@@ -41,3 +41,13 @@ def test_unidentified_meaning_is_not_stakeable():
     a=align_analysis("私は雨を私が",raw,1)
     assert a.units[1].score==0
     assert ''.join(u.text for u in a.units)=="私は雨を私が"
+
+
+def test_undefined_concept_never_becomes_a_stake():
+    raw=fixture()
+    raw.units[1].concept_ids=['missing-concept']
+    a=align_analysis('私は雨を私が',raw,1)
+    assert a.units[1].score==0 and a.units[1].concept_ids==[]
+    assert ''.join(u.text for u in a.units)=='私は雨を私が'
+    with pytest.raises(ValueError):
+        validate_stakes(a.model_dump(),[a.units[1].id],0)

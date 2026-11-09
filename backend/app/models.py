@@ -67,5 +67,6 @@ class ScoredSegment(BaseModel):
 
 
 class IndexedAnalysis(BaseModel):
-    units: list[ScoredSegment] = Field(min_length=1, max_length=300)
+    # Establish the concept table before generating references to it.
     concepts: list[Concept] = Field(min_length=1, max_length=100)
+    units: list[ScoredSegment] = Field(min_length=1, max_length=300)

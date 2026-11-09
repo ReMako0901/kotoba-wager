@@ -26,15 +26,15 @@ def align_analysis(text: str, raw: RawAnalysis, version: int) -> Analysis:
             raise GenerationError("解析した言葉と本文が一致しませんでした。本文を保護して停止しました。")
         if pos > cursor:
             append(text[cursor:pos], 0, [], "句読点・空白", cursor)
-        if any(i not in ids for i in unit.concept_ids):
-            raise GenerationError("点数と設定の対応が不正なため、適用しませんでした。")
+        known_meaning = all(i in ids for i in unit.concept_ids)
         if len(set(unit.concept_ids)) != len(unit.concept_ids):
             raise GenerationError("一つの単位に同じ設定が重複しています。")
         # A surface without an identified loss cannot be safely staked. Keep it
         # visible but non-selectable; never invent a concept or cheap blank stake.
-        score = unit.score if unit.concept_ids else 0
-        reason = unit.score_reason if unit.concept_ids or unit.score == 0 else "消失対象が特定されていないため選択不可"
-        append(unit.text, score, unit.concept_ids, reason, pos)
+        concepts = unit.concept_ids if known_meaning else []
+        score = unit.score if concepts else 0
+        reason = unit.score_reason if known_meaning and (concepts or unit.score == 0) else "消失対象が特定されていないため選択不可"
+        append(unit.text, score, concepts, reason, pos)
         cursor = pos + len(unit.text)
     if cursor < len(text):
         if not is_gap(text[cursor:]):
