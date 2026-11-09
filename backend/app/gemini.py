@@ -1,5 +1,6 @@
 import json
 import time
+import unicodedata
 from dataclasses import dataclass
 from typing import TypeVar
 
@@ -38,6 +39,32 @@ def api_schema(model):
             return expand(definitions[node["$ref"].split("/")[-1]])
         return {key: ({name: expand(value) for name, value in item.items()} if key == "properties" else expand(item)) for key, item in node.items() if key in allowed}
     return expand(schema)
+
+
+def materialize_analysis(parts, indexed):
+    """Unscored/ambiguous surfaces remain visible but can never be wagered."""
+    rows = {}
+    for unit in indexed.units:
+        if unit.unit_index >= len(parts):
+            raise GenerationError("解析に未知の文節番号が含まれています。本文を保護しました。")
+        rows.setdefault(unit.unit_index, []).append(unit)
+    units, semantic, covered = [], 0, 0
+    for i, surface in enumerate(parts):
+        punctuation = all(c.isspace() or unicodedata.category(c).startswith(("P", "Z")) for c in surface)
+        candidates = rows.get(i, [])
+        unique = {u.model_dump_json() for u in candidates}
+        certain = len(unique) == 1
+        if not punctuation:
+            semantic += 1
+            covered += int(certain)
+        if punctuation or not certain:
+            units.append({"text": surface, "score": 0, "concept_ids": [], "score_reason": "句読点・空白" if punctuation else "採点を確定できないため選択不可"})
+        else:
+            u = candidates[0]
+            units.append({"text": surface, "score": u.score, "concept_ids": u.concept_ids, "score_reason": u.score_reason})
+    if not semantic or covered / semantic < .75:
+        raise GenerationError("解析できた文節が少ないため、本文を保護しました。再試行できます。")
+    return RawAnalysis(units=units, concepts=indexed.concepts)
 
 
 class Gemini:
@@ -88,9 +115,7 @@ class Gemini:
         parts = split_phrases(text)
         result = await self.generate(ANALYZE, {"text": text, "fixed_units": [{"unit_index": i, "text": part} for i, part in enumerate(parts)], "past_lost_concepts": lost}, IndexedAnalysis)
         indexed = result.value
-        if sorted(u.unit_index for u in indexed.units) != list(range(len(parts))):
-            raise GenerationError("解析で文節の番号が重複または欠落しました。本文を保護しました。")
-        result.value = RawAnalysis(units=[{"text": parts[u.unit_index], "score": u.score, "concept_ids": u.concept_ids, "score_reason": u.score_reason} for u in sorted(indexed.units, key=lambda u: u.unit_index)], concepts=indexed.concepts)
+        result.value = materialize_analysis(parts, indexed)
         return result
 
     async def win(self, text, offer, stakes, lost):
