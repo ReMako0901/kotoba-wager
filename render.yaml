@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: kotoba-wager-api
+    runtime: docker
+    plan: free
+    region: singapore
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health
+    envVars:
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-3.1-flash-lite
+      - key: GEMINI_DAILY_CALL_LIMIT
+        value: '100'
+      - key: ALLOWED_ORIGINS
+        value: https://remako0901.github.io

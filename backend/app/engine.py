@@ -1,0 +1,130 @@
+import asyncio
+import secrets
+from copy import deepcopy
+from .analysis import align_analysis, make_offers, validate_stakes
+from .config import settings
+from .gemini import gemini, GenerationError
+from .store import store
+from .quota import reserve_call
+
+
+class GameEngine:
+    def __init__(self, repository=store, ai=gemini, draw=None):
+        self.store = repository
+        self.ai = ai
+        self.draw = draw or (lambda probability: secrets.randbelow(1_000_000) < probability * 1_000_000)
+        self.tasks = set()
+
+    def spawn(self, coroutine):
+        task = asyncio.create_task(coroutine)
+        self.tasks.add(task)
+        task.add_done_callback(self.tasks.discard)
+
+    async def call(self, session, method, *args):
+        session["api_calls"] += 1
+        self.store.save(session)
+        await reserve_call()
+        result = await method(*args)
+        for k in session["usage"]:
+            session["usage"][k] += result.usage.get(k, 0)
+        session["api_events"].append({"operation":method.__name__,"usage":result.usage,"elapsed_seconds":result.elapsed_seconds})
+        self.store.save(session)
+        return result.value
+
+    async def analyze_initial(self, sid):
+        async with self.store.lock(sid):
+            session = self.store.load(sid)
+            try:
+                session["analysis_attempts"] += 1
+                self.store.save(session)
+                raw = await self.call(session, self.ai.analyze, session["text"], session["lost_concepts"])
+                analysis = align_analysis(session["text"], raw, session["version"]).model_dump()
+                session.update(analysis=analysis, offers=make_offers(analysis,1,session["version"]), status="ready", error=None)
+            except GenerationError as error:
+                session.update(status="error", error=str(error))
+            except Exception:
+                session.update(status="error", error="解析中に予期しないエラーが発生しました。本文を保護しました。")
+            self.store.save(session)
+
+    def settle_draw(self, session, request):
+        """Caller holds session lock. Persist the draw before any generation."""
+        existing = next((tx for tx in session["transactions"] if tx["id"]==request.request_id), None)
+        if existing:
+            if existing["unit_ids"] != request.unit_ids or existing["offer"]["id"] != request.offer_id:
+                raise ValueError("同じ取引IDで異なる内容を送信できません。")
+            return False
+        if session["status"] != "ready" or session["view"] == "result" or session.get("pending_transaction_id"):
+            raise ValueError("前の取引の処理または結果確認が終わっていません。")
+        if session["version"] != request.version:
+            raise ValueError("本文の版が更新されています。選び直してください。")
+        offer = next((o for o in session["offers"] if o["id"]==request.offer_id),None)
+        if offer is None:
+            raise ValueError("報酬が更新されています。選び直してください。")
+        units, concepts = validate_stakes(session["analysis"],request.unit_ids,offer["required_points"])
+        outcome = "win" if self.draw(session["win_probability"]) else "loss"
+        tx = {"id":request.request_id,"source_version":session["version"],"status":"generating","outcome":outcome,"offer":deepcopy(offer),"unit_ids":request.unit_ids,"stakes":[u["text"] for u in units],"staked_concepts":deepcopy(concepts),"lost":deepcopy(concepts) if outcome=="loss" else [],"before":session["text"],"attempts":0}
+        session["transactions"].append(tx)
+        session.update(status="generating",pending_transaction_id=tx["id"],error=None)
+        self.store.save(session)
+        return True
+
+    async def process_transaction(self,sid):
+        async with self.store.lock(sid):
+            session=self.store.load(sid)
+            tx=next(t for t in session["transactions"] if t["id"]==session["pending_transaction_id"])
+            if tx["status"] == "committed":
+                return
+            try:
+                tx["attempts"] += 1
+                tx["status"]="generating"
+                self.store.save(session)
+                if not tx.get("draft"):
+                    if tx["outcome"] == "win":
+                        edited=await self.call(session,self.ai.win,tx["before"],tx["offer"],tx["staked_concepts"],session["lost_concepts"])
+                    else:
+                        edited=await self.call(session,self.ai.loss,tx["before"],tx["staked_concepts"],session["lost_concepts"],session["analysis"]["concepts"])
+                    if edited.text == tx["before"]:
+                        raise GenerationError("本文に変化がなかったため、反映せず停止しました。")
+                    if not edited.checks.lost_absent:
+                        raise GenerationError("Geminiの自己確認で、消失設定の維持に問題が見つかりました。本文を保護しました。")
+                    if tx["outcome"] == "win" and not (edited.checks.protected_retained and edited.checks.reward_realized):
+                        raise GenerationError("賭けた設定の保持または報酬の実現を確認できず、反映しませんでした。")
+                    tx["draft"]=edited.model_dump()
+                    self.store.save(session)
+                draft=tx["draft"]
+                lost=deepcopy(session["lost_concepts"])
+                for c in tx["lost"]:
+                    lost.append({**c,"transaction_id":tx["id"],"source_version":tx["source_version"]})
+                raw=await self.call(session,self.ai.analyze,draft["text"],lost)
+                version=session["version"]+1
+                analysis=align_analysis(draft["text"],raw,version).model_dump()
+                completed=sum(t["status"]=="committed" for t in session["transactions"])+1
+                offers=make_offers(analysis,completed+1,version)
+                tx.update(status="committed",after=draft["text"],summary=draft["summary"],changes=draft["changes"],checks=draft["checks"],error=None)
+                tx.pop("draft",None)
+                session.update(text=tx["after"],version=version,analysis=analysis,offers=offers,lost_concepts=lost,status="ready",view="result",error=None)
+            except GenerationError as error:
+                tx.update(status="error",error=str(error))
+                session.update(status="error",error=str(error))
+            except Exception:
+                tx.update(status="error",error="文章の反映中に予期しないエラーが発生しました。")
+                session.update(status="error",error=tx["error"])
+            self.store.save(session)
+
+    async def retry(self,sid):
+        async with self.store.lock(sid):
+            session=self.store.load(sid)
+            if session["status"] != "error":
+                raise ValueError("現在は再試行が必要な状態ではありません。")
+            tx=next((t for t in session["transactions"] if t["id"]==session.get("pending_transaction_id")),None)
+            attempts=tx["attempts"] if tx else session["analysis_attempts"]
+            if attempts >= settings.max_attempts:
+                raise ValueError("試作用の再試行上限（3回）です。本文と勝敗は保存されています。設定と生成結果を確認してください。")
+            session["status"]="generating" if tx else "analyzing"
+            session["error"]=None
+            self.store.save(session)
+            self.spawn(self.process_transaction(sid) if tx else self.analyze_initial(sid))
+            return session
+
+
+engine=GameEngine()
