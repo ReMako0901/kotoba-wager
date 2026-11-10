@@ -8,6 +8,7 @@ from .config import PROJECT, settings
 from .engine import engine
 from .gemini import gemini
 from .models import CreateSession, TradeRequest
+from .analysis import build_analysis, make_offers, BETTING_MODE
 from .store import store
 
 STORIES=json.loads((PROJECT / "data" / "stories.json").read_text())
@@ -26,7 +27,10 @@ if settings.allowed_origins:
 
 def load(sid):
     try:
-        return store.load(sid)
+        session=store.load(sid)
+        if session.get('betting_mode')!=BETTING_MODE:
+            raise HTTPException(409,'この物語は旧点数方式です。保存データは残しています。「はじめる」から個数方式で遊んでください。')
+        return session
     except FileNotFoundError:
         raise HTTPException(404,"保存された物語が見つかりません。新しく始めてください。") from None
 
@@ -39,7 +43,7 @@ def public(session):
 
 @app.get("/api/health")
 def health():
-    return {"status":"ok","api_configured":gemini.configured(),"model":settings.model}
+    return {"status":"ok","api_configured":gemini.configured(),"model":settings.model,"betting_mode":BETTING_MODE}
 
 
 class DrawRequest(BaseModel):
@@ -64,6 +68,8 @@ async def create_session(request:CreateSession):
         except FileNotFoundError:
             existing=None
         if existing:
+            if existing.get('betting_mode')!=BETTING_MODE:
+                raise HTTPException(409,'旧点数方式の開始IDです。新しく「はじめる」から開始してください。')
             if existing["story_id"] != request.story_id:
                 raise HTTPException(409,"同じ開始IDで違う物語は開始できません。")
             return public(existing)
@@ -72,9 +78,9 @@ async def create_session(request:CreateSession):
             raise HTTPException(404,"開始文章が見つかりません。")
         if not gemini.configured():
             raise HTTPException(503,"Gemini APIキーが未設定です。設定してサーバーを再起動してください。")
-        session={"id":sid,"story_id":story["id"],"title":story["title"],"text":story["text"],"version":1,"status":"analyzing","analysis":None,"offers":[],"win_probability":settings.win_probability,"transactions":[],"lost_concepts":[],"pending_transaction_id":None,"view":"game","api_calls":0,"api_events":[],"usage":{"input":0,"output":0,"thoughts":0},"model":settings.model,"analysis_attempts":0,"error":None}
+        analysis=build_analysis(story['text'],1).model_dump()
+        session={"betting_mode":BETTING_MODE,"id":sid,"story_id":story["id"],"title":story["title"],"text":story["text"],"version":1,"status":"ready","analysis":analysis,"offers":make_offers(analysis,1,1),"win_probability":settings.win_probability,"transactions":[],"lost_concepts":[],"pending_transaction_id":None,"view":"game","api_calls":0,"api_events":[],"usage":{"input":0,"output":0,"thoughts":0},"model":settings.model,"analysis_attempts":0,"error":None}
         store.save(session)
-        engine.spawn(engine.analyze_initial(sid))
         return public(session)
 
 

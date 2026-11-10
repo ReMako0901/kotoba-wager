@@ -3,6 +3,7 @@ import re
 from difflib import SequenceMatcher
 from .gemini import GenerationError
 from .models import Rewrite
+from .segmentation import noun_literals
 
 
 def sentences(text):
@@ -17,7 +18,7 @@ def sentences(text):
 def edit_plan(text, outcome, stakes, dependencies, offer=None):
     chunks=sentences(text)
     if outcome=='win':
-        tier=(offer or {}).get('tier',1)
+        tier=(offer or {}).get('change_scale',1)
         return {'sentences':chunks,'editable_sentence_ids':[s['sentence_id'] for s in chunks], 'max_changed_characters':{1:24,2:46,3:90}.get(tier,24),'max_edited_sentences':{1:1,2:2,3:len(chunks)}.get(tier,1),'instruction':'原文を保ち、報酬のための小さな差分だけを返す。'}
     lost={c['id'] for c in stakes}
     affected=set(lost)
@@ -37,9 +38,14 @@ def edit_plan(text, outcome, stakes, dependencies, offer=None):
     selected=list(dict.fromkeys(a for c in stakes for a in c.get('selected_surfaces',c.get('anchors',[c['label']]))))
     budget=max(12,2*sum(map(len,selected))+4*(len(selected)-1))
     # A central actor's disappearance can require changes across its mentions.
-    if any(c['kind']=='person' for c in stakes) or len(selected)>=4:
-        budget=max(budget,int(len(text)*.85))
-    return {'loss_anchors':selected,'sentences':chunks,'editable_sentence_ids':allowed,'max_changed_characters':min(140,budget),'max_edited_sentences':len(allowed),'instruction':'選んだ語が直接表す意味と成立しなくなる依存描写だけを最小修正。ほかの文は完全保存。'}
+    if any(c['kind']=='person' for c in stakes) or len(selected)>=3:
+        budget=max(budget,int(sum(len(s['text']) for s in chunks if s['sentence_id'] in allowed)*.85))
+    elif len(allowed)>1:
+        # Semantic dependencies can span sentences even for one grammatical chip.
+        # This changes edit scope, never the number of chips or their equal price.
+        budget=max(budget,int(sum(len(s['text']) for s in chunks if s['sentence_id'] in allowed)*.75))
+    protected=[n for n in noun_literals(text) if not any(n in surface for surface in selected)] if all(c['kind']=='relation' for c in stakes) else []
+    return {'must_keep_literals':protected,'loss_anchors':selected,'sentences':chunks,'editable_sentence_ids':allowed,'max_changed_characters':min(140,budget),'max_edited_sentences':len(allowed),'instruction':'選んだ語が直接表す意味と成立しなくなる依存描写だけを最小修正。ほかの文は完全保存。'}
 
 
 def change_size(before,after):
@@ -73,6 +79,8 @@ def apply_edits(text, proposal, plan):
     result=text
     for start,end,after in sorted(spans,reverse=True):
         result=result[:start]+after+result[end:]
+    if any(result.count(noun)<text.count(noun) for noun in plan.get('must_keep_literals', [])):
+        raise GenerationError('関係だけの消失で対象の物まで削除されたため、本文を保護しました。')
     if len(result)>140 or not result.strip():
         raise GenerationError('編集後の長さが条件を満たしませんでした。本文を保護しました。')
     return Rewrite(text=result,summary=proposal.summary,changes=proposal.changes,checks=proposal.checks)

@@ -32,3 +32,9 @@ def split_phrases(text: str) -> list[str]:
     if ''.join(parts) != text:
         raise ValueError('分割後の本文が原文と一致しません。')
     return parts
+
+
+def noun_literals(text: str) -> list[str]:
+    """Literal entity anchors for preserving objects when only a relation is lost."""
+    tokens=_dictionary().create().tokenize(text,tokenizer.Tokenizer.SplitMode.C)
+    return list(dict.fromkeys(t.surface() for t in tokens if t.part_of_speech()[0]=='名詞'))

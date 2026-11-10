@@ -1,15 +1,13 @@
 import json
 import time
-import unicodedata
 from dataclasses import dataclass
 from typing import TypeVar
 
 import httpx
 from pydantic import BaseModel, ValidationError
 from .config import settings
-from .models import RawAnalysis, Rewrite, IndexedAnalysis, EditProposal
-from .segmentation import split_phrases
-from .prompts import SYSTEM, ANALYZE, WIN, LOSS
+from .models import EditProposal, MeaningResponse, StakesResolution, ResolvedConcept
+from .prompts import SYSTEM, RESOLVE, WIN, LOSS
 
 T = TypeVar("T", bound=BaseModel)
 
@@ -41,33 +39,30 @@ def api_schema(model):
     return expand(schema)
 
 
-def materialize_analysis(parts, indexed):
-    """Unscored/ambiguous surfaces remain visible but can never be wagered."""
-    rows = {}
-    for unit in indexed.units:
-        if unit.unit_index >= len(parts):
-            raise GenerationError("解析に未知の文節番号が含まれています。本文を保護しました。")
-        rows.setdefault(unit.unit_index, []).append(unit)
-    units, semantic, covered = [], 0, 0
-    for i, surface in enumerate(parts):
-        punctuation = all(c.isspace() or unicodedata.category(c).startswith(("P", "Z")) for c in surface)
-        candidates = rows.get(i, [])
-        unique = {u.model_dump_json() for u in candidates}
-        certain = len(unique) == 1 and candidates[0].source_text == surface
-        if certain and not punctuation:
-            concept_map = {c.id: c for c in indexed.concepts}
-            certain = all(cid in concept_map and any(anchor.strip() and anchor.strip() in surface for anchor in concept_map[cid].anchors) for cid in candidates[0].concept_ids)
-        if not punctuation:
-            semantic += 1
-            covered += int(certain)
-        if punctuation or not certain:
-            units.append({"text": surface, "score": 0, "concept_ids": [], "score_reason": "句読点・空白" if punctuation else "原文と意味の対応を確定できないため選択不可", "scoring_state": "punctuation" if punctuation else "unresolved"})
-        else:
-            u = candidates[0]
-            units.append({"text": surface, "score": u.score, "concept_ids": u.concept_ids, "score_reason": u.score_reason, "scoring_state": "scored" if u.score > 0 and u.concept_ids else "not_stakeable"})
-    if not semantic or covered / semantic < .75:
-        raise GenerationError("解析できた文節が少ないため、本文を保護しました。再試行できます。")
-    return RawAnalysis(units=units, concepts=indexed.concepts)
+def materialize_meanings(text, units, response):
+    lookup={u['id']:u for u in units}
+    rows={}
+    for meaning in response.meanings:
+        if meaning.unit_id not in lookup or meaning.unit_id in rows:
+            raise GenerationError('選択したことばと意味の対応を確認できませんでした。勝敗と本文は保護されています。')
+        if meaning.source_text!=lookup[meaning.unit_id]['text']:
+            raise GenerationError('選んだ原文とAIの解釈が一致しませんでした。勝敗と本文は保護されています。')
+        if any(not m.strip() or m not in text for m in meaning.mentions):
+            raise GenerationError('関連する言及を原文で確認できませんでした。本文を保護しました。')
+        rows[meaning.unit_id]=meaning
+    if set(rows)!=set(lookup):
+        raise GenerationError('選んだことばの解釈が一部ありませんでした。同じ勝敗で再試行できます。')
+    groups={}
+    for u in units:
+        m=rows[u['id']]
+        key=(m.kind,m.label.strip())
+        if key not in groups:
+            groups[key]=ResolvedConcept(id=u['id'],label=m.label,kind=m.kind,description=m.description,depends_on=[],anchors=[],selected_surfaces=[],mentions=[])
+        c=groups[key]
+        c.selected_surfaces=list(dict.fromkeys([*c.selected_surfaces,u['text']]))
+        c.anchors=list(dict.fromkeys([*c.anchors,u['text']]))
+        c.mentions=list(dict.fromkeys([*c.mentions,u['text'],*m.mentions]))
+    return StakesResolution(concepts=list(groups.values()))
 
 
 class Gemini:
@@ -114,11 +109,10 @@ class Gemini:
         usage = envelope.get("usageMetadata", {})
         return Result(value=value, usage={"input": usage.get("promptTokenCount", 0), "output": usage.get("candidatesTokenCount", 0), "thoughts": usage.get("thoughtsTokenCount", 0)}, elapsed_seconds=round(time.monotonic()-started, 2))
 
-    async def analyze(self, text, lost):
-        parts = split_phrases(text)
-        result = await self.generate(ANALYZE, {"text": text, "fixed_units": [{"unit_index": i, "text": part} for i, part in enumerate(parts)], "past_lost_concepts": lost}, IndexedAnalysis)
-        indexed = result.value
-        result.value = materialize_analysis(parts, indexed)
+    async def resolve_stakes(self,text,units,lost):
+        # No scoring, availability decisions or number adjustment is delegated to AI.
+        result=await self.generate(RESOLVE,{'text':text,'selected_units':[{'unit_id':u['id'],'source_text':u['text']} for u in units],'past_lost_concepts':lost},MeaningResponse)
+        result.value=materialize_meanings(text,units,result.value)
         return result
 
     async def edit(self, instruction, text, payload, outcome, stakes):

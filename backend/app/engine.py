@@ -1,7 +1,7 @@
 import asyncio
 import secrets
 from copy import deepcopy
-from .analysis import align_analysis, make_offers, validate_stakes
+from .analysis import build_analysis, make_offers, validate_stakes, BETTING_MODE
 from .config import settings
 from .gemini import gemini, GenerationError
 from .store import store
@@ -31,15 +31,14 @@ class GameEngine:
         self.store.save(session)
         return result.value
 
-    async def analyze_initial(self, sid):
+    async def prepare_initial(self, sid):
         async with self.store.lock(sid):
             session = self.store.load(sid)
             try:
                 session["analysis_attempts"] += 1
                 self.store.save(session)
-                raw = await self.call(session, self.ai.analyze, session["text"], session["lost_concepts"])
-                analysis = align_analysis(session["text"], raw, session["version"]).model_dump()
-                session.update(analysis=analysis, offers=make_offers(analysis,1,session["version"]), status="ready", error=None)
+                analysis = build_analysis(session['text'],session['version']).model_dump()
+                session.update(analysis=analysis, offers=make_offers(analysis,1,session['version']), status='ready', error=None, betting_mode=BETTING_MODE)
             except GenerationError as error:
                 session.update(status="error", error=str(error))
             except Exception:
@@ -60,9 +59,9 @@ class GameEngine:
         offer = next((o for o in session["offers"] if o["id"]==request.offer_id),None)
         if offer is None:
             raise ValueError("報酬が更新されています。選び直してください。")
-        units, concepts = validate_stakes(session["analysis"],request.unit_ids,offer["required_points"])
+        units = validate_stakes(session["analysis"],request.unit_ids,offer["required_count"])
         outcome = "win" if self.draw(session["win_probability"]) else "loss"
-        tx = {"id":request.request_id,"source_version":session["version"],"status":"generating","outcome":outcome,"offer":deepcopy(offer),"unit_ids":request.unit_ids,"stakes":[u["text"] for u in units],"staked_concepts":deepcopy(concepts),"lost":deepcopy(concepts) if outcome=="loss" else [],"before":session["text"],"attempts":0}
+        tx = {"id":request.request_id,"source_version":session["version"],"status":"generating","outcome":outcome,"offer":deepcopy(offer),"unit_ids":request.unit_ids,"wager_count":len(units),"stakes":[u["text"] for u in units],"selected_units":deepcopy(units),"staked_concepts":[],"lost":[],"meanings_resolved":False,"before":session["text"],"attempts":0}
         session["transactions"].append(tx)
         session.update(status="generating",pending_transaction_id=tx["id"],error=None)
         self.store.save(session)
@@ -78,26 +77,34 @@ class GameEngine:
                 tx["attempts"] += 1
                 tx["status"]="generating"
                 self.store.save(session)
+                if not tx.get("meanings_resolved"):
+                    resolution=await self.call(session,self.ai.resolve_stakes,tx['before'],tx['selected_units'],session['lost_concepts'])
+                    tx['staked_concepts']=[c.model_dump() for c in resolution.concepts]
+                    tx['lost']=deepcopy(tx['staked_concepts']) if tx['outcome']=='loss' else []
+                    tx['meanings_resolved']=True
+                    self.store.save(session)
                 if not tx.get("draft"):
                     if tx["outcome"] == "win":
                         edited=await self.call(session,self.ai.win,tx["before"],tx["offer"],tx["staked_concepts"],session["lost_concepts"])
                     else:
-                        edited=await self.call(session,self.ai.loss,tx["before"],tx["staked_concepts"],session["lost_concepts"],session["analysis"]["concepts"])
+                        edited=await self.call(session,self.ai.loss,tx["before"],tx["staked_concepts"],session["lost_concepts"],[])
                     if edited.text == tx["before"]:
                         raise GenerationError("本文に変化がなかったため、反映せず停止しました。")
                     if not edited.checks.lost_absent:
                         raise GenerationError("Geminiの自己確認で、消失設定の維持に問題が見つかりました。本文を保護しました。")
                     if tx["outcome"] == "win" and not (edited.checks.protected_retained and edited.checks.reward_realized):
                         raise GenerationError("賭けた設定の保持または報酬の実現を確認できず、反映しませんでした。")
+                    # All next-round chips are local. Verify playability before
+                    # caching the draft so a bad proposal can be regenerated manually.
+                    build_analysis(edited.text,session['version']+1)
                     tx["draft"]=edited.model_dump()
                     self.store.save(session)
                 draft=tx["draft"]
                 lost=deepcopy(session["lost_concepts"])
                 for c in tx["lost"]:
                     lost.append({**c,"transaction_id":tx["id"],"source_version":tx["source_version"]})
-                raw=await self.call(session,self.ai.analyze,draft["text"],lost)
                 version=session["version"]+1
-                analysis=align_analysis(draft["text"],raw,version).model_dump()
+                analysis=build_analysis(draft['text'],version).model_dump()
                 completed=sum(t["status"]=="committed" for t in session["transactions"])+1
                 offers=make_offers(analysis,completed+1,version)
                 tx.update(status="committed",after=draft["text"],summary=draft["summary"],changes=draft["changes"],checks=draft["checks"],error=None)
@@ -123,7 +130,7 @@ class GameEngine:
             session["status"]="generating" if tx else "analyzing"
             session["error"]=None
             self.store.save(session)
-            self.spawn(self.process_transaction(sid) if tx else self.analyze_initial(sid))
+            self.spawn(self.process_transaction(sid) if tx else self.prepare_initial(sid))
             return session
 
 

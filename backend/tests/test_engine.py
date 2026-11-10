@@ -1,23 +1,22 @@
 import asyncio
 from copy import deepcopy
 import pytest
-from app.analysis import align_analysis, make_offers
+from app.analysis import build_analysis, make_offers
 from app.engine import GameEngine
 from app.gemini import GenerationError, Result, api_schema
-from app.models import RawAnalysis, Rewrite, TradeRequest
+from app.models import Rewrite, TradeRequest, StakesResolution, ResolvedConcept, MeaningResponse
 from app.store import Store
 
 BEFORE = '私は雨を見つめていた。静かな駅の屋根から、水滴が線路へ落ちている。'
 AFTER = '私は晴れた空を見つめていた。静かな駅の屋根の向こうに、青い光が広がっている。'
 
-def analysis(text):
-    return RawAnalysis.model_validate({'units':[{'text':text,'score':3,'concept_ids':['weather'],'score_reason':'天候'}], 'concepts':[{'id':'weather','label':'雨','kind':'attribute','description':'雨が降っている','depends_on':[]}]})
-
 class AI:
-    def __init__(self): self.fail_rewrite=False; self.fail_analysis=False; self.rewrites=0
-    async def analyze(self,text,lost):
-        if self.fail_analysis: raise GenerationError('解析失敗')
-        return Result(analysis(text), {'input':1,'output':1,'thoughts':0}, .1)
+    def __init__(self): self.fail_rewrite=False; self.fail_resolution=False; self.rewrites=0; self.resolutions=0
+    async def resolve_stakes(self,text,units,lost):
+        self.resolutions+=1
+        if self.fail_resolution: raise GenerationError('解釈失敗')
+        c=ResolvedConcept(id='weather',label='雨',kind='attribute',description='雨が降る',selected_surfaces=[u['text'] for u in units],mentions=['雨を'])
+        return Result(StakesResolution(concepts=[c]),{'input':1,'output':1,'thoughts':0},.1)
     async def win(self,*args):
         self.rewrites+=1
         if self.fail_rewrite: raise GenerationError('通信失敗')
@@ -26,12 +25,12 @@ class AI:
 
 def setup(tmp_path,outcome):
     repository=Store(tmp_path)
-    a=align_analysis(BEFORE,analysis(BEFORE),1).model_dump()
+    a=build_analysis(BEFORE,1).model_dump()
     s={'id':'test-session','text':BEFORE,'version':1,'status':'ready','view':'game','analysis':a,'offers':make_offers(a,1,1),'transactions':[],'pending_transaction_id':None,'win_probability':.5,'lost_concepts':[],'api_calls':0,'api_events':[],'usage':{'input':0,'output':0,'thoughts':0},'analysis_attempts':1,'error':None}
     repository.save(s); ai=AI(); draws=[]
     engine=GameEngine(repository,ai,lambda p: draws.append(p) or outcome)
     o=s['offers'][0]
-    req=TradeRequest(request_id='request-0001',version=1,offer_id=o['id'],unit_ids=o['example_unit_ids'])
+    req=TradeRequest(request_id='request-0001',version=1,offer_id=o['id'],unit_ids=[u['id'] for u in a['units'] if u['stakeable']][:o['required_count']])
     return repository,s,ai,engine,draws,req
 
 @pytest.mark.parametrize('outcome',[True,False])
@@ -62,15 +61,26 @@ def test_failed_generation_preserves_text_and_outcome_after_restart(tmp_path):
     assert repo.load(s['id'])['version']==2 and len(draws)==1
 
 
-def test_draft_cached_when_followup_analysis_fails(tmp_path):
+def test_resolved_meaning_is_cached_when_edit_fails(tmp_path):
     repo,s,ai,engine,draws,req=setup(tmp_path,True)
-    engine.settle_draw(s,req); ai.fail_analysis=True
+    engine.settle_draw(s,req);ai.fail_rewrite=True
     asyncio.run(engine.process_transaction(s['id']))
     assert repo.load(s['id'])['text']==BEFORE
-    assert repo.load(s['id'])['transactions'][0]['draft']['text']==AFTER
-    ai.fail_analysis=False
+    assert repo.load(s['id'])['transactions'][0]['meanings_resolved']
+    ai.fail_rewrite=False
     asyncio.run(engine.process_transaction(s['id']))
-    assert repo.load(s['id'])['version']==2 and ai.rewrites==1 and len(draws)==1
+    assert repo.load(s['id'])['version']==2 and ai.resolutions==1 and len(draws)==1
+
+
+def test_failed_meaning_resolution_keeps_the_settled_draw(tmp_path):
+    repo,s,ai,engine,draws,req=setup(tmp_path,False)
+    engine.settle_draw(s,req);ai.fail_resolution=True
+    asyncio.run(engine.process_transaction(s['id']))
+    assert repo.load(s['id'])['status']=='error'
+    assert repo.load(s['id'])['text']==BEFORE and len(draws)==1
+    ai.fail_resolution=False
+    asyncio.run(engine.process_transaction(s['id']))
+    assert repo.load(s['id'])['version']==2 and len(draws)==1
 
 
 def test_interrupted_draw_is_recovered_without_redraw(tmp_path):
@@ -83,11 +93,11 @@ def test_interrupted_draw_is_recovered_without_redraw(tmp_path):
 
 
 def test_schema_is_inline_without_large_decode_bounds():
-    schema=api_schema(RawAnalysis)
+    schema=api_schema(MeaningResponse)
     assert '$ref' not in str(schema) and 'maxItems' not in str(schema)
-    assert schema['properties']['units']['items']['properties']['score']['type']=='integer'
+    assert schema['properties']['meanings']['items']['properties']['source_text']['type']=='string'
     with pytest.raises(ValueError):
-        RawAnalysis.model_validate({'units':[],'concepts':[]})
+        MeaningResponse.model_validate({'meanings':[]})
 
 
 def test_manual_retry_limit_does_not_redraw(tmp_path):

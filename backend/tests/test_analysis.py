@@ -1,53 +1,50 @@
 import pytest
-from app.analysis import align_analysis, make_offers, validate_stakes
-from app.models import RawAnalysis
-from app.gemini import GenerationError
+from app.analysis import build_analysis,make_offers,validate_stakes
+
+TEXT='私の隣の席には、料理好きのロボットがいる。昼休み、彼はお弁当と一緒にラブレターをくれた。宛名は、私の炊飯器だった。'
 
 
-def fixture():
-    return RawAnalysis.model_validate({"concepts":[{"id":"me","label":"私","kind":"person","description":"語り手","depends_on":[]},{"id":"rain","label":"雨","kind":"attribute","description":"雨が降る","depends_on":[]}],"units":[{"text":"私は","score":6,"concept_ids":["me"],"score_reason":"主体"},{"text":"雨を","score":2,"concept_ids":["rain"],"score_reason":"天気"},{"text":"私が","score":6,"concept_ids":["me"],"score_reason":"同じ主体"}]})
+def test_every_nonpunctuation_chip_has_equal_availability():
+    a=build_analysis(TEXT,1)
+    assert ''.join(u.text for u in a.units)==TEXT
+    assert all(TEXT[u.start:u.end]==u.text for u in a.units)
+    for word in ['いる','お弁当と','一緒に','宛名は']:
+        assert next(u for u in a.units if u.text==word).stakeable
+    assert all('score' not in u.model_dump() for u in a.units)
+    assert all(not u.stakeable for u in a.units if u.text in ['。','、'])
 
 
-def test_exact_alignment_preserves_unicode_and_omitted_punctuation():
-    text="私は、雨を。\n私が。"
-    a=align_analysis(text,fixture(),1)
-    assert ''.join(u.text for u in a.units)==text
-    assert all(text[u.start:u.end]==u.text for u in a.units)
-    assert any(u.score==0 and '\n' in u.text for u in a.units)
+def test_any_pair_is_accepted_without_semantic_or_value_matching():
+    a=build_analysis(TEXT,1).model_dump()
+    choices=[u for u in a['units'] if u['stakeable']]
+    for i,x in enumerate(choices):
+        for y in choices[i+1:]:
+            assert len(validate_stakes(a,[x['id'],y['id']],2))==2
+    repeated=[u['id'] for u in choices if u['text']=='私の']
+    assert len(repeated)==2
+    assert len(validate_stakes(a,repeated,2))==2
 
 
-def test_refuses_missing_meaningful_content():
-    with pytest.raises(GenerationError):
-        align_analysis("私は知らない雨を私が",fixture(),1)
+def test_exact_count_duplicates_stale_ids_and_punctuation():
+    a=build_analysis(TEXT,1).model_dump()
+    valid=next(u['id'] for u in a['units'] if u['stakeable'])
+    punctuation=next(u['id'] for u in a['units'] if not u['stakeable'])
+    with pytest.raises(ValueError):validate_stakes(a,[valid],2)
+    with pytest.raises(ValueError):validate_stakes(a,[valid,valid],2)
+    with pytest.raises(ValueError):validate_stakes(a,['old-id'],1)
+    with pytest.raises(ValueError):validate_stakes(a,[punctuation],1)
 
 
-def test_same_person_cannot_be_wagered_twice():
-    a=align_analysis("私は雨を私が",fixture(),1).model_dump()
-    with pytest.raises(ValueError):
-        validate_stakes(a,["v1-u1","v1-u3"],12)
-    for offer in make_offers(a,1,1):
-        validate_stakes(a,offer['example_unit_ids'],offer['required_points'])
+def test_offers_use_counts_and_separate_reward_scale_from_round_phase():
+    a=build_analysis(TEXT,1).model_dump()
+    for round_number in [1,3,5,20]:
+        offers=make_offers(a,round_number,1)
+        assert [o['required_count'] for o in offers]==[1,2,3]
+        assert [o['change_scale'] for o in offers]==[1,2,3]
+        assert all('required_points' not in o for o in offers)
 
 
-def test_exact_sum_and_duplicate_validation():
-    a=align_analysis("私は雨を私が",fixture(),1).model_dump()
-    with pytest.raises(ValueError): validate_stakes(a,["v1-u1"],7)
-    with pytest.raises(ValueError): validate_stakes(a,["v1-u1","v1-u1"],12)
-
-
-def test_unidentified_meaning_is_not_stakeable():
-    raw=fixture()
-    raw.units[1].concept_ids=[]
-    a=align_analysis("私は雨を私が",raw,1)
-    assert a.units[1].score==0
-    assert ''.join(u.text for u in a.units)=="私は雨を私が"
-
-
-def test_undefined_concept_never_becomes_a_stake():
-    raw=fixture()
-    raw.units[1].concept_ids=['missing-concept']
-    a=align_analysis('私は雨を私が',raw,1)
-    assert a.units[1].score==0 and a.units[1].concept_ids==[]
-    assert ''.join(u.text for u in a.units)=='私は雨を私が'
-    with pytest.raises(ValueError):
-        validate_stakes(a.model_dump(),[a.units[1].id],0)
+def test_one_chip_remaining_never_has_an_impossible_price():
+    a=build_analysis('猫。',1).model_dump()
+    assert [o['required_count'] for o in make_offers(a,1,1)]==[1]
+    assert make_offers(a,1,1)[0]['change_scale']==1

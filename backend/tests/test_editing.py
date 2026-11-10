@@ -56,3 +56,13 @@ def test_removed_entity_cannot_be_hidden_behind_an_anonymous_placeholder():
     plan=edit_plan(text,'loss',[stake],[stake])
     with pytest.raises(GenerationError,match='置き換えただけ'):
         apply_edits(text,proposal([edit(0,'うさぎが','誰かが')]),plan)
+
+
+def test_losing_together_relation_preserves_both_gifts():
+    text='彼はお弁当と一緒にラブレターをくれた。'
+    relation={'id':'together','label':'同時に渡す関係','kind':'relation','description':'二つを一緒に渡した','depends_on':[],'selected_surfaces':['一緒に'],'mentions':['一緒に']}
+    plan=edit_plan(text,'loss',[relation],[])
+    result=apply_edits(text,proposal([edit(0,'一緒に','は別に')]),plan)
+    assert 'お弁当' in result.text and 'ラブレター' in result.text
+    with pytest.raises(GenerationError,match='物まで削除'):
+        apply_edits(text,proposal([edit(0,'お弁当と一緒に','')]),plan)
