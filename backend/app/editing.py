@@ -39,7 +39,7 @@ def edit_plan(text, outcome, stakes, dependencies, offer=None):
     # A central actor's disappearance can require changes across its mentions.
     if any(c['kind']=='person' for c in stakes) or len(selected)>=4:
         budget=max(budget,int(len(text)*.85))
-    return {'sentences':chunks,'editable_sentence_ids':allowed,'max_changed_characters':min(140,budget),'max_edited_sentences':len(allowed),'instruction':'選んだ語が直接表す意味と成立しなくなる依存描写だけを最小修正。ほかの文は完全保存。'}
+    return {'loss_anchors':selected,'sentences':chunks,'editable_sentence_ids':allowed,'max_changed_characters':min(140,budget),'max_edited_sentences':len(allowed),'instruction':'選んだ語が直接表す意味と成立しなくなる依存描写だけを最小修正。ほかの文は完全保存。'}
 
 
 def change_size(before,after):
@@ -58,6 +58,8 @@ def apply_edits(text, proposal, plan):
         if chunk['text'].count(edit.before)!=1:
             raise GenerationError('変更箇所を原文で一意に確認できませんでした。本文を保護しました。')
         if edit.before==edit.after:continue
+        if any(a and a in edit.before for a in plan.get('loss_anchors', [])) and any(alias in edit.after and alias not in edit.before for alias in ('誰か', '何か', '名前のない人', '名もない人')):
+            raise GenerationError('失う対象を「誰か」「何か」に置き換えただけの編集を検出したため、本文を保護しました。')
         start=chunk['start']+chunk['text'].index(edit.before)
         end=start+len(edit.before)
         if any(start<b and a<end for a,b,_ in spans):

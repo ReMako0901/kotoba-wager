@@ -48,3 +48,11 @@ def test_ambiguous_overlapping_and_stale_edits_are_refused():
     with pytest.raises(GenerationError):apply_edits(text,proposal([edit(0,'猫','犬')]),plan)
     with pytest.raises(GenerationError):apply_edits(text,proposal([edit(0,'猫が','犬が'),edit(0,'猫が猫を','犬を')]),plan)
     with pytest.raises(GenerationError):apply_edits(text,proposal([edit(0,'魚が','犬が')]),plan)
+
+
+def test_removed_entity_cannot_be_hidden_behind_an_anonymous_placeholder():
+    text='うさぎがピザを届けた。'
+    stake={'id':'rabbit','label':'うさぎ','kind':'person','description':'配達員のうさぎ','depends_on':[],'selected_surfaces':['うさぎが'],'anchors':['うさぎが']}
+    plan=edit_plan(text,'loss',[stake],[stake])
+    with pytest.raises(GenerationError,match='置き換えただけ'):
+        apply_edits(text,proposal([edit(0,'うさぎが','誰かが')]),plan)
