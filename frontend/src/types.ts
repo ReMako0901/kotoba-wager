@@ -1,6 +1,6 @@
 export interface Story { id: string; title: string; tagline: string; genre: string; text: string }
-export interface Unit { id: string; text: string; start: number; end: number; score: number; concept_ids: string[] }
-export interface Concept { id: string; label: string; kind: string; description: string; depends_on: string[] }
+export interface Unit { id: string; text: string; start: number; end: number; score: number; concept_ids: string[]; score_reason?: string; scoring_state?: 'scored'|'not_stakeable'|'unresolved'|'punctuation' }
+export interface Concept { id: string; label: string; kind: string; description: string; depends_on: string[]; anchors?: string[] }
 export interface Analysis { units: Unit[]; concepts: Concept[] }
 export interface Offer { id: string; title: string; description: string; required_points: number; example_unit_ids: string[]; tier: number }
 export interface Transaction { id: string; status: string; outcome: 'win'|'loss'; offer: Offer; unit_ids: string[]; stakes: string[]; lost: Concept[]; before: string; after?: string; summary?: string; changes?: string[]; checks?: {protected_retained: boolean; lost_absent: boolean; reward_realized: boolean; notes: string}; attempts: number; error?: string }

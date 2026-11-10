@@ -7,7 +7,7 @@ from typing import TypeVar
 import httpx
 from pydantic import BaseModel, ValidationError
 from .config import settings
-from .models import RawAnalysis, Rewrite, IndexedAnalysis
+from .models import RawAnalysis, Rewrite, IndexedAnalysis, EditProposal
 from .segmentation import split_phrases
 from .prompts import SYSTEM, ANALYZE, WIN, LOSS
 
@@ -53,15 +53,18 @@ def materialize_analysis(parts, indexed):
         punctuation = all(c.isspace() or unicodedata.category(c).startswith(("P", "Z")) for c in surface)
         candidates = rows.get(i, [])
         unique = {u.model_dump_json() for u in candidates}
-        certain = len(unique) == 1
+        certain = len(unique) == 1 and candidates[0].source_text == surface
+        if certain and not punctuation:
+            concept_map = {c.id: c for c in indexed.concepts}
+            certain = all(cid in concept_map and any(anchor.strip() and anchor.strip() in surface for anchor in concept_map[cid].anchors) for cid in candidates[0].concept_ids)
         if not punctuation:
             semantic += 1
             covered += int(certain)
         if punctuation or not certain:
-            units.append({"text": surface, "score": 0, "concept_ids": [], "score_reason": "句読点・空白" if punctuation else "採点を確定できないため選択不可"})
+            units.append({"text": surface, "score": 0, "concept_ids": [], "score_reason": "句読点・空白" if punctuation else "原文と意味の対応を確定できないため選択不可", "scoring_state": "punctuation" if punctuation else "unresolved"})
         else:
             u = candidates[0]
-            units.append({"text": surface, "score": u.score, "concept_ids": u.concept_ids, "score_reason": u.score_reason})
+            units.append({"text": surface, "score": u.score, "concept_ids": u.concept_ids, "score_reason": u.score_reason, "scoring_state": "scored" if u.score > 0 and u.concept_ids else "not_stakeable"})
     if not semantic or covered / semantic < .75:
         raise GenerationError("解析できた文節が少ないため、本文を保護しました。再試行できます。")
     return RawAnalysis(units=units, concepts=indexed.concepts)
@@ -118,11 +121,19 @@ class Gemini:
         result.value = materialize_analysis(parts, indexed)
         return result
 
+    async def edit(self, instruction, text, payload, outcome, stakes):
+        # Imported lazily: the pure edit validator uses GenerationError.
+        from .editing import edit_plan, apply_edits
+        plan = edit_plan(text, outcome, stakes, payload.get("existing_concepts_and_dependencies", []), payload.get("reward"))
+        result = await self.generate(instruction, {**payload, **plan}, EditProposal)
+        result.value = apply_edits(text, result.value, plan)
+        return result
+
     async def win(self, text, offer, stakes, lost):
-        return await self.generate(WIN, {"text": text, "reward": offer, "protected_stakes": stakes, "past_lost_concepts": lost}, Rewrite)
+        return await self.edit(WIN, text, {"text": text, "reward": offer, "protected_stakes": stakes, "past_lost_concepts": lost}, "win", stakes)
 
     async def loss(self, text, stakes, lost, dependencies):
-        return await self.generate(LOSS, {"text": text, "new_lost_concepts": stakes, "past_lost_concepts": lost, "existing_concepts_and_dependencies": dependencies}, Rewrite)
+        return await self.edit(LOSS, text, {"text": text, "new_lost_concepts": stakes, "past_lost_concepts": lost, "existing_concepts_and_dependencies": dependencies}, "loss", stakes)
 
 
 gemini = Gemini()

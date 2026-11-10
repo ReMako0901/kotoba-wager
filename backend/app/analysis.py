@@ -17,15 +17,15 @@ def align_analysis(text: str, raw: RawAnalysis, version: int) -> Analysis:
             raise GenerationError("解析の依存関係が不正なため、適用しませんでした。")
     cursor, units = 0, []
 
-    def append(surface, score, concepts, reason, start):
-        units.append(Unit(id=f"v{version}-u{len(units)+1}", text=surface, score=score, concept_ids=concepts, score_reason=reason, start=start, end=start+len(surface)))
+    def append(surface, score, concepts, reason, start, state="scored"):
+        units.append(Unit(id=f"v{version}-u{len(units)+1}", text=surface, score=score, concept_ids=concepts, score_reason=reason, start=start, end=start+len(surface), scoring_state=state))
 
     for unit in raw.units:
         pos = text.find(unit.text, cursor)
         if pos < 0 or not is_gap(text[cursor:pos]):
             raise GenerationError("解析した言葉と本文が一致しませんでした。本文を保護して停止しました。")
         if pos > cursor:
-            append(text[cursor:pos], 0, [], "句読点・空白", cursor)
+            append(text[cursor:pos], 0, [], "句読点・空白", cursor, "punctuation")
         known_meaning = all(i in ids for i in unit.concept_ids)
         if len(set(unit.concept_ids)) != len(unit.concept_ids):
             raise GenerationError("一つの単位に同じ設定が重複しています。")
@@ -34,12 +34,17 @@ def align_analysis(text: str, raw: RawAnalysis, version: int) -> Analysis:
         concepts = unit.concept_ids if known_meaning else []
         score = unit.score if concepts else 0
         reason = unit.score_reason if known_meaning and (concepts or unit.score == 0) else "消失対象が特定されていないため選択不可"
-        append(unit.text, score, concepts, reason, pos)
+        state = unit.scoring_state
+        if not known_meaning or (unit.score > 0 and not concepts):
+            state = "unresolved"
+        elif score == 0 and state == "scored":
+            state = "not_stakeable"
+        append(unit.text, score, concepts, reason, pos, state)
         cursor = pos + len(unit.text)
     if cursor < len(text):
         if not is_gap(text[cursor:]):
             raise GenerationError("解析に本文の末尾が含まれていませんでした。")
-        append(text[cursor:], 0, [], "句読点・空白", cursor)
+        append(text[cursor:], 0, [], "句読点・空白", cursor, "punctuation")
     if "".join(u.text for u in units) != text:
         raise GenerationError("解析結果と本文の対応を確認できませんでした。")
     if not any(u.score > 0 for u in units):
@@ -90,4 +95,10 @@ def validate_stakes(analysis: dict, unit_ids: list[str], required: int):
         seen.update(unit["concept_ids"])
     if sum(u["score"] for u in units) != required:
         raise ValueError("必要点数とぴったり一致していません。")
-    return units, [c for c in analysis["concepts"] if c["id"] in seen]
+    # Carry the actual selected surfaces and mentions into generation. Never let
+    # a free-standing concept ID silently replace what the player tapped.
+    selected = []
+    for c in analysis["concepts"]:
+        if c["id"] in seen:
+            selected.append({**c, "selected_surfaces": [u["text"] for u in units if c["id"] in u["concept_ids"]], "mentions": list(dict.fromkeys(u["text"] for u in analysis["units"] if c["id"] in u["concept_ids"]))})
+    return units, selected
