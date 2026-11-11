@@ -11,7 +11,8 @@
 |[TODO.md](TODO.md)|次に行う作業、優先順、受け入れ条件|
 |[SHARED_NOTES.md](SHARED_NOTES.md)|ユーザーの好み、未決定事項、研究上・運用上の注意|
 |[ARCHITECTURE.md](ARCHITECTURE.md)|ファイル対応、処理の流れ、データ、エラー・再試行|
-|[WORD_DICTIONARY.md](WORD_DICTIONARY.md)|ゲーム用辞書の編集方法、効く範囲、テスト|
+|[WORD_DICTIONARY.md](WORD_DICTIONARY.md)|ゲーム用の小さな補正辞書の編集方法・テスト|
+|[DICTIONARY_CANDIDATES.md](DICTIONARY_CANDIDATES.md)|既存の無償辞書データを取り込む案・調査結果（未実装）|
 
 最短の読み順：STATUS → GAME_OVERVIEW → TODO。実装前に ARCHITECTURE・TECH_STACK・SHARED_NOTES と、対象機能の資料を読む。
 

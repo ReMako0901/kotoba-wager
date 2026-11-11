@@ -10,7 +10,12 @@
 - [x] AI引き継ぎ用の資料を分離し、AGENTS.mdから読む順を指定。
 - [x] 辞書コードと引き継ぎ資料をGitHub公開ソースへ同期。Renderの配信更新は未実施。
 
-## 優先1：プレイ例に合わせた辞書改善
+## 優先1：既存の無償辞書の評価と区切り改善
+
+最新の意図は、既存の辞書データを取り込み参照すること。小規模な補正JSONだけで要望を満たしたと扱わない。[調査結果](DICTIONARY_CANDIDATES.md)を参照し、まずWiktionary機械可読データ等の取得・見出し照合を評価する。採用・本格導入は未実施。
+
+- [ ] 辞書の版・取得元・利用条件を確認して、日本語の見出しと品詞を取り込む。
+- [ ] 辞書照合による境界補正を試し、未登録表現や誤った最長一致の問題を測る。
 
 対象：`data/segmentation_dictionary.json`、`segmentation.py`、`tests/test_segmentation.py`、`test_analysis.py`。
 
