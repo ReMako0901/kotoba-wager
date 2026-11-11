@@ -66,3 +66,27 @@ def test_dictionary_rejects_invalid_data_instead_of_ignoring_it(tmp_path):
     for value in examples:
         path.write_text(json.dumps(value))
         with pytest.raises(ValueError):load_selection_dictionary(path)
+
+
+def test_real_imported_headwords_merge_without_manual_entries(monkeypatch):
+    from app import segmentation as s
+    from app.analysis import build_analysis
+    assert '拍子抜け' not in s.selection_dictionary()[0]
+    assert s.external_lexicon()['拍子抜け']=='noun'
+    assert s.external_lexicon()['猫の手も借りたい']=='idiom'
+    text='拍子抜けして笑った。猫の手も借りたい。'
+    analysis=build_analysis(text,1)
+    assert [u.text for u in analysis.units]==['拍子抜けして','笑った','。','猫の手も借りたい','。']
+    assert [u.text for u in analysis.units if u.stakeable]==['拍子抜けして','猫の手も借りたい']
+    assert all(text[u.start:u.end]==u.text for u in analysis.units)
+    monkeypatch.setattr(s,'external_lexicon',lambda:{})
+    assert s.split_phrases(text)!=[u.text for u in analysis.units]
+
+
+def test_imported_long_expression_cannot_override_connector(monkeypatch):
+    from app import segmentation as s
+    from app.analysis import build_analysis
+    monkeypatch.setattr(s,'external_lexicon',lambda:{'代金の代わりに':'idiom'})
+    analysis=build_analysis('代金の代わりに、話をした。',1)
+    assert [(u.text,u.stakeable) for u in analysis.units[:3]]==[
+        ('代金の',True),('代わりに',False),('、',False)]

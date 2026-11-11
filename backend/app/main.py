@@ -9,6 +9,7 @@ from .engine import engine
 from .gemini import gemini
 from .models import CreateSession, TradeRequest
 from .analysis import build_analysis, make_offers, BETTING_MODE
+from .segmentation import external_lexicon, selection_dictionary
 from .store import store
 
 STORIES=json.loads((PROJECT / "data" / "stories.json").read_text())
@@ -16,6 +17,8 @@ STORIES=json.loads((PROJECT / "data" / "stories.json").read_text())
 
 @asynccontextmanager
 async def lifespan(app):
+    selection_dictionary()
+    external_lexicon()
     store.recover()
     yield
 

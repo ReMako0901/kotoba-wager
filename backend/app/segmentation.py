@@ -29,25 +29,59 @@ def selection_dictionary():
     return load_selection_dictionary(SELECTION_DICTIONARY_PATH)
 
 
+EXTERNAL_LEXICON_PATH = SELECTION_DICTIONARY_PATH.parent / 'lexicons' / 'wiktionary_ja.json'
+LEXICAL_POS = {
+    'noun': ('名詞', '普通名詞', 'サ変可能', '*', '*', '*'),
+    'idiom': ('慣用句', '*', '*', '*', '*', '*'),
+    'connector': ('接続詞', '*', '*', '*', '*', '*'),
+}
+
+
+@lru_cache(maxsize=1)
+def external_lexicon() -> dict[str, str]:
+    data = json.loads(EXTERNAL_LEXICON_PATH.read_text(encoding='utf-8'))
+    if not isinstance(data, dict):
+        raise ValueError('Wiktionary語彙インデックスの形式が不正です。')
+    entries = data.get('entries')
+    if (data.get('version') != 1 or not isinstance(entries, dict) or not entries
+            or any(not 3 <= len(word) <= 12 or kind not in ('noun', 'idiom')
+                   for word, kind in entries.items())):
+        raise ValueError('Wiktionary語彙インデックスの形式が不正です。')
+    return entries
+
+
 def _lexical_tokens(tokens):
     rows = [(t.surface(), t.part_of_speech(), t.dictionary_form()) for t in tokens]
+    compounds, connectors = selection_dictionary()
+    compounds = frozenset(compounds)
+    imported = external_lexicon()
+    # Look up contiguous whole-token spans; do not scan every dictionary entry.
+    limit = max(12, max(map(len, compounds | connectors), default=0))
     i = 0
     while i < len(rows):
-        matched = False
-        for compound in selection_dictionary()[0]:
-            surface = ''
-            j = i
-            while j < len(rows) and len(surface) < len(compound):
-                surface += rows[j][0]
-                j += 1
-            if surface == compound:
-                yield surface, ('名詞', '普通名詞', 'サ変可能', '*', '*', '*'), compound
-                i = j
-                matched = True
+        surface = ''
+        manual = connector = external = None
+        for j in range(i, len(rows)):
+            piece, tags, _ = rows[j]
+            if tags[0] in {'補助記号', '空白'}:
                 break
-        if not matched:
+            surface += piece
+            if len(surface) > limit:
+                break
+            if surface in compounds:
+                manual = (j, surface, 'noun')
+            if surface in connectors:
+                connector = (j, surface, 'connector')
+            if j > i and surface in imported and not any(c in surface for c in connectors):
+                external = (j, surface, imported[surface])
+        best = connector or manual or external
+        if best is None:
             yield rows[i]
             i += 1
+        else:
+            last, word, kind = best
+            yield word, LEXICAL_POS[kind], word
+            i = last+1
 
 
 @lru_cache(maxsize=1)
@@ -103,5 +137,5 @@ def is_stakeable_phrase(surface: str) -> bool:
     if surface in selection_dictionary()[1]:
         return False
     tokens = _dictionary().create().tokenize(surface, tokenizer.Tokenizer.SplitMode.C)
-    return any(tags[0] in {'名詞', '代名詞', '形容詞', '形状詞'}
+    return any(tags[0] in {'名詞', '代名詞', '形容詞', '形状詞', '慣用句'}
                for _, tags, _ in _lexical_tokens(tokens))

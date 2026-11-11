@@ -1,8 +1,6 @@
 {
   "version": 1,
-  "fixed_compounds": [
-    "拍子抜け"
-  ],
+  "fixed_compounds": [],
   "non_wager_connectors": [
     "代わりに",
     "かわりに",
