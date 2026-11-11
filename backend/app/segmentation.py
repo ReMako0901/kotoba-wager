@@ -20,6 +20,11 @@ def split_phrases(text: str) -> list[str]:
         # separate and preserve literal surfaces, whitespace and original offsets.
         if parts and pos in {'助詞', '助動詞', '接尾辞'} and previous[0] not in {'補助記号', '空白'}:
             parts[-1] += surface
+        elif parts and pos == '動詞' and previous[:2] == ('助詞', '接続助詞') and parts[-1].endswith(('て','で')):
+            # Keep serial actions such as 持って出た together, even for independent verbs.
+            parts[-1] += surface
+        elif parts and pos == '名詞' and surface in {'日','朝','夜'} and previous[0] == '助動詞':
+            parts[-1] += surface
         elif parts and pos == '動詞' and tags[1] == '非自立可能' and (previous[0] == '動詞' or previous[:2] == ('助詞', '接続助詞') or (previous[0] in {'名詞', '形状詞'} and token.dictionary_form() == 'する')):
             parts[-1] += surface
         elif parts and previous[0] == '名詞' and pos in {'名詞', '形状詞'}:
@@ -38,3 +43,14 @@ def noun_literals(text: str) -> list[str]:
     """Literal entity anchors for preserving objects when only a relation is lost."""
     tokens=_dictionary().create().tokenize(text,tokenizer.Tokenizer.SplitMode.C)
     return list(dict.fromkeys(t.surface() for t in tokens if t.part_of_speech()[0]=='名詞'))
+
+
+def is_stakeable_phrase(surface: str) -> bool:
+    """Prototype rule: wager entities, attributes and named events/relations.
+
+    Ordinary verbal predicates and discourse adverbs stay readable as plain text.
+    This is deterministic morphology, not AI pricing or a full semantic parser.
+    """
+    tokens = _dictionary().create().tokenize(surface, tokenizer.Tokenizer.SplitMode.C)
+    return any(t.part_of_speech()[0] in {'名詞', '代名詞', '形容詞', '形状詞'}
+               for t in tokens)

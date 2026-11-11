@@ -1,7 +1,7 @@
 """Local, equal-weight phrase selection. AI cannot determine availability or price."""
 import unicodedata
 from .models import Analysis,Unit
-from .segmentation import split_phrases
+from .segmentation import split_phrases,is_stakeable_phrase
 from .gemini import GenerationError
 
 BETTING_MODE='count-v1'
@@ -15,7 +15,7 @@ def build_analysis(text: str,version: int) -> Analysis:
     cursor=0
     units=[]
     for i,surface in enumerate(split_phrases(text)):
-        units.append(Unit(id=f'v{version}-u{i+1}',text=surface,start=cursor,end=cursor+len(surface),stakeable=not is_gap(surface)))
+        units.append(Unit(id=f'v{version}-u{i+1}',text=surface,start=cursor,end=cursor+len(surface),stakeable=not is_gap(surface) and is_stakeable_phrase(surface)))
         cursor+=len(surface)
     if ''.join(u.text for u in units)!=text:
         raise GenerationError('本文とコマの対応を確認できませんでした。')
@@ -48,7 +48,7 @@ def validate_stakes(analysis: dict,unit_ids: list[str],required_count: int):
     end=-1
     for unit in units:
         if not unit['stakeable'] or unit['start']<end:
-            raise ValueError('句読点・空白や重なる範囲は賭けられません。')
+            raise ValueError('枠のないことばや重なる範囲は賭けられません。')
         end=unit['end']
     if len(units)!=required_count:
         raise ValueError(f'ことばをちょうど{required_count}個選んでください。')
