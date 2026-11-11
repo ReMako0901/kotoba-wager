@@ -6,7 +6,7 @@
 
 ## 開発・他のAIへの引き継ぎ
 
-**[引き継ぎ資料の入口](docs/README.md)** から、概要・使用ツール・更新履歴・進捗・TODO・共有事項を個別に読める。実装前に [AGENTS.md](AGENTS.md) と [現在の進捗](docs/STATUS.md) を確認する。ゲーム用辞書は [data/segmentation_dictionary.json](data/segmentation_dictionary.json)、編集方法は [辞書仕様](docs/WORD_DICTIONARY.md)。ローカル／GitHubソース／実際の配信版を区別する。
+**[引き継ぎ資料の入口](docs/README.md)** から、概要・使用ツール・更新履歴・進捗・TODO・共有事項を個別に読める。実装前に [AGENTS.md](AGENTS.md) と [現在の進捗](docs/STATUS.md) を確認する。分割には [Wiktionary索引](data/lexicons/wiktionary_ja.json) と [ゲーム用補正辞書](data/segmentation_dictionary.json) を使う。詳しくは [辞書仕様](docs/WORD_DICTIONARY.md)。ローカル／GitHubソース／実際の配信版を区別する。
 
 ## 現在のルール
 

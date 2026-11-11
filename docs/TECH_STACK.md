@@ -7,7 +7,7 @@
 |画面|React 19、TypeScript、Vite 6|`frontend/package.json`、`pnpm-lock.yaml`|
 |API|Python、FastAPI、Uvicorn、Pydantic|`backend/requirements.lock.txt`|
 |文章生成|Gemini REST API、httpx|`backend/app/gemini.py`|
-|分割|SudachiPy、sudachidict-core、結合ルール、ゲーム専用JSON辞書|`segmentation.py`、`data/segmentation_dictionary.json`|
+|分割|SudachiPy、sudachidict-core、Wiktionary由来の索引、ゲーム専用JSON辞書|`segmentation.py`、`data/segmentation_dictionary.json`|
 |保存|JSONファイル、単一プロセスのasyncioロック、原子的置換|`store.py`|
 |テスト|pytest、FastAPI TestClient|`backend/tests/`|
 |画面公開|GitHub Pages・GitHub Actions|公開専用リポジトリ `.github/workflows/pages.yml`|
@@ -74,4 +74,4 @@ GitHub Repository variable `API_BASE_URL` がworkflowで `VITE_API_BASE_URL` に
 
 ## 外部サービスと素材
 
-既にGeminiキーとRender設定はある。引き継ぎ時にキーを再発行・再登録させる必要はない。新環境にキーがない場合だけ安全な環境変数を設定する。辞書の今回追加分はプロジェクト独自ルールで、外部の大規模辞書を新規ダウンロードしたものではない。Sudachiの一般辞書は従来どおり依存パッケージとして導入される。
+既にGeminiキーとRender設定はある。引き継ぎ時にキーを再発行・再登録させる必要はない。新環境にキーがない場合だけ安全な環境変数を設定する。一般辞書のSudachiに加え、Wiktionaryの既存データから抽出した索引をバックエンドに同梱している。元の巨大なgzipや説明文は配信しない。再生成手順は [WORD_DICTIONARY.md](WORD_DICTIONARY.md)。

@@ -11,8 +11,9 @@
 |[TODO.md](TODO.md)|次に行う作業、優先順、受け入れ条件|
 |[SHARED_NOTES.md](SHARED_NOTES.md)|ユーザーの好み、未決定事項、研究上・運用上の注意|
 |[ARCHITECTURE.md](ARCHITECTURE.md)|ファイル対応、処理の流れ、データ、エラー・再試行|
-|[WORD_DICTIONARY.md](WORD_DICTIONARY.md)|ゲーム用の小さな補正辞書の編集方法・テスト|
-|[DICTIONARY_CANDIDATES.md](DICTIONARY_CANDIDATES.md)|既存の無償辞書データを取り込む案・調査結果（未実装）|
+|[WORD_DICTIONARY.md](WORD_DICTIONARY.md)|Wiktionary索引の再生成・ゲーム用補正辞書の編集方法|
+|[DICTIONARY_CANDIDATES.md](DICTIONARY_CANDIDATES.md)|既存の無償辞書候補と採用経緯|
+|[HOSTING_OPTIONS.md](HOSTING_OPTIONS.md)|Google AI Proのクレジット・RenderとCloud Runの比較|
 
 最短の読み順：STATUS → GAME_OVERVIEW → TODO。実装前に ARCHITECTURE・TECH_STACK・SHARED_NOTES と、対象機能の資料を読む。
 

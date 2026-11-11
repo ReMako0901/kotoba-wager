@@ -11,6 +11,8 @@
 |`backend/app/main.py`|API、開始文ロード、セッション開始、状態の公開、CORS|
 |`backend/app/analysis.py`|ローカル解析の組立、コマ数検査、報酬候補。名前はanalysisだが開始時AI解析ではない|
 |`backend/app/segmentation.py`|Sudachi分割、辞書補正、助詞等の結合、選択可否、名詞アンカー抽出|
+|`data/lexicons/wiktionary_ja.json`|Wiktionaryから生成した複合語・慣用句の検索索引|
+|`scripts/import_wiktionary.py`|元のJSONL.gzから再現可能な索引を生成|
 |`data/segmentation_dictionary.json`|まとまりとして保護する語・枠なしにする接続表現|
 |`backend/app/engine.py`|抽選保存、意味解釈、編集、状態確定、再試行・キャッシュ|
 |`backend/app/gemini.py`|REST呼出、構造化JSON、モデル検証、意味と原文の照合|
@@ -28,7 +30,7 @@
 
 ```text
 保存済み開始文
-  → Sudachi＋ゲーム辞書 → Unit[] → 報酬候補
+  → Sudachi＋Wiktionary索引＋ゲーム辞書 → Unit[] → 報酬候補
   → 報酬選択 → unit_ids選択
   → 必要個数・本文版・重複・可否検査
   → プログラムが抽選、取引IDと勝敗を先に保存
