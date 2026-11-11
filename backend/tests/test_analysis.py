@@ -77,3 +77,17 @@ def test_discourse_connectors_are_plain_but_replacement_noun_can_be_wagered():
     assert not units['笑った'].stakeable
     assert ''.join(u.text for u in a.units)==text
     assert all(text[u.start:u.end]==u.text for u in a.units)
+
+
+def test_eraser_story_groups_short_meanings_without_absorbing_the_predicate():
+    text = ('数学の時間、前の席の子から消しゴムを借りた。'
+            '返すときには、角に掘られた小さな星の形がすっかり消えていた。')
+    analysis = build_analysis(text, 1)
+    assert [unit.text for unit in analysis.units if unit.stakeable] == [
+        '数学の時間', '前の席の子から', '消しゴムを', '返すときには',
+        '角に', '小さな星の形が', '消えていた',
+    ]
+    assert [unit.text for unit in analysis.units if not unit.stakeable] == [
+        '、', '借りた', '。', '、', '掘られた', 'すっかり', '。',
+    ]
+    assert ''.join(unit.text for unit in analysis.units) == text

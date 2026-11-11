@@ -95,6 +95,7 @@ def split_phrases(text: str) -> list[str]:
     parts: list[str] = []
     heads: list[str] = []
     previous = ('', '')
+    after_noun_genitive = False
     for surface, tags, base in _lexical_tokens(tokens):
         pos = tags[0]
         # Attach particles/auxiliaries/suffixes to their content word. Leave punctuation
@@ -104,6 +105,12 @@ def split_phrases(text: str) -> list[str]:
         elif (parts and pos == '動詞' and previous[:2] == ('助詞', '接続助詞')
               and heads[-1] in {'持つ', '連れる'} and base in {'出る', 'くる', '来る', '行く', 'いく'}):
             # Carry/take-out chains only; do not absorb a following independent action.
+            parts[-1] += surface
+        elif (parts and pos == '名詞' and surface in {'とき', '時'}
+              and previous[0] in {'動詞', '助動詞', '形容詞'}):
+            parts[-1] += surface
+        elif parts and pos == '名詞' and after_noun_genitive and len(parts[-1]) + len(surface) <= 9:
+            # Keep short noun phrases such as 前の席の子 intact.
             parts[-1] += surface
         elif parts and pos == '名詞' and surface in {'日','朝','夜'} and previous[0] == '助動詞':
             parts[-1] += surface
@@ -116,6 +123,8 @@ def split_phrases(text: str) -> list[str]:
         else:
             parts.append(surface)
             heads.append(base)
+        after_noun_genitive = (surface == 'の' and tags[:2] == ('助詞', '格助詞')
+                               and previous[0] == '名詞')
         previous = tags
     if ''.join(parts) != text:
         raise ValueError('分割後の本文が原文と一致しません。')
@@ -137,5 +146,12 @@ def is_stakeable_phrase(surface: str) -> bool:
     if surface in selection_dictionary()[1]:
         return False
     tokens = _dictionary().create().tokenize(surface, tokenizer.Tokenizer.SplitMode.C)
-    return any(tags[0] in {'名詞', '代名詞', '形容詞', '形状詞', '慣用句'}
-               for _, tags, _ in _lexical_tokens(tokens))
+    rows = _lexical_tokens(tokens)
+    head = next(rows, None)
+    if head is None:
+        return False
+    _, tags, base = head
+    if tags[0] == '動詞' and base == '消える':
+        return True
+    content = {'名詞', '代名詞', '形容詞', '形状詞', '慣用句'}
+    return tags[0] in content or any(row_tags[0] in content for _, row_tags, _ in rows)

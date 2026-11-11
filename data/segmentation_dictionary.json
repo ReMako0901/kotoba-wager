@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "fixed_compounds": [],
+  "fixed_compounds": ["消しゴム"],
   "non_wager_connectors": [
     "代わりに",
     "かわりに",
