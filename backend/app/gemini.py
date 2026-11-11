@@ -118,7 +118,7 @@ class Gemini:
     async def edit(self, instruction, text, payload, outcome, stakes):
         # Imported lazily: the pure edit validator uses GenerationError.
         from .editing import edit_plan, apply_edits
-        plan = edit_plan(text, outcome, stakes, payload.get("existing_concepts_and_dependencies", []), payload.get("reward"))
+        plan = edit_plan(text, outcome, stakes, payload.get("existing_concepts_and_dependencies", []), payload.get("reward"), payload.get("narrative_change"))
         result = await self.generate(instruction, {**payload, **plan}, EditProposal)
         result.value = apply_edits(text, result.value, plan)
         return result
@@ -126,8 +126,8 @@ class Gemini:
     async def win(self, text, offer, stakes, lost):
         return await self.edit(WIN, text, {"text": text, "reward": offer, "protected_stakes": stakes, "past_lost_concepts": lost}, "win", stakes)
 
-    async def loss(self, text, stakes, lost, dependencies):
-        return await self.edit(LOSS, text, {"text": text, "new_lost_concepts": stakes, "past_lost_concepts": lost, "existing_concepts_and_dependencies": dependencies}, "loss", stakes)
+    async def loss(self, text, stakes, lost, dependencies, narrative_change=None):
+        return await self.edit(LOSS, text, {"text": text, "new_lost_concepts": stakes, "past_lost_concepts": lost, "existing_concepts_and_dependencies": dependencies, "narrative_change": narrative_change}, "loss", stakes)
 
 
 gemini = Gemini()

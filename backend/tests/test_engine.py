@@ -114,3 +114,66 @@ def test_manual_retry_limit_does_not_redraw(tmp_path):
     done=repo.load(s['id'])
     assert done['transactions'][0]['attempts']==3 and len(draws)==1
     assert done['version']==1 and done['text']==BEFORE
+
+
+@pytest.mark.parametrize('wins,finish_first', [(True,False),(False,False),(True,True)])
+def test_gamble_keeps_text_until_generation_and_reveal(tmp_path,wins,finish_first):
+    from app.main import public
+    repo,s,ai,engine,draws,req=setup(tmp_path,wins)
+    req=req.model_copy(update={'game':'blackjack'})
+    assert engine.settle_draw(s,req)
+    tx=s['transactions'][0]
+    assert tx['gamble']['rounds'][0]['deck']
+    assert not engine.settle_draw(s,req)
+    assert 'deck' not in public(s)['transactions'][0]['gamble']['rounds'][0]
+    assert s['text']==BEFORE and not tx['presentation_completed']
+    if finish_first:
+        assert asyncio.run(engine.finish_gamble(s['id'],tx['id']))['text']==BEFORE
+    asyncio.run(engine.process_transaction(s['id']))
+    if not finish_first:
+        awaiting=repo.load(s['id'])
+        assert awaiting['status']=='awaiting_reveal'
+        assert awaiting['version']==1 and awaiting['text']==BEFORE and not awaiting['lost_concepts']
+        assert 'draft' not in public(awaiting)['transactions'][0]
+    done=asyncio.run(engine.finish_gamble(s['id'],tx['id']))
+    assert done['version']==2 and done['text']==AFTER and done['view']=='result'
+    assert done['transactions'][0]['gamble']==tx['gamble']
+    assert bool(done['lost_concepts']) is (not wins)
+    assert draws==[.6] and ai.rewrites==1
+
+
+def test_gamble_error_and_retry_reuse_the_plan(tmp_path):
+    repo,s,ai,engine,draws,req=setup(tmp_path,False)
+    req=req.model_copy(update={'game':'baccarat'})
+    engine.settle_draw(s,req)
+    tx=s['transactions'][0]
+    ai.fail_rewrite=True
+    asyncio.run(engine.process_transaction(s['id']))
+    failed=asyncio.run(engine.finish_gamble(s['id'],tx['id']))
+    assert failed['status']=='error' and failed['text']==BEFORE
+    ai.fail_rewrite=False
+    async def retry():
+        await engine.retry(s['id'])
+        await asyncio.gather(*engine.tasks)
+    asyncio.run(retry())
+    done=repo.load(s['id'])
+    assert done['status']=='ready' and done['text']==AFTER
+    assert done['transactions'][0]['gamble']==tx['gamble'] and draws==[.45]
+
+
+@pytest.mark.parametrize('has_past_loss', [False, True])
+def test_win_checks_absence_only_when_there_are_prior_losses(tmp_path,has_past_loss):
+    repo,s,ai,engine,draws,req=setup(tmp_path,True)
+    if has_past_loss:
+        s['lost_concepts']=[{'label':'前に消えた設定'}]
+    original_win=ai.win
+    async def misunderstood_check(*args):
+        result=await original_win(*args)
+        result.value.checks.lost_absent=False
+        return result
+    ai.win=misunderstood_check
+    engine.settle_draw(s,req)
+    asyncio.run(engine.process_transaction(s['id']))
+    done=repo.load(s['id'])
+    assert done['text']==(BEFORE if has_past_loss else AFTER)
+    assert done['status']==('error' if has_past_loss else 'ready')

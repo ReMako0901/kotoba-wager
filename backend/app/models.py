@@ -69,6 +69,7 @@ class TradeRequest(BaseModel):
     version: int = Field(ge=1)
     offer_id: str
     unit_ids: list[str] = Field(min_length=1,max_length=80)
+    game: Literal["slot", "blackjack", "baccarat"] | None = None
 
 
 class TextEdit(BaseModel):

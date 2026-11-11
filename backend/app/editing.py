@@ -15,7 +15,7 @@ def sentences(text):
     return result
 
 
-def edit_plan(text, outcome, stakes, dependencies, offer=None):
+def base_edit_plan(text, outcome, stakes, dependencies, offer=None):
     chunks=sentences(text)
     if outcome=='win':
         tier=(offer or {}).get('change_scale',1)
@@ -46,6 +46,27 @@ def edit_plan(text, outcome, stakes, dependencies, offer=None):
         budget=max(budget,int(sum(len(s['text']) for s in chunks if s['sentence_id'] in allowed)*.75))
     protected=[n for n in noun_literals(text) if not any(n in surface for surface in selected)] if all(c['kind']=='relation' for c in stakes) else []
     return {'must_keep_literals':protected,'loss_anchors':selected,'sentences':chunks,'editable_sentence_ids':allowed,'max_changed_characters':min(140,budget),'max_edited_sentences':len(allowed),'instruction':'選んだ語が直接表す意味と成立しなくなる依存描写だけを最小修正。ほかの文は完全保存。'}
+
+
+def edit_plan(text, outcome, stakes, dependencies, offer=None, narrative_change=None):
+    plan = base_edit_plan(text, outcome, stakes, dependencies, offer)
+    change = narrative_change or (offer or {}).get('narrative_change')
+    if not change:
+        return plan
+    strength = change['strength']
+    plan['narrative_change'] = change
+    budget = {1: 24, 2: 36, 4: 65, 8: 112, 9: 126, 10: 140}[strength]
+    if outcome == 'win':
+        plan['max_changed_characters'] = budget
+        plan['max_edited_sentences'] = min(strength, len(plan['sentences']))
+    elif strength >= 4:
+        plan['max_changed_characters'] = max(plan['max_changed_characters'], budget)
+    if strength >= 4:
+        plan['editable_sentence_ids'] = [s['sentence_id'] for s in plan['sentences']]
+        plan['max_edited_sentences'] = len(plan['sentences'])
+        plan['instruction'] = '賭けと勝敗に結びつく大きな展開を許可する。関係ない設定は維持する。'
+    plan['instruction'] += f' 物語の変化の強さは{strength}/10。勝利はポジティブに、敗北はネガティブに進展させる。'
+    return plan
 
 
 def change_size(before,after):

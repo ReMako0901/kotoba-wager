@@ -11,6 +11,7 @@ from .models import CreateSession, TradeRequest
 from .analysis import build_analysis, make_offers, BETTING_MODE
 from .segmentation import external_lexicon, selection_dictionary
 from .store import store
+from .gambles import GAMES
 from .starter_stories import CATALOG_PATH, load_precomputed
 
 STORIES = json.loads(CATALOG_PATH.read_text(encoding="utf-8"))
@@ -43,12 +44,23 @@ def load(sid):
 def public(session):
     result={k:v for k,v in session.items() if k!="api_events"}
     result["transactions"]=[{k:v for k,v in t.items() if k!="draft"} for t in session["transactions"]]
+    for tx in result['transactions']:
+        if tx.get('gamble'):
+            tx['gamble'] = {**tx['gamble'], 'rounds': [
+                {key: value for key, value in item.items() if key != 'deck'}
+                for item in tx['gamble'].get('rounds', [])
+            ]}
     return result
 
 
 @app.get("/api/health")
 def health():
     return {"status":"ok","api_configured":gemini.configured(),"model":settings.model,"betting_mode":BETTING_MODE}
+
+
+@app.get("/api/games")
+def games():
+    return {"games": GAMES}
 
 
 class DrawRequest(BaseModel):
@@ -109,6 +121,15 @@ async def trade(sid:str,request:TradeRequest):
         if created:
             engine.spawn(engine.process_transaction(sid))
         return public(session)
+
+
+@app.post("/api/sessions/{sid}/transactions/{transaction_id}/finish")
+async def finish_gamble(sid: str, transaction_id: str):
+    load(sid)
+    try:
+        return public(await engine.finish_gamble(sid, transaction_id))
+    except ValueError as error:
+        raise HTTPException(409, str(error)) from None
 
 
 @app.post("/api/sessions/{sid}/retry",status_code=202)
