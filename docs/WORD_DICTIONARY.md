@@ -47,7 +47,7 @@ PYTHONPATH=backend .venv/bin/python -m pytest backend/tests -q
 3. 同じ表現を重複登録しない。空文字・空白を含む語は禁止。versionは現在1。
 4. `backend/tests/test_segmentation.py`／`test_analysis.py` に実際の失敗例と、誤って変えてはいけない対比例を追加。
 5. pytestで確認し、元本文の完全復元・start/end一致も保つ。
-6. バックエンドを再起動して読み直す。辞書はプロセス内でキャッシュされる。
+6. `.venv/bin/python scripts/precompute_starter_analysis.py` で開始文100件の区切りを再生成し、バックエンドを再起動して読み直す。辞書はプロセス内でキャッシュされる。
 7. 新しいゲーム・本文版で確認。途中の保存済みUnit IDは書き換えない。
 
 辞書例外を足すたびに、単なるリスト一致テストだけでなく、文の中で意図した区切りと選択可否になることを確かめる。

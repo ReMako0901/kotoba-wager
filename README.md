@@ -52,7 +52,8 @@ cd ..
 - `backend/app/editing.py`：変更する文の制限、差分量・原文・保護対象の検証。
 - `backend/app/engine.py`：勝敗の一度確定、解釈の保存、取引処理、再試行。
 - `backend/app/store.py`：単一プロセスのロックと原子的JSON保存。
-- `data/stories.json`：短くポップな開始文章6件。旧文章は `stories-classic.json`。
+- `data/starter_analysis.json`：開始文ごとの区切り、本文位置、選択可否。本文や辞書を変えたら `.venv/bin/python scripts/precompute_starter_analysis.py` で再生成する。
+- `data/stories.json`：短い開始文章100件。旧文章は `stories-classic.json`。
 
 ```sh
 PYTHONPATH=backend .venv/bin/python -m pytest backend/tests -q

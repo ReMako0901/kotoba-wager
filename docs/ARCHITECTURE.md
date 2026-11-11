@@ -22,7 +22,7 @@
 |`backend/app/store.py`|JSON保存、ロック、プロセス再起動時の中断復旧|
 |`backend/app/quota.py`|UTC日付単位の呼出予約・制限|
 |`backend/app/config.py`|環境変数、`.env`読込|
-|`data/stories.json`|現行開始文6件。id/title/genre/tagline/text|
+|`data/stories.json`|現行開始文100件。id/title/genre/tagline/text|
 |`data/stories-classic.json`|以前の長く重い開始文。現在は使用しない|
 |`scripts/serve.py`|API＋存在すればビルド済み画面の統合配信|
 
@@ -30,7 +30,7 @@
 
 ```text
 保存済み開始文
-  → Sudachi＋Wiktionary索引＋ゲーム辞書 → Unit[] → 報酬候補
+  → 保存済みUnit[]を読み込み（未生成・更新時はローカルで分割） → 報酬候補
   → 報酬選択 → unit_ids選択
   → 必要個数・本文版・重複・可否検査
   → プログラムが抽選、取引IDと勝敗を先に保存
