@@ -16,6 +16,14 @@ class GenerationError(Exception):
     pass
 
 
+class EditRejected(GenerationError):
+    pass
+
+
+class ReviewRejected(EditRejected):
+    pass
+
+
 @dataclass
 class Result:
     value: BaseModel
@@ -119,15 +127,21 @@ class Gemini:
         # Imported lazily: the pure edit validator uses GenerationError.
         from .editing import edit_plan, apply_edits
         plan = edit_plan(text, outcome, stakes, payload.get("existing_concepts_and_dependencies", []), payload.get("reward"), payload.get("narrative_change"))
-        result = await self.generate(instruction, {**payload, **plan}, EditProposal)
-        result.value = apply_edits(text, result.value, plan)
+        result = await self.generate(
+            instruction, {**payload, **plan}, EditProposal,
+            thinking_level="MEDIUM" if payload.get("previous_review") else "MINIMAL",
+        )
+        try:
+            result.value = apply_edits(text, result.value, plan)
+        except GenerationError as error:
+            raise EditRejected(str(error)) from error
         return result
 
-    async def win(self, text, offer, stakes, lost):
-        return await self.edit(WIN, text, {"text": text, "reward": offer, "protected_stakes": stakes, "past_lost_concepts": lost}, "win", stakes)
+    async def win(self, text, offer, stakes, lost, *, previous_review=None):
+        return await self.edit(WIN, text, {"text": text, "reward": offer, "protected_stakes": stakes, "past_lost_concepts": lost, "previous_review": previous_review}, "win", stakes)
 
-    async def loss(self, text, stakes, lost, dependencies, narrative_change=None):
-        return await self.edit(LOSS, text, {"text": text, "new_lost_concepts": stakes, "past_lost_concepts": lost, "existing_concepts_and_dependencies": dependencies, "narrative_change": narrative_change}, "loss", stakes)
+    async def loss(self, text, stakes, lost, dependencies, narrative_change=None, *, previous_review=None):
+        return await self.edit(LOSS, text, {"text": text, "new_lost_concepts": stakes, "past_lost_concepts": lost, "existing_concepts_and_dependencies": dependencies, "narrative_change": narrative_change, "previous_review": previous_review}, "loss", stakes)
 
     async def review(self, original, candidate, outcome, offer, stakes, lost):
         from .editing import edit_plan, apply_edits
@@ -145,23 +159,26 @@ class Gemini:
         }, StoryReview, thinking_level="MEDIUM")
         review = result.value
         if review.verdict == 'reject':
-            raise GenerationError('文章全体の読み直しで違和感が残ったため、反映しませんでした。同じ勝敗で再試行できます。')
+            raise ReviewRejected('文章全体の読み直しで違和感が残りました。')
         if review.verdict == 'repair':
             try:
                 proposal = EditProposal.model_validate(review.model_dump())
             except ValidationError:
-                raise GenerationError('文章の修正案を確認できませんでした。同じ勝敗で再試行できます。') from None
-            result.value = apply_edits(original, proposal, plan)
+                raise ReviewRejected('文章の修正案が必要な形式を満たしませんでした。') from None
+            try:
+                result.value = apply_edits(original, proposal, plan)
+            except GenerationError as error:
+                raise ReviewRejected(str(error)) from error
             if result.value.text == candidate.text:
-                raise GenerationError('読み直しで見つかった違和感を修正できませんでした。同じ勝敗で再試行できます。')
+                raise ReviewRejected('修正案を適用しても初稿と同じ本文になりました。')
             if outcome == 'loss' and any(
                 surface not in candidate.text and surface in result.value.text
                 for concept in stakes for surface in concept['selected_surfaces']
             ):
-                raise GenerationError('修正案が失われたことばを戻したため、本文を保護しました。同じ勝敗で再試行できます。')
+                raise ReviewRejected('修正案が失われたことばを戻しました。')
         else:
             if review.edits:
-                raise GenerationError('文章の読み直し結果が矛盾しています。同じ勝敗で再試行できます。')
+                raise ReviewRejected('採用判定に修正案が付いていました。')
             result.value = candidate.model_copy(update={'checks': review.checks})
         return result
 

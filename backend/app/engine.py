@@ -3,7 +3,7 @@ import secrets
 from copy import deepcopy
 from .analysis import build_analysis, make_offers, validate_stakes, BETTING_MODE
 from .config import settings
-from .gemini import gemini, GenerationError
+from .gemini import gemini, EditRejected, GenerationError, ReviewRejected
 from .store import store
 from .quota import reserve_call
 from .gambles import make_gamble
@@ -21,11 +21,11 @@ class GameEngine:
         self.tasks.add(task)
         task.add_done_callback(self.tasks.discard)
 
-    async def call(self, session, method, *args):
+    async def call(self, session, method, *args, **kwargs):
         session["api_calls"] += 1
         self.store.save(session)
         await reserve_call()
-        result = await method(*args)
+        result = await method(*args, **kwargs)
         for k in session["usage"]:
             session["usage"][k] += result.usage.get(k, 0)
         session["api_events"].append({"operation":method.__name__,"usage":result.usage,"elapsed_seconds":result.elapsed_seconds})
@@ -91,28 +91,7 @@ class GameEngine:
                     tx['meanings_resolved']=True
                     self.store.save(session)
                 if not tx.get("draft"):
-                    if tx["outcome"] == "win":
-                        edited=await self.call(session,self.ai.win,tx["before"],tx["offer"],tx["staked_concepts"],session["lost_concepts"])
-                    else:
-                        loss_args = (tx["before"], tx["staked_concepts"], session["lost_concepts"], [])
-                        if tx.get("gamble"):
-                            loss_args += (tx["offer"]["narrative_change"],)
-                        edited = await self.call(session, self.ai.loss, *loss_args)
-                    edited = await self.call(
-                        session, self.ai.review, tx["before"], edited, tx["outcome"],
-                        tx["offer"], tx["staked_concepts"], session["lost_concepts"],
-                    )
-                    if edited.text == tx["before"]:
-                        raise GenerationError("本文に変化がなかったため、反映せず停止しました。")
-                    if tx["outcome"] == "win" and not session["lost_concepts"]:
-                        # With no past losses, there is nothing to keep absent.
-                        edited.checks.lost_absent = True
-                    if not edited.checks.lost_absent:
-                        raise GenerationError("Geminiの自己確認で、消失設定の維持に問題が見つかりました。本文を保護しました。")
-                    if tx["outcome"] == "win" and not (edited.checks.protected_retained and edited.checks.reward_realized):
-                        raise GenerationError("賭けた設定の保持または報酬の実現を確認できず、反映しませんでした。")
-                    if tx["outcome"] == "loss" and edited.checks.reward_realized:
-                        raise GenerationError("敗北時に報酬が反映されていたため、本文を保護しました。同じ勝敗で再試行できます。")
+                    edited = await self.edit_and_review(session, tx)
                     # All next-round chips are local. Verify playability before
                     # caching the draft so a bad proposal can be regenerated manually.
                     build_analysis(edited.text,session['version']+1)
@@ -130,6 +109,45 @@ class GameEngine:
                 tx.update(status="error",error="文章の反映中に予期しないエラーが発生しました。")
                 session.update(status="error",error=tx["error"])
             self.store.save(session)
+
+    async def edit_and_review(self, session, tx):
+        outcome = tx["outcome"]
+        original = tx["before"]
+        offer = tx["offer"]
+        stakes = tx["staked_concepts"]
+        lost = session["lost_concepts"]
+        feedback = {}
+        for attempt in range(2):
+            candidate = None
+            try:
+                if outcome == "win":
+                    candidate = await self.call(session, self.ai.win, original, offer, stakes, lost, **feedback)
+                else:
+                    loss_args = (original, stakes, lost, [])
+                    if tx.get("gamble"):
+                        loss_args += (offer["narrative_change"],)
+                    candidate = await self.call(session, self.ai.loss, *loss_args, **feedback)
+                if feedback and candidate.text == feedback["previous_review"].get("rejected_text"):
+                    raise ReviewRejected("不採用になった本文と同じ文章が返りました。")
+                edited = await self.call(session, self.ai.review, original, candidate, outcome, offer, stakes, lost)
+                if edited.text == original:
+                    raise ReviewRejected("編集後の本文が原文と同じです。")
+                if outcome == "win" and not lost:
+                    edited.checks.lost_absent = True
+                if not edited.checks.lost_absent:
+                    raise ReviewRejected("消失設定が本文に残っています。")
+                if outcome == "win" and not (edited.checks.protected_retained and edited.checks.reward_realized):
+                    raise ReviewRejected("賭けた設定の保持または報酬の実現を確認できません。")
+                if outcome == "loss" and edited.checks.reward_realized:
+                    raise ReviewRejected("敗北時に報酬が反映されています。")
+                return edited
+            except EditRejected as error:
+                if attempt == 1:
+                    raise GenerationError("本文を自動で作り直しましたが、確認を通りませんでした。元の本文と勝敗は保存されています。") from error
+                previous_review = {"reason": str(error)}
+                if candidate is not None:
+                    previous_review["rejected_text"] = candidate.text
+                feedback = {"previous_review": previous_review}
 
     def commit_transaction(self, session, tx):
         draft=tx["draft"]

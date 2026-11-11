@@ -3,7 +3,7 @@ from copy import deepcopy
 import pytest
 from app.analysis import build_analysis, make_offers
 from app.engine import GameEngine
-from app.gemini import GenerationError, Result, api_schema
+from app.gemini import GenerationError, Result, ReviewRejected, api_schema
 from app.models import Rewrite, TradeRequest, StakesResolution, ResolvedConcept, MeaningResponse
 from app.store import Store
 
@@ -17,12 +17,12 @@ class AI:
         if self.fail_resolution: raise GenerationError('解釈失敗')
         c=ResolvedConcept(id='weather',label='雨',kind='attribute',description='雨が降る',selected_surfaces=[u['text'] for u in units],mentions=['雨を'])
         return Result(StakesResolution(concepts=[c]),{'input':1,'output':1,'thoughts':0},.1)
-    async def win(self,*args):
+    async def win(self,*args, **kwargs):
         self.rewrites+=1
         if self.fail_rewrite: raise GenerationError('通信失敗')
         return Result(Rewrite(text=AFTER,summary='変化',changes=['空が変化'],checks={'protected_retained':True,'lost_absent':True,'reward_realized':True,'notes':'テスト用'}),{},.1)
-    async def loss(self,*args):
-        result = await self.win(*args)
+    async def loss(self,*args, **kwargs):
+        result = await self.win(*args, **kwargs)
         result.value.checks.reward_realized = False
         return result
 
@@ -173,7 +173,7 @@ def test_win_checks_absence_only_when_there_are_prior_losses(tmp_path,has_past_l
     if has_past_loss:
         s['lost_concepts']=[{'label':'前に消えた設定'}]
     original_win=ai.win
-    async def misunderstood_check(*args):
+    async def misunderstood_check(*args, **kwargs):
         result=await original_win(*args)
         result.value.checks.lost_absent=False
         return result
@@ -198,3 +198,74 @@ def test_failed_review_never_reflects_the_unreviewed_candidate(tmp_path):
     failed = asyncio.run(engine.finish_gamble(session['id'], request.request_id))
     assert failed['status'] == 'error' and failed['text'] == BEFORE
     assert failed['api_calls'] == 3 and draws == [.6]
+
+
+@pytest.mark.parametrize('repeat_rejected_text', [False, True])
+def test_invalid_review_regenerates_once_without_another_draw(tmp_path, repeat_rejected_text):
+    repo, session, ai, engine, draws, request = setup(tmp_path, True)
+    request = request.model_copy(update={'game': 'blackjack'})
+    engine.settle_draw(session, request)
+    rewrite = ai.win
+    review = ai.review
+    second_draft = '私は雨を見つめていた。静かな駅に、待っていた友達がやって来た。'
+    review_calls = []
+
+    async def draft(*args, previous_review=None):
+        result = await rewrite(*args)
+        if previous_review:
+            assert previous_review == {'rejected_text': AFTER, 'reason': '初稿と同じ本文'}
+            if not repeat_rejected_text:
+                result.value.text = second_draft
+        return result
+
+    async def read(original, candidate, outcome, offer, stakes, lost):
+        review_calls.append(candidate.text)
+        assert outcome == 'win'
+        if candidate.text == AFTER:
+            raise ReviewRejected('初稿と同じ本文')
+        return await review(original, candidate, outcome, offer, stakes, lost)
+
+    ai.win = draft
+    ai.review = read
+    asyncio.run(engine.process_transaction(session['id']))
+    assert repo.load(session['id'])['text'] == BEFORE
+    done = asyncio.run(engine.finish_gamble(session['id'], request.request_id))
+    assert draws == [.6] and ai.rewrites == 2
+    assert done['transactions'][0]['outcome'] == 'win'
+    if repeat_rejected_text:
+        assert done['text'] == BEFORE and done['status'] == 'error'
+        assert review_calls == [AFTER]
+    else:
+        assert done['text'] == second_draft and done['status'] == 'ready'
+        assert review_calls == [AFTER, second_draft] and done['api_calls'] == 5
+
+
+def test_oversized_initial_edit_is_replaced_before_review(tmp_path, monkeypatch):
+    from app.gemini import Gemini
+    from app.models import EditProposal
+
+    repo, session, ai, engine, draws, request = setup(tmp_path, True)
+    request = request.model_copy(update={'game': 'blackjack'})
+    editor = Gemini()
+    feedback = []
+
+    async def generate(instruction, payload, schema, *, thinking_level):
+        feedback.append(payload['previous_review'])
+        edits = [{'sentence_id': 0, 'before': '雨を', 'after': '銀色の雨を', 'reason': '描写を加える'}]
+        if len(feedback) == 1:
+            edits.append({'sentence_id': 1, 'before': '静かな', 'after': '暗い', 'reason': '描写を変える'})
+        return Result(EditProposal(
+            edits=edits, summary='雨の描写', changes=['雨に色がついた'],
+            checks={'protected_retained': True, 'lost_absent': True, 'reward_realized': True, 'notes': ''},
+        ), {}, .1)
+
+    monkeypatch.setattr(editor, 'generate', generate)
+    ai.win = editor.win
+    engine.settle_draw(session, request)
+    asyncio.run(engine.process_transaction(session['id']))
+    waiting = repo.load(session['id'])
+    assert waiting['status'] == 'awaiting_reveal' and waiting['text'] == BEFORE
+    done = asyncio.run(engine.finish_gamble(session['id'], request.request_id))
+    assert done['text'] == BEFORE.replace('雨を', '銀色の雨を') and draws == [.6]
+    assert done['api_calls'] == 4 and len(feedback) == 2
+    assert feedback[0] is None and '上限は24文字・1文' in feedback[1]['reason']

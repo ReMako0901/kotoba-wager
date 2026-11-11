@@ -96,7 +96,11 @@ def apply_edits(text, proposal, plan):
     if not spans:
         raise GenerationError('本文に変化がありませんでした。')
     if cost>plan['max_changed_characters'] or len(changed_sentences)>plan['max_edited_sentences']:
-        raise GenerationError('今回の賭けに対して変化が大きすぎるため、反映せず本文を保護しました。同じ勝敗で再試行できます。')
+        raise GenerationError(
+            '今回の賭けに対して変化が大きすぎます。'
+            f'変更は{cost}文字・{len(changed_sentences)}文、'
+            f'上限は{plan["max_changed_characters"]}文字・{plan["max_edited_sentences"]}文です。'
+        )
     result=text
     for start,end,after in sorted(spans,reverse=True):
         result=result[:start]+after+result[end:]

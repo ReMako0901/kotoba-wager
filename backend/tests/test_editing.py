@@ -13,7 +13,7 @@ def proposal(edits):
 def edit(sid,before,after):return {'sentence_id':sid,'before':before,'after':after,'reason':'対象の消失'}
 
 
-@pytest.mark.parametrize('error', [None, '関係のない文', '失われたことばを戻した'])
+@pytest.mark.parametrize('error', [None, '関係のない文', '失われたことばを戻し', '初稿と同じ本文'])
 def test_review_replaces_the_draft_using_original_edit_constraints(monkeypatch, error):
     ai = Gemini()
     plan = edit_plan(BEFORE, 'loss', [PRICE], [])
@@ -21,6 +21,8 @@ def test_review_replaces_the_draft_using_original_edit_constraints(monkeypatch, 
     edits = [edit(2, '代金の代わりに', 'お礼に')]
     if error == '関係のない文':
         edits.append(edit(0, 'ピザ', '寿司'))
+    elif error == '初稿と同じ本文':
+        edits = [edit(2, '代金の代わりに', 'お礼に、お礼に')]
     elif error:
         edits = [edit(2, '代金の代わりに', '代金の支払いに')]
 
@@ -58,7 +60,7 @@ def test_price_loss_refuses_unrelated_sentence_rewrite():
 
 def test_a_small_stake_cannot_rewrite_the_whole_allowed_sentence():
     plan=edit_plan(BEFORE,'loss',[PRICE],[PRICE])
-    with pytest.raises(GenerationError,match='変化が大きすぎる'):
+    with pytest.raises(GenerationError,match='変化が大きすぎ'):
         apply_edits(BEFORE,proposal([edit(2,BEFORE.split('。')[2]+'。','星屑の降る玄関で、誰もいない夜を待ち続けた。')]),plan)
 
 
