@@ -46,7 +46,20 @@ export default function App(){
   },[session?.id,session?.status]);
   useEffect(()=>{window.scrollTo(0,0)},[screen,session?.view,session?.version]);
   async function act(fn:()=>Promise<void>){if(inFlight.current)return;inFlight.current=true;setBusy(true);setError('');setNotice('');try{await fn()}catch(e){setError(e instanceof Error?e.message:'処理に失敗しました。')}finally{inFlight.current=false;setBusy(false)}}
-  async function reroll(reset=false){await act(async()=>{const r=await api<{stories:Story[];exhausted:boolean}>('/stories/draw',{exclude:reset?[]:seen});setChoices(r.stories);setSeen(old=>[...(reset?[]:old),...r.stories.map(s=>s.id)]);if(r.exhausted)setNotice('候補を一巡！ もう一度シャッフルしたよ。');setScreen('choose')})}
+  async function reroll(reset = false) {
+    await act(async () => {
+      const result = await api<{ stories: Story[]; exhausted: boolean }>('/stories/draw', {
+        exclude: reset ? [] : seen,
+      });
+      setChoices(result.stories);
+      setSeen(previous => [
+        ...(reset || result.exhausted ? [] : previous),
+        ...result.stories.map(story => story.id),
+      ]);
+      if (result.exhausted) setNotice('候補を一巡！ もう一度シャッフルしたよ。');
+      setScreen('choose');
+    });
+  }
   const units=session?.analysis?.units||[],offer=session?.offers.find(o=>o.id===offerId);
   const selectedUnits=units.filter(u=>selected.includes(u.id));
   const selectedCount=selectedUnits.length;
@@ -67,7 +80,7 @@ export default function App(){
     <header className="masthead"><button className="wordmark" aria-label="タイトルへ戻る" onClick={()=>{setScreen('title');setHistoryOpen(false)}}>ことばの取引所<span>WORDS / BET / REMIX</span></button>{screen==='game'?<button className="icon-button" aria-label="取引履歴" onClick={()=>setHistoryOpen(true)}>☰</button>:<span className="edition">PROTOTYPE B</span>}</header>
     {error&&<div className="alert" role="alert">{error}{session&&<button onClick={()=>act(async()=>accept(await api<Session>(`/sessions/${session.id}`)))}>状態を確認</button>}</div>}
     {screen==='title'&&<main className="title-screen"><p className="eyebrow">ちいさな文章、おおきな番狂わせ。</p><div className="title-art" aria-hidden="true"><span>私</span><b>⇄</b><span>？</span></div><h1>そのことば、<br/>賭けちゃう？</h1><p className="intro">ほしい展開を選んで、ことばをベット。<br/>勝てばプラス。負けたら、その意味が消える。</p><button className="primary" disabled={busy} onClick={()=>reroll(true)}>はじめる <span>→</span></button>{resumeId&&<button className="secondary" disabled={busy} onClick={()=>act(async()=>accept(await api<Session>(`/sessions/${resumeId}`)))}>つづきから</button>}<p className="quiet">現金・換金なし / 消えた設定は戻らない</p>{health&&!health.api_configured&&<p className="alert">Geminiキーを設定してサーバーを再起動してください。</p>}</main>}
-    {screen==='choose'&&<main className="choose-screen"><p className="eyebrow">START / お話をひとつ</p><h1>どれで遊ぶ？</h1><div className="story-list">{choices.map((s,i)=><button key={s.id} className="story-card" disabled={busy||!health?.api_configured} onClick={()=>act(async()=>accept(await api<Session>('/sessions',{story_id:s.id,request_id:requestId()})))}><div className="story-card-top"><span>0{i+1} / {s.genre}</span><b>↗</b></div><h2>{s.title}</h2><p>{s.text}</p></button>)}</div><button className="secondary" disabled={busy} onClick={()=>reroll()}>↻ 別の3つを見る</button>{notice&&<p className="quiet" role="status">{notice}</p>}</main>}
+    {screen==='choose'&&<main className="choose-screen"><p className="eyebrow">START / お話をひとつ</p><h1>どれで遊ぶ？</h1><div className="story-list">{choices.map((s,i)=><button key={s.id} className="story-card" disabled={busy||!health?.api_configured} onClick={()=>act(async()=>accept(await api<Session>('/sessions',{story_id:s.id,request_id:requestId()})))}><div className="story-card-top"><span>0{i+1} / {s.genre}</span><b>↗</b></div><h2>{s.title}</h2><p>{s.text}</p></button>)}</div><button className="secondary" disabled={busy} onClick={()=>reroll()}>↻ 別の候補を見る</button>{notice&&<p className="quiet" role="status">{notice}</p>}</main>}
     {screen==='game'&&session&&<main className="game-screen">
       <div className="chapter-line"><span>ROUND {String(round).padStart(2,'0')}</span><span>{resultMode?'03 / 結果':processing?'準備中':'02 / ことばをベット'}</span></div>
       <h1 className="story-title">{session.title}</h1>

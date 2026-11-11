@@ -57,8 +57,9 @@ class DrawRequest(BaseModel):
 
 @app.post("/api/stories/draw")
 def draw_stories(request:DrawRequest):
-    available=[s for s in STORIES if s["id"] not in request.exclude]
-    exhausted=len(available)<3
+    excluded = set(request.exclude)
+    available = [story for story in STORIES if story["id"] not in excluded]
+    exhausted = not available
     if exhausted:
         available=STORIES
     return {"stories":secrets.SystemRandom().sample(available,min(3,len(available))),"exhausted":exhausted}

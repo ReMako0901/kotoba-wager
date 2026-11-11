@@ -30,3 +30,16 @@ def test_old_points_state_is_not_silently_reinterpreted_as_count(tmp_path,monkey
     with TestClient(main.app) as client:
         assert client.get('/api/sessions/old-session').status_code==409
     assert repo.load('old-session')['transactions']==[]
+
+
+
+def test_story_draw_shows_last_candidate_before_restarting():
+    catalog_ids = [story["id"] for story in main.STORIES]
+    with TestClient(main.app) as client:
+        last = client.post("/api/stories/draw", json={"exclude": catalog_ids[:-1]}).json()
+        assert not last["exhausted"]
+        assert [story["id"] for story in last["stories"]] == catalog_ids[-1:]
+
+        restarted = client.post("/api/stories/draw", json={"exclude": catalog_ids}).json()
+        assert restarted["exhausted"]
+        assert len({story["id"] for story in restarted["stories"]}) == 3
