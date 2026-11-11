@@ -63,3 +63,17 @@ def test_action_chains_and_adverbs_remain_plain_text():
         assert by_text[word].stakeable
     assert ''.join(u.text for u in a.units)==text
     assert all(text[u.start:u.end]==u.text for u in a.units)
+
+
+def test_discourse_connectors_are_plain_but_replacement_noun_can_be_wagered():
+    text='代金の代わりに、話をした。とたんに、拍子抜けして笑った。代わりが見つかった。'
+    a=build_analysis(text,1)
+    units={u.text:u for u in a.units}
+    assert not units['代わりに'].stakeable
+    assert not units['とたんに'].stakeable
+    assert units['代金の'].stakeable
+    assert units['拍子抜けして'].stakeable
+    assert units['代わりが'].stakeable
+    assert not units['笑った'].stakeable
+    assert ''.join(u.text for u in a.units)==text
+    assert all(text[u.start:u.end]==u.text for u in a.units)
