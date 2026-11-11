@@ -8,6 +8,10 @@ def test_session_is_selectable_immediately_without_an_ai_call(tmp_path,monkeypat
     monkeypatch.setattr(main,'store',repo)
     monkeypatch.setattr(main.gemini,'configured',lambda:True)
     monkeypatch.setattr(main.engine,'spawn',lambda *_: (_ for _ in ()).throw(AssertionError('開始時のAIは不要')))
+    def unexpected_segmentation(*_):
+        raise AssertionError("開始文は保存済みの区切りを使う")
+
+    monkeypatch.setattr(main, "build_analysis", unexpected_segmentation)
     with TestClient(main.app) as client:
         r=client.post('/api/sessions',json={'story_id':'robot-105','request_id':'count-api-session'})
         assert r.status_code==202

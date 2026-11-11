@@ -4,6 +4,7 @@ COPY backend/requirements.lock.txt backend/requirements.lock.txt
 RUN pip install --no-cache-dir -r backend/requirements.lock.txt
 COPY backend/app backend/app
 COPY data/stories.json data/stories.json
+COPY data/starter_analysis.json data/starter_analysis.json
 COPY data/segmentation_dictionary.json data/segmentation_dictionary.json
 COPY data/lexicons/ data/lexicons/
 COPY scripts/serve.py scripts/serve.py

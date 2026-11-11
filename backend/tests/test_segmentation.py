@@ -17,7 +17,17 @@ def test_spacing_emoji_and_newlines_are_preserved():
 
 def test_starting_stories_are_short_and_fully_segmented():
     stories=json.loads((Path(__file__).parents[2]/'data/stories.json').read_text())
+    from app.analysis import build_analysis
+    from app.starter_stories import load_precomputed
+
+    assert len(stories) == len({story["id"] for story in stories}) == len({story["text"] for story in stories})
+    cached = load_precomputed()
+    assert set(cached) == {story["id"] for story in stories}
     for s in stories:
+        analysis = cached[s["id"]]
+        assert analysis == build_analysis(s["text"], 1)
+        assert sum(unit.stakeable for unit in analysis.units) >= 3
+        assert all(s["text"][unit.start:unit.end] == unit.text for unit in analysis.units)
         assert 40<=len(s['text'])<=90
         parts=split_phrases(s['text'])
         assert ''.join(parts)==s['text']

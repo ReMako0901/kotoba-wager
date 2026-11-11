@@ -4,15 +4,17 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from .config import PROJECT, settings
+from .config import settings
 from .engine import engine
 from .gemini import gemini
 from .models import CreateSession, TradeRequest
 from .analysis import build_analysis, make_offers, BETTING_MODE
 from .segmentation import external_lexicon, selection_dictionary
 from .store import store
+from .starter_stories import CATALOG_PATH, load_precomputed
 
-STORIES=json.loads((PROJECT / "data" / "stories.json").read_text())
+STORIES = json.loads(CATALOG_PATH.read_text(encoding="utf-8"))
+STARTER_ANALYSES = load_precomputed()
 
 
 @asynccontextmanager
@@ -81,7 +83,10 @@ async def create_session(request:CreateSession):
             raise HTTPException(404,"開始文章が見つかりません。")
         if not gemini.configured():
             raise HTTPException(503,"Gemini APIキーが未設定です。設定してサーバーを再起動してください。")
-        analysis=build_analysis(story['text'],1).model_dump()
+        starter_analysis = STARTER_ANALYSES.get(story["id"])
+        if starter_analysis is None:
+            starter_analysis = build_analysis(story["text"], 1)
+        analysis = starter_analysis.model_dump()
         session={"betting_mode":BETTING_MODE,"id":sid,"story_id":story["id"],"title":story["title"],"text":story["text"],"version":1,"status":"ready","analysis":analysis,"offers":make_offers(analysis,1,1),"win_probability":settings.win_probability,"transactions":[],"lost_concepts":[],"pending_transaction_id":None,"view":"game","api_calls":0,"api_events":[],"usage":{"input":0,"output":0,"thoughts":0},"model":settings.model,"analysis_attempts":0,"error":None}
         store.save(session)
         return public(session)
