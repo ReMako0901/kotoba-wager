@@ -1,7 +1,7 @@
 """Assemble literal, bounded edits locally; untouched sentences remain byte-identical."""
 import re
 from difflib import SequenceMatcher
-from .gemini import GenerationError
+from .gemini import EditBudgetExceeded, GenerationError
 from .models import Rewrite
 from .segmentation import noun_literals
 
@@ -96,7 +96,7 @@ def apply_edits(text, proposal, plan):
     if not spans:
         raise GenerationError('本文に変化がありませんでした。')
     if cost>plan['max_changed_characters'] or len(changed_sentences)>plan['max_edited_sentences']:
-        raise GenerationError(
+        raise EditBudgetExceeded(
             '今回の賭けに対して変化が大きすぎます。'
             f'変更は{cost}文字・{len(changed_sentences)}文、'
             f'上限は{plan["max_changed_characters"]}文字・{plan["max_edited_sentences"]}文です。'

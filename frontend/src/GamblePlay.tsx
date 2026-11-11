@@ -52,7 +52,7 @@ export function GamblePlay({ gamble, busy, error, prepared, onFinish }: {
       {!slot && !complete && <button className="primary" disabled={busy} onClick={() => setRevealed(revealed + 1)}>次のカードをめくる <span>↗</span></button>}
       {tied && <button className="primary" disabled={busy} onClick={() => {setRoundIndex(roundIndex + 1); setRevealed(0);}}>同じことばでもう一度 <span>→</span></button>}
       {complete && !tied && <button className="primary" disabled={busy} onClick={onFinish}>{busy ? '物語を準備中…' : 'この結果を物語へ'} <span>→</span></button>}
-      <p className="quiet" role="status">{error ? '文章の準備でエラーが出た。結果確認後に同じ勝敗で再試行できる。' : prepared ? '物語の準備ができた。' : busy ? '物語の準備が終わるまで、そのまま待ってね。' : '物語も準備中…'}</p>
+      <p className="quiet" role="status">{error ? '文章を表示できませんでした。' : prepared ? '物語の準備ができた。' : busy ? '物語の準備が終わるまで、そのまま待ってね。' : '物語も準備中…'}</p>
     </div>
   </section>;
 }

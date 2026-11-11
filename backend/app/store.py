@@ -34,18 +34,21 @@ class Store:
                 os.unlink(tmp)
 
     def recover(self):
+        pending = []
         for path in self.directory.glob("*.json"):
-            session = json.loads(path.read_text())
             if path.name == "api-quota.json":
                 continue
-            if session["status"] in ("analyzing", "generating"):
-                session["status"] = "error"
-                session["error"] = "サーバー再起動により処理が中断しました。本文と確定済みの勝敗を保護しました。再試行できます。"
-                for tx in session["transactions"]:
-                    if tx["status"] == "generating":
-                        tx["status"] = "error"
-                        tx["error"] = session["error"]
+            session = json.loads(path.read_text())
+            if session["status"] not in ("generating", "error"):
+                continue
+            tx = next((item for item in session["transactions"]
+                       if item["id"] == session.get("pending_transaction_id")), None)
+            if tx and tx["status"] != "committed":
+                session.update(status="generating", error=None)
+                tx.update(status="generating", error=None)
                 self.save(session)
+                pending.append(session["id"])
+        return pending
 
 
 store = Store()

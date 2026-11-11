@@ -24,6 +24,10 @@ class ReviewRejected(EditRejected):
     pass
 
 
+class EditBudgetExceeded(GenerationError):
+    pass
+
+
 @dataclass
 class Result:
     value: BaseModel
@@ -127,6 +131,8 @@ class Gemini:
         # Imported lazily: the pure edit validator uses GenerationError.
         from .editing import edit_plan, apply_edits
         plan = edit_plan(text, outcome, stakes, payload.get("existing_concepts_and_dependencies", []), payload.get("reward"), payload.get("narrative_change"))
+        if (payload.get("previous_review") or {}).get("relax_budget"):
+            relax_edit_budget(plan)
         result = await self.generate(
             instruction, {**payload, **plan}, EditProposal,
             thinking_level="MEDIUM" if payload.get("previous_review") else "MINIMAL",
@@ -143,10 +149,12 @@ class Gemini:
     async def loss(self, text, stakes, lost, dependencies, narrative_change=None, *, previous_review=None):
         return await self.edit(LOSS, text, {"text": text, "new_lost_concepts": stakes, "past_lost_concepts": lost, "existing_concepts_and_dependencies": dependencies, "narrative_change": narrative_change, "previous_review": previous_review}, "loss", stakes)
 
-    async def review(self, original, candidate, outcome, offer, stakes, lost):
+    async def review(self, original, candidate, outcome, offer, stakes, lost, *, relax_budget=False):
         from .editing import edit_plan, apply_edits
 
         plan = edit_plan(original, outcome, stakes, [], offer)
+        if relax_budget:
+            relax_edit_budget(plan)
         result = await self.generate(REVIEW, {
             **plan,
             'original_text': original,
@@ -181,6 +189,12 @@ class Gemini:
                 raise ReviewRejected('採用判定に修正案が付いていました。')
             result.value = candidate.model_copy(update={'checks': review.checks})
         return result
+
+
+def relax_edit_budget(plan):
+    plan['max_edited_sentences'] = len(plan['editable_sentence_ids'])
+    plan['max_changed_characters'] = 140 + sum(len(sentence['text']) for sentence in plan['sentences'])
+    plan['instruction'] += ' 自然で意味の通る完成文に必要な分だけ変更する。'
 
 
 gemini = Gemini()

@@ -53,7 +53,7 @@ class Checks(BaseModel):
 
 
 class Rewrite(BaseModel):
-    text: str = Field(min_length=1,max_length=140)
+    text: str = Field(min_length=1)
     summary: str
     changes: list[str] = Field(min_length=1,max_length=8)
     checks: Checks

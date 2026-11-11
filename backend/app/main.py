@@ -22,7 +22,8 @@ STARTER_ANALYSES = load_precomputed()
 async def lifespan(app):
     selection_dictionary()
     external_lexicon()
-    store.recover()
+    for sid in store.recover():
+        engine.spawn(engine.process_transaction(sid))
     yield
 
 
@@ -94,8 +95,6 @@ async def create_session(request:CreateSession):
         story=next((s for s in STORIES if s["id"]==request.story_id),None)
         if not story:
             raise HTTPException(404,"開始文章が見つかりません。")
-        if not gemini.configured():
-            raise HTTPException(503,"Gemini APIキーが未設定です。設定してサーバーを再起動してください。")
         starter_analysis = STARTER_ANALYSES.get(story["id"])
         if starter_analysis is None:
             starter_analysis = build_analysis(story["text"], 1)

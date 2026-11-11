@@ -2,7 +2,6 @@ import json
 from pathlib import Path
 import pytest
 from app.segmentation import split_phrases
-from app.models import Rewrite
 
 
 def test_short_phrases_preserve_particles_and_auxiliary_verbs():
@@ -32,11 +31,6 @@ def test_starting_stories_are_short_and_fully_segmented():
         parts=split_phrases(s['text'])
         assert ''.join(parts)==s['text']
         assert max(map(len,parts))<=12
-
-
-def test_long_rewrites_cannot_grow_the_story():
-    with pytest.raises(ValueError):
-        Rewrite(text='あ'*141,summary='test',changes=['test'],checks={'protected_retained':True,'lost_absent':True,'reward_realized':True,'notes':''})
 
 
 def test_compound_emotion_keeps_its_meaning_without_absorbing_next_action():

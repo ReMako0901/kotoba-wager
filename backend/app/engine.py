@@ -3,10 +3,13 @@ import secrets
 from copy import deepcopy
 from .analysis import build_analysis, make_offers, validate_stakes, BETTING_MODE
 from .config import settings
-from .gemini import gemini, EditRejected, GenerationError, ReviewRejected
+from .gemini import gemini, EditBudgetExceeded, EditRejected, GenerationError, ReviewRejected
 from .store import store
 from .quota import reserve_call
 from .gambles import make_gamble
+from .story_fallback import complete_story, local_concepts
+
+STORY_GENERATION_TIMEOUT = 24
 
 
 class GameEngine:
@@ -84,17 +87,19 @@ class GameEngine:
                 tx["attempts"] += 1
                 tx["status"]="generating"
                 self.store.save(session)
-                if not tx.get("meanings_resolved"):
-                    resolution=await self.call(session,self.ai.resolve_stakes,tx['before'],tx['selected_units'],session['lost_concepts'])
-                    tx['staked_concepts']=[c.model_dump() for c in resolution.concepts]
-                    tx['lost']=deepcopy(tx['staked_concepts']) if tx['outcome']=='loss' else []
-                    tx['meanings_resolved']=True
-                    self.store.save(session)
                 if not tx.get("draft"):
-                    edited = await self.edit_and_review(session, tx)
-                    # All next-round chips are local. Verify playability before
-                    # caching the draft so a bad proposal can be regenerated manually.
-                    build_analysis(edited.text,session['version']+1)
+                    try:
+                        edited = await asyncio.wait_for(
+                            self.generate_story(session, tx), timeout=STORY_GENERATION_TIMEOUT,
+                        )
+                    except (GenerationError, TimeoutError):
+                        if not tx.get("meanings_resolved"):
+                            tx["staked_concepts"] = local_concepts(tx["selected_units"])
+                            if tx["outcome"] == "loss":
+                                tx["lost"] = deepcopy(tx["staked_concepts"])
+                            tx["meanings_resolved"] = True
+                        edited = complete_story(tx, session["lost_concepts"])
+                        tx["used_fallback"] = True
                     tx["draft"]=edited.model_dump()
                     self.store.save(session)
                 if tx.get('gamble') and not tx.get('presentation_completed'):
@@ -110,6 +115,17 @@ class GameEngine:
                 session.update(status="error",error=tx["error"])
             self.store.save(session)
 
+    async def generate_story(self, session, tx):
+        if not tx.get("meanings_resolved"):
+            resolution = await self.call(session, self.ai.resolve_stakes, tx["before"], tx["selected_units"], session["lost_concepts"])
+            tx["staked_concepts"] = [concept.model_dump() for concept in resolution.concepts]
+            tx["lost"] = deepcopy(tx["staked_concepts"]) if tx["outcome"] == "loss" else []
+            tx["meanings_resolved"] = True
+            self.store.save(session)
+        edited = await self.edit_and_review(session, tx)
+        build_analysis(edited.text, session["version"] + 1)
+        return edited
+
     async def edit_and_review(self, session, tx):
         outcome = tx["outcome"]
         original = tx["before"]
@@ -117,6 +133,7 @@ class GameEngine:
         stakes = tx["staked_concepts"]
         lost = session["lost_concepts"]
         feedback = {}
+        relaxed = False
         for attempt in range(2):
             candidate = None
             try:
@@ -129,7 +146,8 @@ class GameEngine:
                     candidate = await self.call(session, self.ai.loss, *loss_args, **feedback)
                 if feedback and candidate.text == feedback["previous_review"].get("rejected_text"):
                     raise ReviewRejected("不採用になった本文と同じ文章が返りました。")
-                edited = await self.call(session, self.ai.review, original, candidate, outcome, offer, stakes, lost)
+                review_options = {"relax_budget": True} if relaxed else {}
+                edited = await self.call(session, self.ai.review, original, candidate, outcome, offer, stakes, lost, **review_options)
                 if edited.text == original:
                     raise ReviewRejected("編集後の本文が原文と同じです。")
                 if outcome == "win" and not lost:
@@ -144,7 +162,10 @@ class GameEngine:
             except EditRejected as error:
                 if attempt == 1:
                     raise GenerationError("本文を自動で作り直しましたが、確認を通りませんでした。元の本文と勝敗は保存されています。") from error
+                relaxed = isinstance(error.__cause__, EditBudgetExceeded)
                 previous_review = {"reason": str(error)}
+                if relaxed:
+                    previous_review["relax_budget"] = True
                 if candidate is not None:
                     previous_review["rejected_text"] = candidate.text
                 feedback = {"previous_review": previous_review}

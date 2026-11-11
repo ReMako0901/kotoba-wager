@@ -97,3 +97,10 @@ def test_losing_together_relation_preserves_both_gifts():
     assert 'お弁当' in result.text and 'ラブレター' in result.text
     with pytest.raises(GenerationError,match='物まで削除'):
         apply_edits(text,proposal([edit(0,'お弁当と一緒に','')]),plan)
+
+
+def test_ai_rewrites_still_have_a_total_length_limit():
+    text = '猫が来た。'
+    plan = edit_plan(text, 'win', [], [], {'narrative_change': {'strength': 9}})
+    with pytest.raises(GenerationError, match='長さが条件'):
+        apply_edits(text, proposal([edit(0, '猫', '猫' + 'にゃ' * 68)]), {**plan, 'max_changed_characters': 280})

@@ -26,7 +26,7 @@ class AI:
         result.value.checks.reward_realized = False
         return result
 
-    async def review(self, original, candidate, outcome, offer, stakes, lost):
+    async def review(self, original, candidate, outcome, offer, stakes, lost, **kwargs):
         return Result(candidate, {}, .1)
 
 def setup(tmp_path,outcome):
@@ -53,49 +53,35 @@ def test_commit_and_duplicate_draw(tmp_path,outcome):
     assert len(draws)==1
 
 
-def test_failed_generation_preserves_text_and_outcome_after_restart(tmp_path):
-    repo,s,ai,engine,draws,req=setup(tmp_path,False)
-    engine.settle_draw(s,req); ai.fail_rewrite=True
-    asyncio.run(engine.process_transaction(s['id']))
-    failed=repo.load(s['id'])
-    assert failed['text']==BEFORE and failed['version']==1 and failed['status']=='error'
-    assert failed['transactions'][0]['outcome']=='loss'
-    # A restarted server reuses the persisted result; it never invokes the draw.
-    ai.fail_rewrite=False
-    resumed=GameEngine(Store(tmp_path),ai,lambda p: pytest.fail('redraw'))
-    asyncio.run(resumed.process_transaction(s['id']))
-    assert repo.load(s['id'])['version']==2 and len(draws)==1
-
-
-def test_resolved_meaning_is_cached_when_edit_fails(tmp_path):
-    repo,s,ai,engine,draws,req=setup(tmp_path,True)
-    engine.settle_draw(s,req);ai.fail_rewrite=True
-    asyncio.run(engine.process_transaction(s['id']))
-    assert repo.load(s['id'])['text']==BEFORE
-    assert repo.load(s['id'])['transactions'][0]['meanings_resolved']
-    ai.fail_rewrite=False
-    asyncio.run(engine.process_transaction(s['id']))
-    assert repo.load(s['id'])['version']==2 and ai.resolutions==1 and len(draws)==1
-
-
-def test_failed_meaning_resolution_keeps_the_settled_draw(tmp_path):
-    repo,s,ai,engine,draws,req=setup(tmp_path,False)
-    engine.settle_draw(s,req);ai.fail_resolution=True
-    asyncio.run(engine.process_transaction(s['id']))
-    assert repo.load(s['id'])['status']=='error'
-    assert repo.load(s['id'])['text']==BEFORE and len(draws)==1
-    ai.fail_resolution=False
-    asyncio.run(engine.process_transaction(s['id']))
-    assert repo.load(s['id'])['version']==2 and len(draws)==1
+@pytest.mark.parametrize('wins', [True, False])
+@pytest.mark.parametrize('fail_stage', ['meaning', 'edit'])
+def test_provider_failure_still_commits_a_complete_story(tmp_path, wins, fail_stage):
+    repo, session, ai, engine, draws, request = setup(tmp_path, wins)
+    ai.fail_resolution = fail_stage == 'meaning'
+    ai.fail_rewrite = fail_stage == 'edit'
+    engine.settle_draw(session, request)
+    asyncio.run(engine.process_transaction(session['id']))
+    done = repo.load(session['id'])
+    tx = done['transactions'][0]
+    assert done['status'] == 'ready' and done['version'] == 2 and done['offers']
+    assert tx['used_fallback'] and draws == [.5] and done['text'].endswith('。')
+    if wins:
+        assert done['text'].startswith(BEFORE) and tx['checks']['reward_realized']
+    else:
+        assert all(word not in done['text'] for word in tx['stakes'])
+        assert done['lost_concepts'] and not tx['checks']['reward_realized']
 
 
 def test_interrupted_draw_is_recovered_without_redraw(tmp_path):
-    repo,s,ai,engine,draws,req=setup(tmp_path,False)
-    engine.settle_draw(s,req)
-    Store(tmp_path).recover()
-    recovered=repo.load(s['id'])
-    assert recovered['status']=='error' and recovered['transactions'][0]['outcome']=='loss'
-    assert recovered['text']==BEFORE
+    repo, session, ai, engine, draws, request = setup(tmp_path, False)
+    engine.settle_draw(session, request)
+    recovered = Store(tmp_path).recover()
+    assert recovered == [session['id']]
+    assert repo.load(session['id'])['text'] == BEFORE
+    asyncio.run(engine.process_transaction(recovered[0]))
+    done = repo.load(session['id'])
+    assert done['transactions'][0]['outcome'] == 'loss'
+    assert done['text'] == AFTER and draws == [.5]
 
 
 def test_schema_is_inline_without_large_decode_bounds():
@@ -104,22 +90,6 @@ def test_schema_is_inline_without_large_decode_bounds():
     assert schema['properties']['meanings']['items']['properties']['source_text']['type']=='string'
     with pytest.raises(ValueError):
         MeaningResponse.model_validate({'meanings':[]})
-
-
-def test_manual_retry_limit_does_not_redraw(tmp_path):
-    repo,s,ai,engine,draws,req=setup(tmp_path,False)
-    engine.settle_draw(s,req); ai.fail_rewrite=True
-    asyncio.run(engine.process_transaction(s['id']))
-    async def retry_once():
-        await engine.retry(s['id'])
-        await asyncio.gather(*engine.tasks)
-    asyncio.run(retry_once())
-    asyncio.run(retry_once())
-    with pytest.raises(ValueError,match='上限'):
-        asyncio.run(engine.retry(s['id']))
-    done=repo.load(s['id'])
-    assert done['transactions'][0]['attempts']==3 and len(draws)==1
-    assert done['version']==1 and done['text']==BEFORE
 
 
 @pytest.mark.parametrize('wins,finish_first', [(True,False),(False,False),(True,True)])
@@ -148,23 +118,18 @@ def test_gamble_keeps_text_until_generation_and_reveal(tmp_path,wins,finish_firs
     assert draws==[.6] and ai.rewrites==1
 
 
-def test_gamble_error_and_retry_reuse_the_plan(tmp_path):
-    repo,s,ai,engine,draws,req=setup(tmp_path,False)
-    req=req.model_copy(update={'game':'baccarat'})
-    engine.settle_draw(s,req)
-    tx=s['transactions'][0]
-    ai.fail_rewrite=True
-    asyncio.run(engine.process_transaction(s['id']))
-    failed=asyncio.run(engine.finish_gamble(s['id'],tx['id']))
-    assert failed['status']=='error' and failed['text']==BEFORE
-    ai.fail_rewrite=False
-    async def retry():
-        await engine.retry(s['id'])
-        await asyncio.gather(*engine.tasks)
-    asyncio.run(retry())
-    done=repo.load(s['id'])
-    assert done['status']=='ready' and done['text']==AFTER
-    assert done['transactions'][0]['gamble']==tx['gamble'] and draws==[.45]
+def test_fallback_stays_hidden_until_gamble_is_revealed(tmp_path):
+    repo, session, ai, engine, draws, request = setup(tmp_path, False)
+    request = request.model_copy(update={'game': 'baccarat'})
+    engine.settle_draw(session, request)
+    gamble = session['transactions'][0]['gamble']
+    ai.fail_rewrite = True
+    asyncio.run(engine.process_transaction(session['id']))
+    pending = repo.load(session['id'])
+    assert pending['status'] == 'awaiting_reveal' and pending['text'] == BEFORE
+    done = asyncio.run(engine.finish_gamble(session['id'], request.request_id))
+    assert done['status'] == 'ready' and done['text'] != BEFORE
+    assert done['transactions'][0]['gamble'] == gamble and draws == [.45]
 
 
 @pytest.mark.parametrize('has_past_loss', [False, True])
@@ -181,8 +146,9 @@ def test_win_checks_absence_only_when_there_are_prior_losses(tmp_path,has_past_l
     engine.settle_draw(s,req)
     asyncio.run(engine.process_transaction(s['id']))
     done=repo.load(s['id'])
-    assert done['text']==(BEFORE if has_past_loss else AFTER)
-    assert done['status']==('error' if has_past_loss else 'ready')
+    assert done['status'] == 'ready'
+    assert bool(done['transactions'][0].get('used_fallback')) == has_past_loss
+    assert (done['text'] == AFTER) is not has_past_loss
 
 
 def test_failed_review_never_reflects_the_unreviewed_candidate(tmp_path):
@@ -196,7 +162,8 @@ def test_failed_review_never_reflects_the_unreviewed_candidate(tmp_path):
     ai.review = reject
     asyncio.run(engine.process_transaction(session['id']))
     failed = asyncio.run(engine.finish_gamble(session['id'], request.request_id))
-    assert failed['status'] == 'error' and failed['text'] == BEFORE
+    assert failed['status'] == 'ready' and failed['text'].startswith(BEFORE)
+    assert failed['transactions'][0]['used_fallback'] and failed['text'] != AFTER
     assert failed['api_calls'] == 3 and draws == [.6]
 
 
@@ -233,7 +200,8 @@ def test_invalid_review_regenerates_once_without_another_draw(tmp_path, repeat_r
     assert draws == [.6] and ai.rewrites == 2
     assert done['transactions'][0]['outcome'] == 'win'
     if repeat_rejected_text:
-        assert done['text'] == BEFORE and done['status'] == 'error'
+        assert done['text'].startswith(BEFORE) and done['status'] == 'ready'
+        assert done['transactions'][0]['used_fallback']
         assert review_calls == [AFTER]
     else:
         assert done['text'] == second_draft and done['status'] == 'ready'
@@ -252,8 +220,8 @@ def test_oversized_initial_edit_is_replaced_before_review(tmp_path, monkeypatch)
     async def generate(instruction, payload, schema, *, thinking_level):
         feedback.append(payload['previous_review'])
         edits = [{'sentence_id': 0, 'before': '雨を', 'after': '銀色の雨を', 'reason': '描写を加える'}]
-        if len(feedback) == 1:
-            edits.append({'sentence_id': 1, 'before': '静かな', 'after': '暗い', 'reason': '描写を変える'})
+        edits.append({'sentence_id': 1, 'before': '静かな', 'after': '暗い', 'reason': '描写を変える'})
+        assert payload['max_edited_sentences'] == len(feedback)
         return Result(EditProposal(
             edits=edits, summary='雨の描写', changes=['雨に色がついた'],
             checks={'protected_retained': True, 'lost_absent': True, 'reward_realized': True, 'notes': ''},
@@ -266,6 +234,24 @@ def test_oversized_initial_edit_is_replaced_before_review(tmp_path, monkeypatch)
     waiting = repo.load(session['id'])
     assert waiting['status'] == 'awaiting_reveal' and waiting['text'] == BEFORE
     done = asyncio.run(engine.finish_gamble(session['id'], request.request_id))
-    assert done['text'] == BEFORE.replace('雨を', '銀色の雨を') and draws == [.6]
+    assert done['text'] == BEFORE.replace('雨を', '銀色の雨を').replace('静かな', '暗い') and draws == [.6]
     assert done['api_calls'] == 4 and len(feedback) == 2
     assert feedback[0] is None and '上限は24文字・1文' in feedback[1]['reason']
+    assert feedback[1]['relax_budget']
+
+
+def test_generation_timeout_uses_fallback_without_waiting_for_provider(tmp_path, monkeypatch):
+    import app.engine as engine_module
+
+    repo, session, ai, engine, draws, request = setup(tmp_path, True)
+    monkeypatch.setattr(engine_module, 'STORY_GENERATION_TIMEOUT', .01)
+
+    async def stalled(*args):
+        await asyncio.Event().wait()
+
+    ai.resolve_stakes = stalled
+    engine.settle_draw(session, request)
+    asyncio.run(engine.process_transaction(session['id']))
+    done = repo.load(session['id'])
+    assert done['status'] == 'ready' and done['transactions'][0]['used_fallback']
+    assert draws == [.5] and done['text'].startswith(BEFORE)
