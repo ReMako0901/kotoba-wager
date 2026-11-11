@@ -1,5 +1,7 @@
 # 個数ベット方式（count-v1）
 
+最新の全体進捗は [docs/STATUS.md](docs/STATUS.md)、辞書の編集方法は [docs/WORD_DICTIONARY.md](docs/WORD_DICTIONARY.md)。結合・非選択の補正は外部JSON辞書へ切り出した。後半の検証は各版当時の記録。
+
 ## 現在のルール
 
 - 画面の短いまとまり1コマを1個と数える。選択可能なコマは同じ重み。
