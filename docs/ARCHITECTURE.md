@@ -5,6 +5,8 @@
 |ファイル|責務|
 |---|---|
 |`frontend/src/App.tsx`|タイトル、開始文3択、報酬ポップアップ、コマ選択、結果、履歴、ポーリング|
+|`frontend/src/GamblePlay.tsx`|リール停止・カード公開・タイ時の配り直し・反映ボタン|
+|`backend/app/gambles.py`|ゲーム別の抽選・変化の強さ・図柄・事前配列カード|
 |`frontend/src/types.ts`|APIの画面側型。Python側モデルと同期する|
 |`frontend/src/api.ts`|fetch、公開APIホストの切替、エラー表示用例外|
 |`frontend/src/style.css`|白黒・縦画面・セーフエリア・本文内スクロール|
@@ -31,14 +33,16 @@
 ```text
 保存済み開始文
   → 保存済みUnit[]を読み込み（未生成・更新時はローカルで分割） → 報酬候補
-  → 報酬選択 → unit_ids選択
+  → 報酬選択 → ゲーム選択 → unit_ids選択
   → 必要個数・本文版・重複・可否検査
-  → プログラムが抽選、取引IDと勝敗を先に保存
+  → 取引ID・勝敗・変化の強さ・演出用の図柄／カードを保存
+  → 演出開始。以下の生成処理を並行して進める
   → Gemini.resolve_stakes（選ばれたコマだけの意味と原文上の言及）
   → ID・原文・言及照合、成功した解釈を保存
   → Gemini.win / loss（文字列の部分編集案）
   → 置換可能な原文・範囲・重複・差分量・保護条件・自己確認を検査
   → 原文と編集案から更新本文をローカルで組立
+  → 編集案を保持し、演出後の反映ボタンを待つ（awaiting_reveal）
   → 次ラウンドの分割と報酬をローカル準備
   → 本文版・履歴・消失済み意味をまとめて保存 → 結果画面
 ```
@@ -57,7 +61,7 @@
 
 ## 編集の制約
 
-勝利の差分文字数仮上限はchange_scale 1/2/3に対して24/46/90。変更文数も制限。敗北は選択語とその言及から編集可能文を決め、人物消失や複数対象では必要な範囲を広げる。関係だけの消失では未選択の名詞を保持する追加検査がある。
+ゲームを指定した取引では勝敗と変化の強さをGeminiへ渡す。強さ1の勝利は1文・24文字差分を上限とし、強さ4以上では賭けに結びつく大きな変化を許す。旧クライアントからのゲーム未指定取引は従来のchange_scaleに従う。敗北は選択語とその言及から編集可能文を決め、人物消失や複数対象では必要な範囲を広げる。関係だけの消失では未選択の名詞を保持する追加検査がある。
 
 本文最大140文字。意味の保持・消失・報酬の自己確認はLLM自身によるもの。原文照合などの機械検査が通っても意味や自然さが保証されるわけではない。
 
@@ -69,7 +73,9 @@
 |POST `/api/stories/draw`|exclude付きの候補3件抽選|
 |POST `/api/sessions`|story_id/request_idで開始。再送の同一IDを保護|
 |GET `/api/sessions/{sid}`|進捗・結果を取得|
-|POST `/api/sessions/{sid}/transactions`|request_id/version/offer_id/unit_idsで取引|
+|GET `/api/games`|ゲームの種類・決着時の勝率・演出の説明|
+|POST `/api/sessions/{sid}/transactions`|request_id/version/offer_id/unit_ids/gameで取引開始。game省略は旧クライアント互換|
+|POST `/api/sessions/{sid}/transactions/{id}/finish`|演出後に反映を確定。同じIDで再送しても再抽選しない|
 |POST `/api/sessions/{sid}/retry`|保存済み同一勝敗で手動再試行|
 |POST `/api/sessions/{sid}/continue`|結果から次の報酬・選択へ|
 
