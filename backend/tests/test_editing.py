@@ -1,7 +1,8 @@
+import asyncio
 import pytest
 from app.editing import edit_plan, apply_edits
-from app.models import EditProposal
-from app.gemini import GenerationError
+from app.models import EditProposal, StoryReview
+from app.gemini import Gemini, GenerationError, Result
 
 BEFORE='私はピザを注文した。月からスクーターで来たうさぎが、焼きたてチーズの香ばしさと共に到着する。代金の代わりに、私は彼に月夜に響くリコーダーの音色を一つ語って聞かせた。'
 PRICE={'id':'price','label':'代金','kind':'attribute','description':'支払いが必要である','depends_on':[],'anchors':['代金の'],'selected_surfaces':['代金の'],'mentions':['代金の']}
@@ -10,6 +11,34 @@ def proposal(edits):
     return EditProposal(edits=edits,summary='代金を不要にした',changes=['支払い条件だけを削除'],checks={'protected_retained':True,'lost_absent':True,'reward_realized':False,'notes':''})
 
 def edit(sid,before,after):return {'sentence_id':sid,'before':before,'after':after,'reason':'対象の消失'}
+
+
+@pytest.mark.parametrize('error', [None, '関係のない文', '失われたことばを戻した'])
+def test_review_replaces_the_draft_using_original_edit_constraints(monkeypatch, error):
+    ai = Gemini()
+    plan = edit_plan(BEFORE, 'loss', [PRICE], [])
+    draft = apply_edits(BEFORE, proposal([edit(2, '代金の代わりに', 'お礼に、お礼に')]), plan)
+    edits = [edit(2, '代金の代わりに', 'お礼に')]
+    if error == '関係のない文':
+        edits.append(edit(0, 'ピザ', '寿司'))
+    elif error:
+        edits = [edit(2, '代金の代わりに', '代金の支払いに')]
+
+    async def review_response(prompt, data, schema, *, thinking_level):
+        assert data['candidate_text'] == draft.text
+        assert data['original_text'] == BEFORE and data['outcome'] == 'loss'
+        assert data['reward'] is None and schema is StoryReview
+        assert data['protected_stakes'] == [] and data['new_lost_concepts'] == [PRICE]
+        return Result(StoryReview(verdict='repair', **proposal(edits).model_dump()), {}, .1)
+
+    monkeypatch.setattr(ai, 'generate', review_response)
+    task = ai.review(BEFORE, draft, 'loss', {'title': 'うれしい知らせ'}, [PRICE], [])
+    if error:
+        with pytest.raises(GenerationError, match=error):
+            asyncio.run(task)
+    else:
+        result = asyncio.run(task)
+        assert result.value.text == BEFORE.replace('代金の代わりに', 'お礼に')
 
 
 def test_price_loss_cannot_change_the_buyer_rabbit_or_delivery():

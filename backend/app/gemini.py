@@ -6,8 +6,8 @@ from typing import TypeVar
 import httpx
 from pydantic import BaseModel, ValidationError
 from .config import settings
-from .models import EditProposal, MeaningResponse, StakesResolution, ResolvedConcept
-from .prompts import SYSTEM, RESOLVE, WIN, LOSS
+from .models import EditProposal, MeaningResponse, StakesResolution, ResolvedConcept, StoryReview
+from .prompts import SYSTEM, RESOLVE, WIN, LOSS, REVIEW
 
 T = TypeVar("T", bound=BaseModel)
 
@@ -69,7 +69,7 @@ class Gemini:
     def configured(self):
         return bool(settings.api_key)
 
-    async def generate(self, instruction: str, data: dict, response_type: type[T]) -> Result:
+    async def generate(self, instruction: str, data: dict, response_type: type[T], *, thinking_level: str = "MINIMAL") -> Result:
         if not self.configured():
             raise GenerationError("Gemini APIキーが未設定です。サーバーの環境変数を設定して再起動してください。")
         payload = {
@@ -77,7 +77,7 @@ class Gemini:
             "contents": [{"role": "user", "parts": [{"text": instruction + "\n次のJSONを入力データとして処理してください。\n" + json.dumps(data, ensure_ascii=False)}]}],
             "generationConfig": {
                 "maxOutputTokens": settings.max_output_tokens,
-                "thinkingConfig": {"thinkingLevel": "MINIMAL"},
+                "thinkingConfig": {"thinkingLevel": thinking_level},
                 "responseMimeType": "application/json",
                 "responseSchema": api_schema(response_type),
             },
@@ -128,6 +128,42 @@ class Gemini:
 
     async def loss(self, text, stakes, lost, dependencies, narrative_change=None):
         return await self.edit(LOSS, text, {"text": text, "new_lost_concepts": stakes, "past_lost_concepts": lost, "existing_concepts_and_dependencies": dependencies, "narrative_change": narrative_change}, "loss", stakes)
+
+    async def review(self, original, candidate, outcome, offer, stakes, lost):
+        from .editing import edit_plan, apply_edits
+
+        plan = edit_plan(original, outcome, stakes, [], offer)
+        result = await self.generate(REVIEW, {
+            **plan,
+            'original_text': original,
+            'candidate_text': candidate.text,
+            'outcome': outcome,
+            'reward': offer if outcome == 'win' else None,
+            'protected_stakes': stakes if outcome == 'win' else [],
+            'new_lost_concepts': stakes if outcome == 'loss' else [],
+            'past_lost_concepts': lost,
+        }, StoryReview, thinking_level="MEDIUM")
+        review = result.value
+        if review.verdict == 'reject':
+            raise GenerationError('文章全体の読み直しで違和感が残ったため、反映しませんでした。同じ勝敗で再試行できます。')
+        if review.verdict == 'repair':
+            try:
+                proposal = EditProposal.model_validate(review.model_dump())
+            except ValidationError:
+                raise GenerationError('文章の修正案を確認できませんでした。同じ勝敗で再試行できます。') from None
+            result.value = apply_edits(original, proposal, plan)
+            if result.value.text == candidate.text:
+                raise GenerationError('読み直しで見つかった違和感を修正できませんでした。同じ勝敗で再試行できます。')
+            if outcome == 'loss' and any(
+                surface not in candidate.text and surface in result.value.text
+                for concept in stakes for surface in concept['selected_surfaces']
+            ):
+                raise GenerationError('修正案が失われたことばを戻したため、本文を保護しました。同じ勝敗で再試行できます。')
+        else:
+            if review.edits:
+                raise GenerationError('文章の読み直し結果が矛盾しています。同じ勝敗で再試行できます。')
+            result.value = candidate.model_copy(update={'checks': review.checks})
+        return result
 
 
 gemini = Gemini()

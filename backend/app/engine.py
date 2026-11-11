@@ -98,6 +98,10 @@ class GameEngine:
                         if tx.get("gamble"):
                             loss_args += (tx["offer"]["narrative_change"],)
                         edited = await self.call(session, self.ai.loss, *loss_args)
+                    edited = await self.call(
+                        session, self.ai.review, tx["before"], edited, tx["outcome"],
+                        tx["offer"], tx["staked_concepts"], session["lost_concepts"],
+                    )
                     if edited.text == tx["before"]:
                         raise GenerationError("本文に変化がなかったため、反映せず停止しました。")
                     if tx["outcome"] == "win" and not session["lost_concepts"]:
@@ -107,6 +111,8 @@ class GameEngine:
                         raise GenerationError("Geminiの自己確認で、消失設定の維持に問題が見つかりました。本文を保護しました。")
                     if tx["outcome"] == "win" and not (edited.checks.protected_retained and edited.checks.reward_realized):
                         raise GenerationError("賭けた設定の保持または報酬の実現を確認できず、反映しませんでした。")
+                    if tx["outcome"] == "loss" and edited.checks.reward_realized:
+                        raise GenerationError("敗北時に報酬が反映されていたため、本文を保護しました。同じ勝敗で再試行できます。")
                     # All next-round chips are local. Verify playability before
                     # caching the draft so a bad proposal can be regenerated manually.
                     build_analysis(edited.text,session['version']+1)

@@ -84,3 +84,11 @@ class EditProposal(BaseModel):
     summary: str
     changes: list[str] = Field(min_length=1,max_length=8)
     checks: Checks
+
+
+class StoryReview(BaseModel):
+    verdict: Literal['accept', 'repair', 'reject']
+    edits: list[TextEdit] = Field(max_length=12)
+    summary: str
+    changes: list[str] = Field(max_length=8)
+    checks: Checks

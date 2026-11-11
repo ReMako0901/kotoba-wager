@@ -21,7 +21,13 @@ class AI:
         self.rewrites+=1
         if self.fail_rewrite: raise GenerationError('通信失敗')
         return Result(Rewrite(text=AFTER,summary='変化',changes=['空が変化'],checks={'protected_retained':True,'lost_absent':True,'reward_realized':True,'notes':'テスト用'}),{},.1)
-    async def loss(self,*args): return await self.win(*args)
+    async def loss(self,*args):
+        result = await self.win(*args)
+        result.value.checks.reward_realized = False
+        return result
+
+    async def review(self, original, candidate, outcome, offer, stakes, lost):
+        return Result(candidate, {}, .1)
 
 def setup(tmp_path,outcome):
     repository=Store(tmp_path)
@@ -177,3 +183,18 @@ def test_win_checks_absence_only_when_there_are_prior_losses(tmp_path,has_past_l
     done=repo.load(s['id'])
     assert done['text']==(BEFORE if has_past_loss else AFTER)
     assert done['status']==('error' if has_past_loss else 'ready')
+
+
+def test_failed_review_never_reflects_the_unreviewed_candidate(tmp_path):
+    repo, session, ai, engine, draws, request = setup(tmp_path, True)
+    request = request.model_copy(update={'game': 'blackjack'})
+    engine.settle_draw(session, request)
+    async def reject(original, candidate, outcome, offer, stakes, lost):
+        assert original == BEFORE and candidate.text == AFTER
+        assert outcome == 'win' and offer['narrative_change']['strength'] == 1
+        raise GenerationError('文章全体の読み直しで違和感が残りました。')
+    ai.review = reject
+    asyncio.run(engine.process_transaction(session['id']))
+    failed = asyncio.run(engine.finish_gamble(session['id'], request.request_id))
+    assert failed['status'] == 'error' and failed['text'] == BEFORE
+    assert failed['api_calls'] == 3 and draws == [.6]
