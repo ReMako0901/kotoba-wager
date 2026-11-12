@@ -6,6 +6,8 @@ import type { Dust, DustProps } from './PaperDust';
 
 const MAX_ROWS = 9;
 const noColumnStart = /^[、。，．！？!?：；・…‥ー〜～々〻ゝゞヽヾぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮヵヶ」』）〕］｝〉》】〗〙〛’”)]/u;
+const punctuation = /^[、。，．]$/u;
+const closingQuote = /^[」』]$/u;
 const smallKana = /^[ぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮヵヶ]$/u;
 const noColumnEnd = /^[「『（〔［｛〈《【〖〘〚‘“(]/u;
 const dialogueStart = /^[「『]/u;
@@ -22,18 +24,20 @@ function paperPositions(text: string, rows: number, runStarts: Set<number>) {
       let row = dialogueStart.test(glyphs[first]) ? 0 : 1;
       while (start < glyphs.length) {
         const full = Math.min(start + rows - row, glyphs.length);
-        const tuckKana = full > start && full < glyphs.length && smallKana.test(glyphs[full]) &&
-          !noColumnEnd.test(glyphs[full - 1]) &&
-          !noColumnStart.test(glyphs[full + 1] ?? '') && !runStarts.has(offset + full);
+        const next = glyphs[full] ?? '';
+        const canTuck = punctuation.test(next) || (smallKana.test(next) && !runStarts.has(offset + full));
+        const tuckedMarks = punctuation.test(next) && closingQuote.test(glyphs[full + 1] ?? '') ? 2 : 1;
+        const tucked = full > start && canTuck && !noColumnEnd.test(glyphs[full - 1]) &&
+          !noColumnStart.test(glyphs[full + tuckedMarks] ?? '') ? tuckedMarks : 0;
         let end = full;
-        if (!tuckKana) {
+        if (!tucked) {
           while (end > start && end < glyphs.length &&
             (noColumnStart.test(glyphs[end]) || noColumnEnd.test(glyphs[end - 1]))) end--;
           if (end === start) end = full;
         }
         for (let i = start; i < end; i++) positions.set(offset + i, column * rows + row + i - start);
-        if (tuckKana) positions.set(offset + end, column * rows + rows - 1);
-        start = end + Number(tuckKana);
+        for (let i = 0; i < tucked; i++) positions.set(offset + end + i, column * rows + rows - 1);
+        start = end + tucked;
         row = 0;
         column++;
       }
@@ -69,6 +73,7 @@ function Paper({text, units, selected, disabled, onToggle, marked, dust, losses}
   }, []);
   const runs = units ?? [{id: 'text', text, stakeable: false}];
   const content = [];
+  const allGlyphs = Array.from(text);
   const runStarts = new Set<number>();
   let runOffset = 0;
   for (const run of runs) {
@@ -85,20 +90,23 @@ function Paper({text, units, selected, disabled, onToggle, marked, dust, losses}
     while (index < glyphs.length) {
       const source = offset + index;
       const square = positions.get(source);
-      if (square === undefined) { index++; continue; }
+      if (square === undefined || occupied.has(square)) { index++; continue; }
       const row = square % rows;
       let length = 0;
       const cells = [];
       while (index + length < glyphs.length && row + cells.length < rows &&
         positions.get(source + length) === square + cells.length) {
         const cell = square + cells.length;
-        const first = length++;
-        if (index + length < glyphs.length && positions.get(source + length) === cell) length++;
-        const characters = glyphs.slice(index + first, index + length);
-        const isMarked = characters.some((_, i) => marked?.has(source + first + i));
+        const first = source + length++;
+        let end = first + 1;
+        while (positions.get(end) === cell) end++;
+        length += Math.min(end - first - 1, glyphs.length - index - length);
+        const characters = allGlyphs.slice(first, end);
+        const isMarked = characters.some((_, i) => marked?.has(first + i));
+        const packed = characters.length === 1 ? '' : punctuation.test(characters[1]) ? ' packed-punctuation' : ' packed-kana';
         occupied.add(cell);
-        cells.push(<span key={cell} className={`ink-cell${isMarked ? ' marked' : ''}${characters.length > 1 ? ' packed-kana' : ''}`}>
-          {characters.map((glyph, i) => <span key={i} className="ink-glyph">{glyph}</span>)}
+        cells.push(<span key={cell} className={`ink-cell${isMarked ? ' marked' : ''}${packed}`}>
+          {characters.map((glyph, i) => <span key={i} className={marked?.has(first + i) ? 'ink-glyph marked-glyph' : 'ink-glyph'}>{glyph}</span>)}
         </span>);
       }
       const position = {gridRow: `${row + 1} / span ${cells.length}`, gridColumn: Math.floor(square / rows) + 1};
@@ -173,7 +181,7 @@ function animateInk(canvas: HTMLCanvasElement, frame: HTMLElement, dust: Dust, i
     sample.clearRect(0, 0, 64, 64);
     sample.textAlign = 'center';
     sample.textBaseline = 'middle';
-    for (const glyph of cell.children) {
+    for (const glyph of cell.querySelectorAll('.marked-glyph')) {
       const font = getComputedStyle(glyph);
       const glyphBounds = glyph.getBoundingClientRect();
       const dy = glyphBounds.top + glyphBounds.height / 2 - rect.top - rect.height / 2;
