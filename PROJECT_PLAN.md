@@ -60,6 +60,8 @@ Render 無料枠の制約（15分で休止、再起動・再デプロイでロ�
 ## 5. フェーズ計画
 
 ### Phase 0: 準備（ユーザー作業 + 手順書）
+
+手順の正本は `docs/PHASE0_GUIDE.md`。完了後は同書の「完了したら Muse へ知らせる内容」を報告する。
 - Cloud プロジェクト作成、Billing 有効化、AI Pro クレジットの適用確認
 - Firestore（Native）作成、Secret Manager 登録
 - 受け入れ: API キーがコード・Git・画面に出ていないこと
