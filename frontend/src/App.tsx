@@ -124,7 +124,7 @@ export default function App(){
     {error && !customOpen && !choosingGame && <div className="alert" role="alert">{error}{screen === 'game' && session &&
       <button onClick={() => act(async () => accept(await api<Session>(`/sessions/${session.id}`)))}>状態を確認</button>}</div>}
     {screen === 'title' && <main className="title-screen">
-      <h1>ギャンブルライティングメーカー<span>(仮称)</span></h1>
+      <h1><span>ギャンブル</span><span>ライティングメーカー</span><small>(仮称)</small></h1>
       <button className="primary" disabled={busy} onClick={() => reroll(true)}>はじめる <span>→</span></button>
     </main>}
     {screen === 'choose' && <main className="choose-screen">
