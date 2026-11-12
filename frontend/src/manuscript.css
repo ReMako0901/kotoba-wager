@@ -38,18 +38,20 @@ body, .app-shell, .story-board, .modal { background: #fff; }
 .primary:disabled { background: #f7eeee; border-color: #f7eeee; color: #6e5a59; }
 .secondary { border-color: var(--rule); border-radius: 2px; }
 .story-board { border: 0; border-radius: 0; padding: 6px 0 10px; }
+.stake-summary { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.stake-summary .text-button { min-height: 25px; flex-shrink: 0; }
 .paper-frame { position: relative; }
 .paper-scroll { direction: rtl; overflow-x: auto; scrollbar-width: thin; }
 .vertical-paper {
-  --cell-size: clamp(22px, 6.5vw, 29px);
+  --cell-size: clamp(29px, 8.2vw, 39px);
   display: grid;
-  grid-template-rows: repeat(11, var(--cell-size));
+  grid-template-rows: repeat(9, var(--cell-size));
   grid-auto-columns: var(--cell-size);
   width: max-content;
   margin-inline: auto;
   border: 1px solid var(--rule);
   background: #fff;
-  font: 500 calc(var(--cell-size) * .74)/1 var(--serif);
+  font: 500 calc(var(--cell-size) * .8)/1 var(--serif);
 }
 .ink-cell {
   display: grid;

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Transaction, Unit } from './types';
 
-const ROWS = 11;
+const ROWS = 9;
 
 function Paper({text, units, selected, disabled, onToggle, marked}: {
   text: string;
@@ -38,7 +38,7 @@ function Paper({text, units, selected, disabled, onToggle, marked}: {
       offset += length;
     }
   }
-  const capacity = Math.max(9, Math.ceil(offset / ROWS)) * ROWS;
+  const capacity = Math.max(8, Math.ceil(offset / ROWS)) * ROWS;
   for (let i = offset; i < capacity; i++) {
     content.push(<span className="ink-cell" key={i} aria-hidden="true"
       style={{gridRow: i % ROWS + 1, gridColumn: Math.floor(i / ROWS) + 1}} />);

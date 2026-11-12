@@ -26,7 +26,7 @@ export default function App(){
   const [resumeId,setResumeId]=useState(localStorage.getItem(SESSION_KEY));
   const [choices,setChoices]=useState<Story[]>([]),[seen,setSeen]=useState<string[]>([]);
   const [selected,setSelected]=useState<string[]>([]),[offerId,setOfferId]=useState('');
-  const [meaningOpen,setMeaningOpen]=useState(false);
+  const [meaningOpen, setMeaningOpen] = useState(false);
   const [games, setGames] = useState<GameOption[]>([]);
   const [gameId, setGameId] = useState<GameKind>();
   const [choosingGame, setChoosingGame] = useState(false);
@@ -38,10 +38,15 @@ export default function App(){
   useEffect(()=>{
     if(!session)return;
     const saved=savedChoice(session);
-    setSelected((saved.units||[]).filter(id=>session.analysis?.units.some(u=>u.id===id&&u.stakeable)));
-    const valid=session.offers.some(o=>o.id===saved.offer)?saved.offer!:'';
-    setGameId(saved.game); setChoosingGame(Boolean(valid && !saved.game));
-    setOfferId(valid);setChoosingReward(!valid);setMeaningOpen(false);actionId.current=undefined;
+    const restored = (saved.units ?? []).filter(id => session.analysis?.units.some(u => u.id === id && u.stakeable));
+    const restoredOffer = session.offers.find(o => o.id === saved.offer);
+    setSelected(restored);
+    setGameId(restoredOffer && restored.length === restoredOffer.required_count ? saved.game : undefined);
+    setChoosingGame(false);
+    setOfferId(restoredOffer?.id ?? '');
+    setChoosingReward(!restoredOffer);
+    setMeaningOpen(false);
+    actionId.current = undefined;
   },[session?.id,session?.version]);
   useEffect(()=>{if(session?.status==='ready')localStorage.setItem(choiceKey(session),JSON.stringify({units:selected,offer:offerId,game:gameId}))},[selected,offerId,gameId,session?.id,session?.version,session?.status]);
   useEffect(()=>{
@@ -69,6 +74,7 @@ export default function App(){
   const units=session?.analysis?.units||[],offer=session?.offers.find(o=>o.id===offerId);
   const selectedUnits=units.filter(u=>selected.includes(u.id));
   const selectedCount=selectedUnits.length;
+  const stakesReady = offer !== undefined && selectedCount === offer.required_count;
   const last=session?.transactions.at(-1),resultMode=session?.view==='result'&&last?.status==='committed';
   const game = games.find(item => item.id === gameId);
   const gambleMode = Boolean(last?.gamble && !last.presentation_completed && !resultMode);
@@ -76,13 +82,13 @@ export default function App(){
   const round=(session?.transactions.filter(t=>t.status==='committed').length||0)+(resultMode?0:1);
   function toggle(id:string){
     if(busy||!ready||resultMode||!offer||choosingReward)return;
-    actionId.current=undefined;setNotice('');
+    actionId.current=undefined;setNotice('');setGameId(undefined);
     if(selected.includes(id)){setSelected(selected.filter(x=>x!==id));return}
     const unit=units.find(u=>u.id===id);
     if(!unit?.stakeable)return;
     setSelected([...selected,id]);
   }
-  async function trade(){await act(async()=>{if(!session||!offer||!gameId)return;actionId.current||=requestId();accept(await api<Session>(`/sessions/${session.id}/transactions`,{request_id:actionId.current,version:session.version,offer_id:offer.id,unit_ids:selected,game:gameId}))})}
+  async function trade(){await act(async()=>{if(!session||!offer||!gameId||!stakesReady)return;actionId.current||=requestId();accept(await api<Session>(`/sessions/${session.id}/transactions`,{request_id:actionId.current,version:session.version,offer_id:offer.id,unit_ids:selected,game:gameId}))})}
 
   return <div className={`app-shell ${screen==='game'?'playing':''}`}>
     <header className="masthead"><button className="wordmark" aria-label="タイトルへ戻る" onClick={()=>{setScreen('title');setHistoryOpen(false)}}>ことばの取引所</button>{screen==='game'?<button className="icon-button" aria-label="取引履歴" disabled={gambleMode} onClick={()=>setHistoryOpen(true)}>☰</button>:null}</header>
@@ -101,16 +107,42 @@ export default function App(){
         <div className="bottom-actions"><button className="primary" disabled={busy} onClick={()=>act(async()=>{setSelected([]);setOfferId('');setChoosingReward(true);accept(await api<Session>(`/sessions/${session.id}/continue`,{}))})}>次は何をねらう？ <span>→</span></button></div>
       </>:<>
         <button className="reward-summary" disabled={!ready||busy} onClick={()=>{setChoosingGame(false);setChoosingReward(true)}}><span><small>今回ねらうもの</small><b>{offer?.title||'報酬を選ぼう'}</b></span><span>{offer?`${offer.required_count}個`:`${session.offers.length}つから`} <small>変更 ↗</small></span></button>
-        <button className="game-summary" disabled={!ready || busy || !offer} onClick={() => setChoosingGame(true)}>{game?.name || 'ギャンブルを選ぶ'}<small>{game ? `決着時の勝率 ${Math.round(game.win_probability * 100)}% · 変更 ↗` : ''}</small></button>
         {processing?<p className="processing" role="status"><span className="spinner"/>{session.status==='analyzing'?'ことばを仕分け中…':'結果は確定！ お話をリミックス中…'}</p>:<p className="reading-hint">赤い線のことばを選ぶ。</p>}
         <section className="story-board" aria-label="賭ける言葉を選ぶ">{session.analysis ? <WagerManuscript text={session.text} units={units} selected={selected}
-          disabled={!ready || !offer || !gameId || busy || choosingReward || choosingGame} onToggle={toggle} />
+          disabled={!ready || !offer || busy || choosingReward || choosingGame} onToggle={toggle} />
           : <Manuscript text={session.text} />}</section>
-        {session.status==='error'?<div className="api-error" role="alert"><p>{session.error}</p></div>:ready&&offer?<section className="trade-dock" aria-label="取引の確定"><div className="dock-top"><span>選んだことば</span><b>{selectedCount}<small> / {offer.required_count} 個</small></b><button className="text-button" disabled={!selected.length} onClick={()=>{setSelected([]);actionId.current=undefined;setNotice('')}}>クリア</button></div><p className="stake-preview">{selectedUnits.length?selectedUnits.map(u=>u.text).join(' / '):'赤い線のことばを選んでね。'}</p><div className="dock-helper"><span>勝率 {Math.round((game?.win_probability ?? session.win_probability)*100)}% {selected.length>0&&<button className="text-button" onClick={()=>setMeaningOpen(true)}>選択を確認</button>}</span><span></span></div><button className="primary" disabled={busy||!game||!selected.length||selectedCount!==offer.required_count} onClick={trade}>{selectedCount===offer.required_count&&selected.length?'ギャンブルスタート':selectedCount>offer.required_count?`${selectedCount-offer.required_count}個減らしてね`:`あと${offer.required_count-selectedCount}個選ぼう`}<span>→</span></button></section>:null}
+        {session.status === 'error' ? <div className="api-error" role="alert"><p>{session.error}</p></div> : ready && offer &&
+          <section className="trade-dock" aria-label="取引の確定">
+            <div className="dock-top">
+              <span>選んだことば</span>
+              <b>{selectedCount}<small> / {offer.required_count} 個</small></b>
+              <button className="text-button" disabled={!selected.length} onClick={() => {
+                setSelected([]); setGameId(undefined); actionId.current = undefined; setNotice('');
+              }}>クリア</button>
+            </div>
+            {selectedUnits.length > 0 && <div className="stake-summary">
+              <p className="stake-preview">{selectedUnits.map(u => u.text).join(' / ')}</p>
+              <button className="text-button" onClick={() => setMeaningOpen(true)}>選択を確認</button>
+            </div>}
+            {game && stakesReady && <div className="dock-helper">
+              <span>{game.name} · 勝率 {Math.round(game.win_probability * 100)}%</span>
+              <button className="text-button" disabled={busy} onClick={() => setChoosingGame(true)}>ギャンブルを変更</button>
+            </div>}
+            <button className="primary" disabled={busy || !stakesReady || !games.length}
+              onClick={() => game ? void trade() : setChoosingGame(true)}>
+              {stakesReady ? game ? 'ギャンブルスタート' : 'ギャンブルを選ぶ'
+                : selectedCount > offer.required_count ? `${selectedCount - offer.required_count}個減らしてね`
+                : `あと${offer.required_count - selectedCount}個選ぼう`}
+              <span>→</span>
+            </button>
+          </section>}
       </>}
-      {ready&&!resultMode&&(choosingReward||!offer)&&<Modal title="何を手に入れる？" onClose={offer?()=>setChoosingReward(false):undefined}><p className="modal-intro">報酬を選んだら、次はギャンブルを選ぼう。</p><div className="reward-options">{session.offers.map(o=><button key={o.id} className="reward-option" onClick={()=>{if(o.id!==offerId)setSelected([]);setOfferId(o.id);setChoosingReward(false);setChoosingGame(true);setNotice('');actionId.current=undefined}}><span><b>{o.title}</b><small>{o.description}</small></span><strong>{o.required_count}<small>個</small></strong></button>)}</div><p className="quiet">勝てば報酬をGET。賭けたことばも残る。</p></Modal>}
-      {ready && !resultMode && !choosingReward && offer && (choosingGame || !gameId) && <Modal title="どのギャンブルにする？" onClose={() => {setChoosingGame(false);if(!gameId)setChoosingReward(true)}}><div className="reward-options">{games.map(option => <button className="reward-option game-option" key={option.id} onClick={() => {setGameId(option.id); setChoosingGame(false); actionId.current = undefined;}}><span><b>{option.name}</b><small>決着時の勝率 {Math.round(option.win_probability * 100)}%</small><small>{option.description}</small><small>{option.detail}</small></span></button>)}</div></Modal>}
-      {meaningOpen&&<Modal title="選んだことば" onClose={()=>setMeaningOpen(false)}><div className="meaning-list">{selectedUnits.map((u,i)=><section key={u.id}><b>{i+1}. 「{u.text}」</b></section>)}</div><p className="quiet">選べるコマはどれも同じ1個。負けた場合、選んだ原文の意味と必要な依存描写が失われます。意味の解釈は勝敗確定後に行います。</p></Modal>}
+      {ready&&!resultMode&&(choosingReward||!offer)&&<Modal title="何を手に入れる？" onClose={offer?()=>setChoosingReward(false):undefined}><p className="modal-intro">報酬を選んだら、本文から賭けることばを選ぶ。</p><div className="reward-options">{session.offers.map(o=><button key={o.id} className="reward-option" onClick={()=>{if(o.id!==offerId){setSelected([]);setGameId(undefined);}setOfferId(o.id);setChoosingReward(false);setNotice('');actionId.current=undefined}}><span><b>{o.title}</b><small>{o.description}</small></span><strong>{o.required_count}<small>個</small></strong></button>)}</div><p className="quiet">勝てば報酬をGET。賭けたことばも残る。</p></Modal>}
+      {ready && !resultMode && !choosingReward && stakesReady && choosingGame && <Modal title="どのギャンブルにする？" onClose={() => setChoosingGame(false)}><div className="reward-options">{games.map(option => <button className="reward-option game-option" key={option.id} onClick={() => {setGameId(option.id); setChoosingGame(false); actionId.current = undefined;}}><span><b>{option.name}</b><small>決着時の勝率 {Math.round(option.win_probability * 100)}%</small><small>{option.description}</small><small>{option.detail}</small></span></button>)}</div></Modal>}
+      {meaningOpen && <Modal title="選んだことば" onClose={() => setMeaningOpen(false)}>
+        <div className="meaning-list">{selectedUnits.map(u => <section key={u.id}><b>「{u.text}」</b></section>)}</div>
+        <p className="quiet">負けると、選んだことばが指す意味と、それに関わる描写が失われます。</p>
+      </Modal>}
       {historyOpen&&<Modal title="これまでの取引" onClose={()=>setHistoryOpen(false)}><div className="history-body">{session.transactions.length?session.transactions.map((t,i)=><p key={t.id}><b>{i+1}. {t.outcome==='win'?'WIN':'LOSE'}</b> / {t.offer.title}<small>{t.stakes.join(' / ')} · {t.status==='committed'?'反映済み':'反映待ち'}</small></p>):<p>まだ取引はないよ。</p>}<h3>失われた設定</h3><p>{session.lost_concepts.map(c=>c.label).join('・')||'まだなし'}</p><p className="quiet">生成 {session.api_calls}回 / {session.model}<br/>入力 {session.usage.input}・出力 {session.usage.output} tokens</p></div></Modal>}
     </>}
     </main>}
