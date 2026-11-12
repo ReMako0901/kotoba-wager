@@ -28,3 +28,29 @@
 - 既存の未追跡研究資料を巻き込まない。`git add .` の無差別使用、履歴改変、`reset --hard`、`push --force`は禁止。
 - 公開専用リポジトリの更新とRenderへの反映は別。プレイ中のRender再起動は途中状態を失わせ得る。最新の配信結果はSTATUS.mdで確認する。
 - 通常の許可済み作業で確認を繰り返さない。新しい課金・公開範囲・認証権限などの変更は勝手に行わない。
+
+## サーバー移行（Cloud Run + Firestore）について
+
+着手前に `PROJECT_PLAN.md` を読み、リポジトリの `docs/HOSTING_OPTIONS.md` と合わせて確認する。
+本節と PROJECT_PLAN.md が食い違う場合は、勝手に決めずユーザーへ報告して止まる。
+
+- 移行先は Cloud Run + Firestore。フロント（GitHub Pages）と API の外部契約は変えない
+- 保存層は `backend/app/store.py` のインターフェースを保って Firestore 化する。
+  セッション本体と transactions を分け、1ドキュメント 1MiB 上限を踏まない
+- 冪等性（同一 request_id の再送で再抽選しない）、本文 version の検査、確定済み取引の
+  再処理防止は、プロセス内ロックではなく Firestore のトランザクションで保証する
+- 生成は `asyncio.create_task` の応答後処理に頼らない。Cloud Tasks から内部エンドポイントを
+  叩き、そのリクエスト内で生成を完了させる。内部エンドポイントは OIDC 等で保護する
+- SudachiPy・辞書・Wiktionary 索引はそのまま使う。形態素解析の差し替えは移行の範囲外
+- Gemini のキーは Secret Manager 経由のみ。`.env`、Git、ログ、画面へ出さない
+- 課金・権限に関わる操作（Cloud プロジェクト作成、Billing 有効化、クレジット請求、
+  Secret 登録、公開切替、Render 停止）は実装者が行わない。手順を提示して止まる
+- `render.yaml` と Render 向け手順は、切替完了とユーザーの承認まで削除しない
+- 検証は「既存 pytest」「エミュレータでの store テスト」「実 Gemini」「ブラウザ確認」「公開配信」を
+  区別して報告する。未実施の検証を実施済みと書かない
+
+## みんなの物語（Phase 3）について
+
+- 公開保存は、完成画面でプレイヤー本人が公開ボタンを押したときだけ行う。自動公開しない
+- 一覧取得は作成日時のインデックスで最新分だけ読む（全件取得しない）
+- ユーザー入力文字列を `dangerouslySetInnerHTML` で描画しない
