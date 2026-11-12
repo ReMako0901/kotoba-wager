@@ -1,0 +1,22 @@
+.game-tiers { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; margin: 12px 0; }
+.game-tiers button { border: 1px solid var(--rule); background: #fff; border-radius: 2px; font-weight: 700; }
+.game-tiers button[aria-pressed=true] { background: #f0e6e3; color: var(--stamp); border-color: var(--stamp); }
+.beginner-game { gap: 16px; }
+.rps-result, .rps-buttons { display: grid; gap: 8px; text-align: center; }
+.rps-result { grid-template-columns: repeat(2, 1fr); }
+.rps-result > div { display: grid; padding: 8px; border: 1px solid var(--rule); }
+.rps-result b { font-size: clamp(30px, 12vw, 48px); }
+.rps-result span { font-size: 13px; }
+.rps-buttons { grid-template-columns: repeat(3, 1fr); }
+.rps-buttons .secondary { margin: 0; padding: 8px 0; }
+.rps-buttons span { display: block; font-size: 29px; }
+.dice-game, .card-guess { display: grid; gap: 12px; }
+.dice-face { justify-self: center; font: 86px/1.12 "Apple Symbols", "Segoe UI Symbol", sans-serif; }
+.guess-board { width: min(100%, 360px); aspect-ratio: 2 / 1; position: relative; justify-self: center; }
+.guess-card.playing-card {
+  position: absolute; left: 2.166%; top: 6%; width: 29%; height: auto; aspect-ratio: 167 / 243;
+  display: grid; place-content: center; padding: 0; overflow: hidden;
+}
+.guess-card.playing-card:disabled { opacity: 1; cursor: default; }
+.guess-card .baccarat-face { position: absolute; inset: 0; }
+.guess-card.guess-selected { outline: 2px solid var(--stamp); outline-offset: 2px; }

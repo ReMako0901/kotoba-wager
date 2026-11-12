@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { BaccaratCard, CardFace } from './BaccaratCard';
+import { BeginnerPlay } from './BeginnerPlay';
 import type { CardRound, Gamble, PlayingCard } from './types';
 
 function total(cards: PlayingCard[], blackjack: boolean) {
@@ -35,7 +36,7 @@ function CardHand({ cards, label, isOpen, blackjack, selected, onSelect, onOpenA
 }
 
 type PlayProps = {
-  gamble: Gamble; busy: boolean; error?: string; prepared: boolean; onFinish: () => void;
+  gamble: Gamble; busy: boolean; error?: string; prepared: boolean; onFinish: () => void; onMove: (attempt: number, choice?: number) => void;
 };
 
 function Status({ error, prepared }: Pick<PlayProps, 'error' | 'prepared'>) {
@@ -165,5 +166,8 @@ function BaccaratPlay(props: PlayProps) {
 export function GamblePlay(props: PlayProps) {
   if (props.gamble.kind === 'slot') return <SlotPlay {...props} />;
   if (props.gamble.kind === 'blackjack') return <BlackjackPlay {...props} />;
+  if (props.gamble.moves) return <BeginnerPlay gamble={props.gamble} busy={props.busy} onMove={props.onMove}>
+    {props.gamble.outcome && <Finish {...props} />}
+  </BeginnerPlay>;
   return <BaccaratPlay {...props} />;
 }

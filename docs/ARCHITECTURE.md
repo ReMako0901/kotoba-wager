@@ -79,6 +79,7 @@ AIの本文案は最大140文字。定型文による勝利の補完は、元の
 |GET `/api/sessions/{sid}`|進捗・結果を取得|
 |GET `/api/games`|ゲームの種類・決着時の勝率・演出の説明|
 |POST `/api/sessions/{sid}/transactions`|request_id/version/offer_id/unit_ids/gameで取引開始。game省略は旧クライアント互換|
+|POST `/api/sessions/{sid}/transactions/{id}/play`|初心者向けの操作を保存。あいこは次の手番を待ち、決着で生成を開始。同じ手番の再送は二重処理しない。|
 |POST `/api/sessions/{sid}/transactions/{id}/finish`|演出後に反映を確定。同じIDで再送しても再抽選しない|
 |POST `/api/sessions/{sid}/retry`|保存済み同一勝敗で手動再試行|
 |POST `/api/sessions/{sid}/continue`|結果から次の報酬・選択へ|

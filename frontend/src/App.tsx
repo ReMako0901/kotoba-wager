@@ -13,11 +13,6 @@ function requestId() {
 }
 const MIN_STORY = 20;
 const MAX_STORY = 100;
-const gameTeasers: Record<GameKind, string> = {
-  slot: '7が揃うと！？',
-  blackjack: '堅実に勝負！',
-  baccarat: 'ハイリスクハイリターン！',
-};
 const choiceKey=(s:Session)=>`story-wager-selection-count-v1-${s.id}-${s.version}`;
 function savedChoice(s:Session):{units?:string[];offer?:string} {try{return JSON.parse(localStorage.getItem(choiceKey(s))||'{}')}catch{return {}}}
 
@@ -39,6 +34,9 @@ export default function App(){
   const [choices,setChoices]=useState<Story[]>([]),[seen,setSeen]=useState<string[]>([]);
   const [selected,setSelected]=useState<string[]>([]),[offerId,setOfferId]=useState('');
   const [games, setGames] = useState<GameOption[]>([]);
+  const [gameTier, setGameTier] = useState<'beginner' | 'advanced'>('beginner');
+  const hasBeginnerGames = games.some(game => game.tier === 'beginner');
+  const shownGames = games.filter(game => !hasBeginnerGames || (game.tier ?? 'advanced') === gameTier);
   const [choosingGame, setChoosingGame] = useState(false);
   const [choosingReward,setChoosingReward]=useState(false),[historyOpen,setHistoryOpen]=useState(false);
   const [busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState('');
@@ -155,7 +153,9 @@ export default function App(){
       </Modal>}
     </main>}
     {screen==='game'&&session&&<main className="game-screen">
-      {gambleMode && last?.gamble ? <GamblePlay key={last.id} gamble={last.gamble} busy={busy} error={session.error} prepared={session.status === 'awaiting_reveal'} onFinish={() => act(async () => accept(await api<Session>(`/sessions/${session.id}/transactions/${last.id}/finish`, {})))} /> : <>
+      {gambleMode && last?.gamble ? <GamblePlay key={last.id} gamble={last.gamble} busy={busy} error={session.error} prepared={session.status === 'awaiting_reveal'}
+        onMove={(attempt, choice) => act(async () => accept(await api<Session>(`/sessions/${session.id}/transactions/${last.id}/play`, { attempt, choice })))}
+        onFinish={() => act(async () => accept(await api<Session>(`/sessions/${session.id}/transactions/${last.id}/finish`, {})))} /> : <>
       <div className="chapter-line"><span>第{round}章</span>{(resultMode || processing) && <span>{resultMode ? '結果' : '準備中'}</span>}</div>
       <h1 className="story-title">{session.title}</h1>
       {resultMode?<>
@@ -192,14 +192,20 @@ export default function App(){
       {ready&&!resultMode&&(choosingReward||!offer)&&<Modal title="何を手に入れる？" onClose={offer?()=>setChoosingReward(false):undefined}><div className="reward-options">{session.offers.map(o=><button key={o.id} className="reward-option" onClick={()=>{if(o.id!==offerId){setSelected([]);}setOfferId(o.id);setChoosingReward(false);setNotice('');action.current=undefined}}><span><b>{o.title}</b><small>{o.description}</small></span><strong>{o.required_count}<small>個</small></strong></button>)}</div></Modal>}
       {ready && !resultMode && !choosingReward && stakesReady && choosingGame &&
         <Modal title="どのギャンブルにする？" onClose={() => { if (!busy) setChoosingGame(false); }}>
-          <div className="reward-options">{games.map(option => <button className="reward-option game-option" key={option.id}
+          {hasBeginnerGames && <div className="game-tiers" role="group" aria-label="難易度">
+            <button type="button" aria-pressed={gameTier === 'beginner'} disabled={busy} onClick={() => setGameTier('beginner')}>初心者</button>
+            <button type="button" aria-pressed={gameTier === 'advanced'} disabled={busy} onClick={() => setGameTier('advanced')}>上級者</button>
+          </div>}
+          <div className="reward-options">{shownGames.map(option => <button className="reward-option game-option" key={option.id}
             disabled={busy} onClick={() => trade(option.id)}>
-            <span><b>{option.name}</b><small>勝率{Math.round(option.win_probability * 100)}％</small><small>{gameTeasers[option.id]}</small></span>
+            <span><b>{option.name}</b>
+              <small>{option.id === 'rps' ? '勝ち33％・負け33％・あいこ34％' : `勝率${Math.round(option.win_probability * 100)}％${option.id === 'card_guess' ? '〜' : ''}`}</small>
+              <small>{option.description}</small></span>
           </button>)}</div>
           {busy && <p className="quiet" role="status">ゲームを準備中…</p>}
           {error && <p className="input-error" role="alert">{error}</p>}
         </Modal>}
-      {historyOpen&&<Modal title="これまでの取引" onClose={()=>setHistoryOpen(false)}><div className="history-body">{session.transactions.length?session.transactions.map((t,i)=><p key={t.id}><b>{i+1}. {t.outcome==='win'?'WIN':'LOSE'}</b> / {t.offer.title}<small>{t.stakes.join(' / ')} · {t.status==='committed'?'反映済み':'反映待ち'}</small></p>):<p>まだ取引はないよ。</p>}<h3>失われた設定</h3><p>{session.lost_concepts.map(c=>c.label).join('・')||'まだなし'}</p><p className="quiet">生成 {session.api_calls}回 / {session.model}<br/>入力 {session.usage.input}・出力 {session.usage.output} tokens</p></div></Modal>}
+      {historyOpen&&<Modal title="これまでの取引" onClose={()=>setHistoryOpen(false)}><div className="history-body">{session.transactions.length?session.transactions.map((t,i)=><p key={t.id}><b>{i+1}. {t.outcome==='win'?'WIN':t.outcome==='loss'?'LOSE':'対戦中'}</b> / {t.offer.title}<small>{t.stakes.join(' / ')} · {t.status==='committed'?'反映済み':'反映待ち'}</small></p>):<p>まだ取引はないよ。</p>}<h3>失われた設定</h3><p>{session.lost_concepts.map(c=>c.label).join('・')||'まだなし'}</p><p className="quiet">生成 {session.api_calls}回 / {session.model}<br/>入力 {session.usage.input}・出力 {session.usage.output} tokens</p></div></Modal>}
     </>}
     </main>}
   </div>;
