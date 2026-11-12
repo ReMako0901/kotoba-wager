@@ -45,7 +45,7 @@ function Status({ error, prepared }: Pick<PlayProps, 'error' | 'prepared'>) {
 
 function Finish({ gamble, busy, error, prepared, onFinish }: PlayProps) {
   return <>
-    <div className="gamble-outcome"><b>{gamble.label} · 変化の強さ {gamble.strength}</b></div>
+    {gamble.kind === 'slot' && <div className="gamble-outcome"><b>{gamble.label} · 変化の強さ {gamble.strength}</b></div>}
     <div className="gamble-actions">
       <button className="primary" disabled={busy || (!prepared && !error)} onClick={onFinish}>
         {prepared || error ? 'この結果を物語へ' : '物語を準備中…'} <span>→</span>
@@ -143,7 +143,7 @@ function BaccaratRound({ round, nextRound, ...props }: PlayProps & { round: Card
     {complete && <h1>{tied ? '引き分け' : round.outcome === 'win' ? '勝利' : '敗北'}</h1>}
     <div className="card-table">
       {hand(bankerCards, 'banker', 'バンカー')}{hand(playerCards, 'player', 'あなた / プレイヤー')}
-      {complete && <p className="hand-comparison">{round.player_total} 対 {round.banker_total} · {round.difference}点差</p>}
+      {complete && <p className="hand-comparison">{round.player_total} 対 {round.banker_total}</p>}
     </div>
     {selected && <BaccaratCard key={`${selected.side}-${selected.index}`}
       card={selected.card} label={selected.label} open={opened[selected.side].includes(selected.index)}
