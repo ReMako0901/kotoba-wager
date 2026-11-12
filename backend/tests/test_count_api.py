@@ -43,3 +43,21 @@ def test_story_draw_shows_last_candidate_before_restarting():
         restarted = client.post("/api/stories/draw", json={"exclude": catalog_ids}).json()
         assert restarted["exhausted"]
         assert len({story["id"] for story in restarted["stories"]}) == 3
+
+
+def test_custom_story_preserves_paragraphs_and_is_retryable(tmp_path, monkeypatch):
+    monkeypatch.setattr(main, 'store', Store(tmp_path))
+    text = '青い扉の前で、私は古い鍵を拾った。\n向こうでは猫が小さな鐘を鳴らした。'
+    payload = {'custom_text': text, 'request_id': 'custom-story-test'}
+    with TestClient(main.app) as client:
+        response = client.post('/api/sessions', json=payload)
+        assert response.status_code == 202
+        story = response.json()
+        assert story['text'] == text
+        assert ''.join(unit['text'] for unit in story['analysis']['units']) == text
+        assert story['offers'] and story['api_calls'] == 0
+        assert client.post('/api/sessions', json=payload).json() == story
+        assert client.post('/api/sessions', json={**payload, 'custom_text': text + '猫。'}).status_code == 409
+        assert client.post('/api/sessions', json={**payload, 'custom_text': '雨' * 101}).status_code == 422
+        assert client.post('/api/sessions', json={**payload, 'custom_text': '短い。'}).status_code == 422
+        assert len(client.post('/api/stories/draw', json={'count': 5}).json()['stories']) == 5

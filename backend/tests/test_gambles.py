@@ -54,3 +54,23 @@ def test_baccarat_ties_and_final_deal_are_prearranged(index, margins, strength, 
         assert deal_baccarat(hand['deck']) == {k: v for k, v in hand.items() if k != 'deck'}
     assert [hand['outcome'] for hand in plan['rounds']] == ['tie', 'tie', 'win' if wins else 'loss']
     assert plan['strength'] == strength and plan['rounds'][-1]['difference'] in margins
+
+
+@pytest.mark.parametrize('wins', [True, False])
+def test_blackjack_hit_or_stand_keeps_result_and_uses_the_same_deck(wins):
+    from app.gambles import blackjack_outcome, blackjack_total
+    rng = Random(42)
+    outcome = 'win' if wins else 'loss'
+    hands_with_hits = 0
+    for _ in range(100):
+        plan = make_gamble('blackjack', lambda _: wins, rng)
+        (hand,) = plan['rounds']
+        hands_with_hits += len(hand['player']) > 2
+        for hits, dealer in enumerate(hand['dealer_hands']):
+            player = hand['player'][:2 + hits]
+            assert player[2:] == hand['deck'][4:4 + hits]
+            assert dealer[2:] == hand['deck'][4 + hits:4 + hits + len(dealer[2:])]
+            assert blackjack_outcome(player, dealer) == outcome
+            if len(dealer) > 2:
+                assert blackjack_total(dealer[:-1]) < 17 <= blackjack_total(dealer)
+    assert hands_with_hits

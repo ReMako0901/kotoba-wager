@@ -31,6 +31,16 @@ export function BaccaratCard({ card, label, open, onOpen }: {
   const [peeks, setPeeks] = useState<Peeks>({});
   const drag = useRef<Drag | undefined>(undefined);
 
+  function expose(next: Peeks) {
+    if ((next.left ?? 0) + (next.right ?? 0) >= 97 ||
+        (next.top ?? 0) + (next.bottom ?? 0) >= 97) {
+      drag.current = undefined;
+      onOpen();
+      return;
+    }
+    setPeeks(next);
+  }
+
   function startDrag(event: PointerEvent<HTMLDivElement>) {
     if (open || event.button !== 0 || drag.current) return;
     const { width, height } = event.currentTarget.getBoundingClientRect();
@@ -60,7 +70,7 @@ export function BaccaratCard({ card, label, open, onOpen }: {
     }
     const edge = start.edge;
     const delta = { left: dx / start.width, right: -dx / start.width, top: dy / start.height, bottom: -dy / start.height }[edge];
-    setPeeks({ ...start.initial, [edge]: Math.max(0, Math.min(100, (start.initial[edge] ?? 0) + delta * 100)) });
+    expose({ ...start.initial, [edge]: Math.max(0, Math.min(100, (start.initial[edge] ?? 0) + delta * 100)) });
   }
 
   function endDrag(event: PointerEvent<HTMLDivElement>) {
@@ -71,7 +81,7 @@ export function BaccaratCard({ card, label, open, onOpen }: {
     const edge = arrows[event.key];
     if (open || !edge) return;
     event.preventDefault();
-    setPeeks(current => ({ ...current, [edge]: Math.min(100, (current[edge] ?? 0) + 15) }));
+    expose({ ...peeks, [edge]: Math.min(100, (peeks[edge] ?? 0) + 15) });
   }
 
   return <section className="baccarat-stage" aria-label={label}>

@@ -7,7 +7,7 @@ export interface Transaction { id: string; status: string; outcome: 'win'|'loss'
 export interface Session { betting_mode: 'count-v1'; id: string; title: string; story_id: string; text: string; version: number; status: string; error?: string; analysis?: Analysis; offers: Offer[]; win_probability: number; transactions: Transaction[]; lost_concepts: Concept[]; pending_transaction_id?: string; view: 'game'|'result'; api_calls: number; usage: {input: number; output: number; thoughts: number}; model: string }
 
 export type GameKind = 'slot' | 'blackjack' | 'baccarat';
-export interface GameOption { id: GameKind; name: string; win_probability: number; description: string; detail: string }
+export interface GameOption { id: GameKind; name: string; win_probability: number; description: string }
 export interface PlayingCard { rank: string; suit: string }
-export interface CardRound { player: PlayingCard[]; banker: PlayingCard[]; player_total: number; banker_total: number; outcome: 'win' | 'loss' | 'tie'; difference?: number }
+export interface CardRound { player: PlayingCard[]; banker: PlayingCard[]; player_total: number; banker_total: number; outcome: 'win' | 'loss' | 'tie'; difference?: number; dealer_hands?: PlayingCard[][] }
 export interface Gamble { kind: GameKind; outcome: 'win' | 'loss'; strength: number; label: string; reels?: string[]; rounds: CardRound[] }

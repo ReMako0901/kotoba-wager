@@ -3,14 +3,11 @@ import secrets
 
 GAMES = [
     {'id': 'slot', 'name': 'スロット', 'win_probability': .5,
-     'description': 'ベル1・スイカ2・REG4・BIG8。負けは2。',
-     'detail': '勝利時 ベル65% / スイカ25% / REG5% / BIG5%'},
+     'description': '7が揃うと！？'},
     {'id': 'blackjack', 'name': 'ブラックジャック', 'win_probability': .6,
-     'description': '勝ちも負けも変化1。カードをめくる簡易進行。',
-     'detail': '両者とも17以上まで自動で引く。引き分けの配列は使用しない。'},
+     'description': '堅実に勝負！'},
     {'id': 'baccarat', 'name': 'バカラ', 'win_probability': .45,
-     'description': 'プレイヤー側で勝負。点差が大きいほど極端に変わる。',
-     'detail': '決着時の勝率45%。各配りで5%はタイで配り直し。点差9→強さ10、7〜8→9、4〜6→2、1〜3→1。'},
+     'description': 'ハイリスクハイリターン！'},
 ]
 
 
@@ -31,24 +28,38 @@ def blackjack_total(cards):
     return total + 10 if any(card['rank'] == 'A' for card in cards) and total + 10 <= 21 else total
 
 
-def deal_blackjack(cards):
-    player, banker = [cards[0], cards[2]], [cards[1], cards[3]]
-    cursor = 4
-    for hand in (player, banker):
-        while blackjack_total(hand) < 17:
-            hand.append(cards[cursor])
-            cursor += 1
-    p, b = blackjack_total(player), blackjack_total(banker)
+def blackjack_outcome(player, dealer):
+    p, d = blackjack_total(player), blackjack_total(dealer)
     if p > 21:
-        outcome = 'loss'
-    elif b > 21:
-        outcome = 'win'
-    elif p == b:
-        player_natural, banker_natural = len(player) == 2 and p == 21, len(banker) == 2 and b == 21
-        outcome = 'win' if player_natural and not banker_natural else 'loss' if banker_natural and not player_natural else 'tie'
-    else:
-        outcome = 'win' if p > b else 'loss'
-    return {'player': player, 'banker': banker, 'player_total': p, 'banker_total': b, 'outcome': outcome}
+        return 'loss'
+    p_natural = len(player) == 2 and p == 21
+    d_natural = len(dealer) == 2 and d == 21
+    if p_natural != d_natural:
+        return 'win' if p_natural else 'loss'
+    return 'win' if d > 21 or p > d else 'loss' if p < d else 'tie'
+
+
+def deal_blackjack(cards):
+    player, opening_dealer = [cards[0], cards[2]], [cards[1], cards[3]]
+    natural = 21 in (blackjack_total(player), blackjack_total(opening_dealer))
+    cursor = 4
+    dealer_hands = []
+    while True:
+        points = blackjack_total(player)
+        dealer = opening_dealer.copy()
+        if not natural and points <= 21:
+            for card in cards[cursor:]:
+                if blackjack_total(dealer) >= 17:
+                    break
+                dealer.append(card)
+        dealer_hands.append(dealer)
+        if natural or points >= 21 or cursor == len(cards):
+            break
+        player.append(cards[cursor])
+        cursor += 1
+    return {'player': player, 'banker': dealer, 'dealer_hands': dealer_hands,
+            'player_total': points, 'banker_total': blackjack_total(dealer),
+            'outcome': blackjack_outcome(player, dealer)}
 
 
 def baccarat_total(cards):
@@ -77,11 +88,22 @@ def deal_baccarat(cards):
 
 def matching_deal(kind, outcome, rng, differences=None):
     deal = deal_blackjack if kind == 'blackjack' else deal_baccarat
+    # Naturals easily pass the fixed-outcome filter, but leave no turn for HIT.
+    natural_round = kind == 'blackjack' and rng.randrange(10) == 0
     for _ in range(20000):
         cards = deck(rng)
         result = deal(cards)
-        if result['outcome'] == outcome and (differences is None or result['difference'] in differences):
-            return {**result, 'deck': cards}
+        if result['outcome'] != outcome or (differences is not None and result['difference'] not in differences):
+            continue
+        if kind == 'blackjack':
+            if (len(result['player']) == 2) != natural_round:
+                continue
+            if any(
+                blackjack_outcome(result['player'][:2 + hits], dealer) != outcome
+                for hits, dealer in enumerate(result['dealer_hands'])
+            ):
+                continue
+        return {**result, 'deck': cards}
     raise ValueError('カードの配列を準備できませんでした。もう一度開始してください。')
 
 
