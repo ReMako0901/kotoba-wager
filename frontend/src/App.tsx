@@ -5,7 +5,7 @@ import { GamblePlay } from './GamblePlay';
 import './style.css';
 import './manuscript.css';
 import { Manuscript, WagerManuscript, LossManuscript } from './Manuscript';
-import { requestPaperTilt, usePaperDust } from './PaperDust';
+import { usePaperDust } from './PaperDust';
 
 function requestId() {
   const b=crypto.getRandomValues(new Uint8Array(16)); b[6]=(b[6]&15)|64; b[8]=(b[8]&63)|128;
@@ -129,7 +129,7 @@ export default function App(){
       <button onClick={() => act(async () => accept(await api<Session>(`/sessions/${session.id}`)))}>状態を確認</button>}</div>}
     {screen === 'title' && <main className="title-screen">
       <h1><span>ギャンブル</span><span>ライティングメーカー</span><small>(仮称)</small></h1>
-      <button className="primary" disabled={busy} onClick={() => { requestPaperTilt(); void reroll(true); }}>はじめる <span>→</span></button>
+      <button className="primary" disabled={busy} onClick={() => void reroll(true)}>はじめる <span>→</span></button>
     </main>}
     {screen === 'choose' && <main className="choose-screen">
       <h1>物語を選ぶ</h1>

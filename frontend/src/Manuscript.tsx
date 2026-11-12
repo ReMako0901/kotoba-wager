@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import type { Transaction, Unit } from './types';
-import { addPaperDust, PaperDust } from './PaperDust';
+import { addPaperDust, PaperDust, sampleDustSize } from './PaperDust';
 import type { Dust, DustProps } from './PaperDust';
 
 const MAX_ROWS = 9;
@@ -210,7 +210,7 @@ function animateInk(canvas: HTMLCanvasElement, frame: HTMLElement, dust: Dust, i
         targetY: floor - 10 * (1 - Math.abs(drift) / 21) * Math.random() ** 2,
         delay: delay + Math.random() * 115,
         duration: 550 + Math.sqrt(Math.max(0, floor - y)) * 35 + Math.random() * 230,
-        size: .65 + Math.random() * .9,
+        size: sampleDustSize(),
       };
     }) : [];
     return {cell, delay, grains};
@@ -232,7 +232,8 @@ function animateInk(canvas: HTMLCanvasElement, frame: HTMLElement, dust: Dust, i
         const x = grain.x + grain.dx * t + Math.sin(t * 7) * 4 * (1 - t);
         const y = grain.y + (grain.targetY - grain.y) * t ** 1.65;
         ctx!.fillStyle = `rgba(52,38,35,${grain.opacity * (.85 - .3 * t)})`;
-        ctx!.fillRect(x, y, grain.size, grain.size);
+        const size = 1.05 + (grain.size - 1.05) * t;
+        ctx!.fillRect(x, y, size, size);
       }
     }
     if (moving) request = requestAnimationFrame(draw);
