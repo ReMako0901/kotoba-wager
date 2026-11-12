@@ -56,6 +56,13 @@ function Finish({ gamble, busy, error, prepared, onFinish }: PlayProps) {
   </>;
 }
 
+const slotSymbols: Record<string, { file: string; label: string }> = {
+  ベル: { file: 'bell.png', label: 'ベル' },
+  スイカ: { file: 'watermelon.png', label: 'スイカ' },
+  REG: { file: 'bar.png', label: 'BAR' },
+  BIG: { file: 'seven.png', label: '7' },
+};
+
 function SlotPlay(props: PlayProps) {
   const [stopped, setStopped] = useState([false, false, false]);
   const complete = stopped.every(Boolean);
@@ -65,9 +72,14 @@ function SlotPlay(props: PlayProps) {
     <h1>{complete ? won ? '勝利' : '敗北' : 'リールを止める'}</h1>
     <div className="slot-machine">
       <div className="slot-reels">{props.gamble.reels!.map((symbol, i) => {
-        const display = symbol === 'BIG' ? '7' : symbol;
+        const artwork = slotSymbols[symbol];
         return <div className={`slot-reel ${stopped[i] ? '' : 'rolling'}`} key={i}
-          aria-label={stopped[i] ? display : '回転中'}>{stopped[i] ? display : '✦'}</div>;
+          aria-label={stopped[i] ? artwork?.label ?? symbol : '回転中'}>
+          {stopped[i] ? artwork
+            ? <img className="slot-symbol" src={`${import.meta.env.BASE_URL}slot-symbols/${artwork.file}`}
+                alt={artwork.label} draggable={false} />
+            : symbol : '✦'}
+        </div>;
       })}</div>
       <div className="slot-stops">{stopped.map((stop, i) =>
         <button key={i} disabled={stop || props.busy}
