@@ -76,6 +76,7 @@ body, .app-shell, .story-board, .modal { background: #fff; }
   height: var(--cell-size);
   box-shadow: inset 1px 0 var(--paper-rule), inset 0 1px var(--paper-rule);
 }
+.ink-cell.packed-kana { grid-template-rows: repeat(2, minmax(0, 1fr)); font-size: .58em; }
 .ink-glyph { direction: ltr; writing-mode: vertical-rl; text-orientation: upright; white-space: pre; }
 .vertical-run, .vertical-word { display: grid; grid-auto-rows: var(--cell-size); }
 .vertical-word {

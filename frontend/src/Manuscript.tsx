@@ -6,10 +6,11 @@ import type { Dust, DustProps } from './PaperDust';
 
 const MAX_ROWS = 9;
 const noColumnStart = /^[、。，．！？!?：；・…‥ー〜～々〻ゝゞヽヾぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮヵヶ」』）〕］｝〉》】〗〙〛’”)]/u;
+const smallKana = /^[ぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮヵヶ]$/u;
 const noColumnEnd = /^[「『（〔［｛〈《【〖〘〚‘“(]/u;
 const dialogueStart = /^[「『]/u;
 
-function paperPositions(text: string, rows: number) {
+function paperPositions(text: string, rows: number, runStarts: Set<number>) {
   const positions = new Map<number, number>();
   let offset = 0;
   let column = 0;
@@ -21,12 +22,18 @@ function paperPositions(text: string, rows: number) {
       let row = dialogueStart.test(glyphs[first]) ? 0 : 1;
       while (start < glyphs.length) {
         const full = Math.min(start + rows - row, glyphs.length);
+        const tuckKana = full > start && full < glyphs.length && smallKana.test(glyphs[full]) &&
+          !noColumnEnd.test(glyphs[full - 1]) &&
+          !noColumnStart.test(glyphs[full + 1] ?? '') && !runStarts.has(offset + full);
         let end = full;
-        while (end > start && end < glyphs.length &&
-          (noColumnStart.test(glyphs[end]) || noColumnEnd.test(glyphs[end - 1]))) end--;
-        if (end === start) end = full;
+        if (!tuckKana) {
+          while (end > start && end < glyphs.length &&
+            (noColumnStart.test(glyphs[end]) || noColumnEnd.test(glyphs[end - 1]))) end--;
+          if (end === start) end = full;
+        }
         for (let i = start; i < end; i++) positions.set(offset + i, column * rows + row + i - start);
-        start = end;
+        if (tuckKana) positions.set(offset + end, column * rows + rows - 1);
+        start = end + Number(tuckKana);
         row = 0;
         column++;
       }
@@ -62,7 +69,13 @@ function Paper({text, units, selected, disabled, onToggle, marked, dust, losses}
   }, []);
   const runs = units ?? [{id: 'text', text, stakeable: false}];
   const content = [];
-  const { positions, columns } = paperPositions(text, rows);
+  const runStarts = new Set<number>();
+  let runOffset = 0;
+  for (const run of runs) {
+    runStarts.add(runOffset);
+    runOffset += Array.from(run.text).length;
+  }
+  const { positions, columns } = paperPositions(text, rows, runStarts);
   const occupied = new Set<number>();
   let offset = 0;
   for (const run of runs) {
@@ -74,16 +87,21 @@ function Paper({text, units, selected, disabled, onToggle, marked, dust, losses}
       const square = positions.get(source);
       if (square === undefined) { index++; continue; }
       const row = square % rows;
-      let length = 1;
-      while (index + length < glyphs.length && row + length < rows &&
-        positions.get(source + length) === square + length) length++;
-      const cells = glyphs.slice(index, index + length).map((glyph, i) => {
-        occupied.add(square + i);
-        return <span key={i} className={marked?.has(source + i) ? 'ink-cell marked' : 'ink-cell'}>
-          <span className="ink-glyph">{glyph}</span>
-        </span>;
-      });
-      const position = {gridRow: `${row + 1} / span ${length}`, gridColumn: Math.floor(square / rows) + 1};
+      let length = 0;
+      const cells = [];
+      while (index + length < glyphs.length && row + cells.length < rows &&
+        positions.get(source + length) === square + cells.length) {
+        const cell = square + cells.length;
+        const first = length++;
+        if (index + length < glyphs.length && positions.get(source + length) === cell) length++;
+        const characters = glyphs.slice(index + first, index + length);
+        const isMarked = characters.some((_, i) => marked?.has(source + first + i));
+        occupied.add(cell);
+        cells.push(<span key={cell} className={`ink-cell${isMarked ? ' marked' : ''}${characters.length > 1 ? ' packed-kana' : ''}`}>
+          {characters.map((glyph, i) => <span key={i} className="ink-glyph">{glyph}</span>)}
+        </span>);
+      }
+      const position = {gridRow: `${row + 1} / span ${cells.length}`, gridColumn: Math.floor(square / rows) + 1};
       content.push(run.stakeable ? (
         <button className="vertical-word" key={source} type="button" style={position}
           aria-label={run.text} aria-pressed={selected?.includes(run.id)}
@@ -151,14 +169,17 @@ function animateInk(canvas: HTMLCanvasElement, frame: HTMLElement, dust: Dust, i
   ctx.scale(scale, scale);
 
   const groups = marks.map((cell, index) => {
-    const glyph = cell.firstElementChild!;
     const rect = cell.getBoundingClientRect();
-    const font = getComputedStyle(glyph);
     sample.clearRect(0, 0, 64, 64);
-    sample.font = `${font.fontWeight} ${Math.min(56, parseFloat(font.fontSize) * 2)}px ${font.fontFamily}`;
     sample.textAlign = 'center';
     sample.textBaseline = 'middle';
-    sample.fillText(glyph.textContent ?? '', 32, 32);
+    for (const glyph of cell.children) {
+      const font = getComputedStyle(glyph);
+      const glyphBounds = glyph.getBoundingClientRect();
+      const dy = glyphBounds.top + glyphBounds.height / 2 - rect.top - rect.height / 2;
+      sample.font = `${font.fontWeight} ${Math.min(56, parseFloat(font.fontSize) * 2)}px ${font.fontFamily}`;
+      sample.fillText(glyph.textContent ?? '', 32, 32 + dy * 2);
+    }
     const alpha = sample.getImageData(0, 0, 64, 64).data;
     const points: { x: number; y: number; opacity: number }[] = [];
     for (let y = 1; y < 64; y += 2) {
