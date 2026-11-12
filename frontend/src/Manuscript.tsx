@@ -1,14 +1,15 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import type { CSSProperties } from 'react';
 import type { Transaction, Unit } from './types';
 import { addPaperDust, PaperDust } from './PaperDust';
 import type { Dust, DustProps } from './PaperDust';
 
-const ROWS = 9;
+const MAX_ROWS = 9;
 const noColumnStart = /^[、。，．！？!?：；・…‥ー〜～々〻ゝゞヽヾぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮヵヶ」』）〕］｝〉》】〗〙〛’”)]/u;
 const noColumnEnd = /^[「『（〔［｛〈《【〖〘〚‘“(]/u;
 const dialogueStart = /^[「『]/u;
 
-function paperPositions(text: string) {
+function paperPositions(text: string, rows: number) {
   const positions = new Map<number, number>();
   let offset = 0;
   let column = 0;
@@ -19,12 +20,12 @@ function paperPositions(text: string) {
       let start = first;
       let row = dialogueStart.test(glyphs[first]) ? 0 : 1;
       while (start < glyphs.length) {
-        const full = Math.min(start + ROWS - row, glyphs.length);
+        const full = Math.min(start + rows - row, glyphs.length);
         let end = full;
         while (end > start && end < glyphs.length &&
           (noColumnStart.test(glyphs[end]) || noColumnEnd.test(glyphs[end - 1]))) end--;
         if (end === start) end = full;
-        for (let i = start; i < end; i++) positions.set(offset + i, column * ROWS + row + i - start);
+        for (let i = start; i < end; i++) positions.set(offset + i, column * rows + row + i - start);
         start = end;
         row = 0;
         column++;
@@ -45,9 +46,23 @@ function Paper({text, units, selected, disabled, onToggle, marked, dust, losses}
   onToggle?: (id: string) => void;
   marked?: Set<number>;
 } & DustProps) {
+  const paper = useRef<HTMLDivElement>(null);
+  const [rows, setRows] = useState(MAX_ROWS);
+  useLayoutEffect(() => {
+    const board = paper.current?.closest('.story-board');
+    if (!board) return;
+    function fit(height: number) {
+      setRows(Math.max(1, Math.min(MAX_ROWS, Math.floor((height - 12) / 22))));
+    }
+    const style = getComputedStyle(board);
+    fit(board.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom));
+    const observer = new ResizeObserver(([entry]) => fit(entry.contentRect.height));
+    observer.observe(board);
+    return () => observer.disconnect();
+  }, []);
   const runs = units ?? [{id: 'text', text, stakeable: false}];
   const content = [];
-  const { positions, columns } = paperPositions(text);
+  const { positions, columns } = paperPositions(text, rows);
   const occupied = new Set<number>();
   let offset = 0;
   for (const run of runs) {
@@ -58,9 +73,9 @@ function Paper({text, units, selected, disabled, onToggle, marked, dust, losses}
       const source = offset + index;
       const square = positions.get(source);
       if (square === undefined) { index++; continue; }
-      const row = square % ROWS;
+      const row = square % rows;
       let length = 1;
-      while (index + length < glyphs.length && row + length < ROWS &&
+      while (index + length < glyphs.length && row + length < rows &&
         positions.get(source + length) === square + length) length++;
       const cells = glyphs.slice(index, index + length).map((glyph, i) => {
         occupied.add(square + i);
@@ -68,7 +83,7 @@ function Paper({text, units, selected, disabled, onToggle, marked, dust, losses}
           <span className="ink-glyph">{glyph}</span>
         </span>;
       });
-      const position = {gridRow: `${row + 1} / span ${length}`, gridColumn: Math.floor(square / ROWS) + 1};
+      const position = {gridRow: `${row + 1} / span ${length}`, gridColumn: Math.floor(square / rows) + 1};
       content.push(run.stakeable ? (
         <button className="vertical-word" key={source} type="button" style={position}
           aria-label={run.text} aria-pressed={selected?.includes(run.id)}
@@ -82,13 +97,13 @@ function Paper({text, units, selected, disabled, onToggle, marked, dust, losses}
     }
     offset += glyphs.length;
   }
-  for (let i = 0; i < columns * ROWS; i++) {
+  for (let i = 0; i < columns * rows; i++) {
     if (occupied.has(i)) continue;
     content.push(<span className="ink-cell" key={`blank-${i}`} aria-hidden="true"
-      style={{gridRow: i % ROWS + 1, gridColumn: Math.floor(i / ROWS) + 1}} />);
+      style={{gridRow: i % rows + 1, gridColumn: Math.floor(i / rows) + 1}} />);
   }
   return <div className="paper-scroll" aria-hidden={units ? undefined : true}>
-    <div className="vertical-paper">{content}<PaperDust dust={dust} losses={losses} /></div>
+    <div className="vertical-paper" ref={paper} style={{'--paper-rows': rows} as CSSProperties}>{content}<PaperDust dust={dust} losses={losses} /></div>
   </div>;
 }
 

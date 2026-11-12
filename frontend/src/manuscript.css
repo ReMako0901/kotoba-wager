@@ -37,17 +37,30 @@ body, .app-shell, .story-board, .modal { background: #fff; }
 .primary { background: var(--stamp); border-color: var(--stamp); border-radius: 2px; }
 .primary:disabled { background: #f7eeee; border-color: #f7eeee; color: #6e5a59; }
 .secondary { border-color: var(--rule); border-radius: 2px; }
-.story-board { border: 0; border-radius: 0; padding: 6px 0 10px; }
+.story-board {
+  flex: 1 1 0;
+  min-height: 0;
+  container-type: size;
+  overflow: hidden;
+  border: 0;
+  border-radius: 0;
+  padding: 6px 0 10px;
+}
 .stake-summary { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
 .stake-summary .text-button { min-height: 25px; flex-shrink: 0; }
 .paper-frame { position: relative; }
-.paper-scroll { direction: rtl; overflow-x: auto; scrollbar-width: thin; }
+.paper-scroll {
+  direction: rtl;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+}
 .vertical-paper {
   position: relative;
   --paper-rule: #9eb49f;
-  --cell-size: clamp(29px, 8.2vw, 39px);
+  --cell-size: max(0px, min(clamp(29px, 8.2vw, 39px), calc((100cqh - 12px) / var(--paper-rows))));
   display: grid;
-  grid-template-rows: repeat(9, var(--cell-size));
+  grid-template-rows: repeat(var(--paper-rows), var(--cell-size));
   grid-auto-columns: var(--cell-size);
   width: max-content;
   margin-inline: auto;
@@ -90,6 +103,8 @@ body, .app-shell, .story-board, .modal { background: #fff; }
   border-radius: 0; background: #fff; color: var(--ink);
 }
 .result-banner strong { color: var(--stamp); font-family: var(--serif); }
+.result-win { border: 0; gap: 8px; padding: 0; line-height: 1.35; }
+.result-win strong { font-size: 17px; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .card-table, .slot-machine { border-radius: 0; background: #fff; color: var(--ink); border: 1px solid var(--rule); }
 .playing-card.face-up, .slot-reel { border: 1px solid var(--rule); }
@@ -116,3 +131,16 @@ body, .app-shell, .story-board, .modal { background: #fff; }
 .input-error { color: var(--stamp); font-size: 13px; }
 .reward-option b { font-size: 19px; }
 .reward-option small { font-size: 12px; }
+
+@media (max-height: 500px) {
+  .playing .navigation-bar .icon-button { height: 34px; min-height: 34px; }
+  .playing .game-screen { gap: 5px; padding-block: 5px; }
+  .playing .chapter-line { line-height: 1.2; }
+  .playing .story-title { font-size: 20px; line-height: 1.2; }
+  .playing .reward-summary { min-height: 44px; padding: 3px 10px; }
+  .story-board { padding-block: 2px; }
+  .trade-dock .primary, .bottom-actions .primary { min-height: 44px; padding: 4px 12px; }
+  .result-banner:not(.result-win) { padding: 4px 8px; }
+  .result-banner:not(.result-win) strong { font-size: 18px; }
+  .changes { max-height: 58px; }
+}
