@@ -86,13 +86,4 @@ body, .app-shell, .story-board, .modal { background: #fff; }
   background: repeating-linear-gradient(45deg, #fff 0 3px, #f1dada 3px 6px);
   color: var(--stamp);
 }
-.playing-card.face-down[aria-pressed=true] { outline: 2px solid var(--stamp); outline-offset: 2px; }
-.squeeze-panel { display: flex; align-items: center; gap: 14px; padding: 12px 0; border-block: 1px solid var(--rule); }
-.squeeze-card { position: relative; width: 64px; height: 84px; flex-shrink: 0; border: 1px solid var(--rule); touch-action: none; cursor: ew-resize; user-select: none; }
-.squeeze-pip { position: absolute; left: 4px; bottom: 9px; font-size: 19px; }
-.squeeze-rank { position: absolute; top: 13px; right: 7px; font: 700 22px/1 Georgia, serif; text-align: center; }
-.squeeze-rank small { display: block; font-size: 19px; }
-.squeeze-back { position: absolute; inset: 0; }
-.squeeze-control { display: grid; gap: 3px; flex: 1; font-size: 12px; }
-.squeeze-control input { margin: 0; min-height: 30px; width: 100%; accent-color: var(--stamp); }
-.squeeze-control .secondary { margin: 0; }
+.playing-card[aria-pressed=true] { outline: 2px solid var(--stamp); outline-offset: 2px; }

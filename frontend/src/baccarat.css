@@ -1,0 +1,67 @@
+.baccarat-screen { gap: 8px; }
+.baccarat-screen .card-table {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  padding: 8px 0;
+  border: 0;
+  border-bottom: 1px solid var(--rule);
+}
+.baccarat-screen .card-hand { align-content: start; }
+.baccarat-screen .card-hand + .card-hand {
+  border-left: 1px solid var(--rule);
+  padding-left: 8px;
+}
+.baccarat-screen .hand-heading { flex-wrap: wrap; gap: 4px; font-size: 11px; }
+.baccarat-screen .playing-cards { flex-wrap: nowrap; }
+.baccarat-screen .playing-card {
+  width: clamp(36px, 11vw, 50px);
+  height: auto;
+  aspect-ratio: 167 / 243;
+  position: relative;
+  padding: 0;
+  overflow: hidden;
+}
+.baccarat-screen .playing-card .baccarat-face { position: absolute; inset: 0; }
+.baccarat-screen .playing-card.face-down .baccarat-face { visibility: hidden; }
+.baccarat-screen .playing-card.face-up:disabled { opacity: 1; }
+.baccarat-screen .hand-comparison { grid-column: 1 / -1; }
+.banker-open {
+  min-height: 44px;
+  background: #fff;
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  font-size: 12px;
+  font-weight: 700;
+}
+.baccarat-stage { flex: 1; display: grid; align-content: center; justify-items: center; gap: 8px; }
+.baccarat-zoom {
+  position: relative;
+  width: min(76vw, 34dvh, 280px);
+  aspect-ratio: 167 / 243;
+  background-color: #fff;
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  overflow: hidden;
+  user-select: none;
+}
+.baccarat-zoom.squeeze-back { cursor: grab; touch-action: none; }
+.baccarat-zoom.squeeze-back:active { cursor: grabbing; }
+.baccarat-face { display: block; width: 100%; height: 100%; object-fit: fill; }
+.baccarat-peek {
+  position: absolute;
+  inset: 0;
+  background: #fff;
+  pointer-events: none;
+}
+.baccarat-peek::before, .baccarat-peek::after {
+  /* Hide only the two corner indices during the peek. */
+  content: '';
+  position: absolute;
+  width: 18.5%;
+  height: 33%;
+  background: #fff;
+}
+.baccarat-peek::before { top: 2px; left: 2px; }
+.baccarat-peek::after { right: 2px; bottom: 2px; }
+.baccarat-controls { display: grid; gap: 4px; width: min(100%, 280px); text-align: center; }
+.baccarat-controls .secondary { margin: 0; min-height: 44px; }
