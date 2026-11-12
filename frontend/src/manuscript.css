@@ -83,6 +83,25 @@ body, .app-shell, .story-board, .modal { background: #fff; }
 .packed-punctuation .ink-glyph:nth-child(2) { justify-self: start; margin-right: 2px; }
 .packed-punctuation .ink-glyph:nth-child(3) { justify-self: end; margin-left: 2px; }
 .ink-glyph { direction: ltr; writing-mode: vertical-rl; text-orientation: upright; white-space: pre; }
+.result-change { animation-duration: 1.4s; animation-timing-function: ease-out; }
+.result-change.rewritten { animation-name: result-rewrite; }
+.result-change.cut-before { animation-name: result-cut-before; }
+.result-change.cut-after { animation-name: result-cut-after; }
+@keyframes result-rewrite {
+  0%, 28% { background-color: #f4e3a4; }
+  100% { background-color: transparent; }
+}
+@keyframes result-cut-before {
+  0%, 28% { box-shadow: 0 -2px #9e762d; }
+  100% { box-shadow: 0 -2px transparent; }
+}
+@keyframes result-cut-after {
+  0%, 28% { box-shadow: 0 2px #9e762d; }
+  100% { box-shadow: 0 2px transparent; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .result-change { animation-timing-function: steps(1, end); }
+}
 .vertical-run, .vertical-word { display: grid; grid-auto-rows: var(--cell-size); }
 .vertical-word {
   margin: 0; padding: 0; border: 0; border-radius: 0; min-height: 0;

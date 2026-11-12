@@ -3,6 +3,7 @@ import type { CSSProperties } from 'react';
 import type { Transaction, Unit } from './types';
 import { addPaperDust, PaperDust, sampleDustSize } from './PaperDust';
 import type { Dust, DustProps } from './PaperDust';
+import { manuscriptChanges } from './manuscriptChanges';
 
 const MAX_ROWS = 9;
 const noColumnStart = /^[、。，．！？!?：；・…‥ー〜～々〻ゝゞヽヾぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮヵヶ」』）〕］｝〉》】〗〙〛’”)]/u;
@@ -49,13 +50,14 @@ function paperPositions(text: string, rows: number, runStarts: Set<number>) {
   return { positions, columns: Math.max(8, column) };
 }
 
-function Paper({text, units, selected, disabled, onToggle, marked, dust, losses}: {
+function Paper({text, units, selected, disabled, onToggle, marked, changes, dust, losses}: {
   text: string;
   units?: Unit[];
   selected?: string[];
   disabled?: boolean;
   onToggle?: (id: string) => void;
   marked?: Set<number>;
+  changes?: ReturnType<typeof manuscriptChanges>;
 } & DustProps) {
   const paper = useRef<HTMLDivElement>(null);
   const [rows, setRows] = useState(MAX_ROWS);
@@ -71,6 +73,21 @@ function Paper({text, units, selected, disabled, onToggle, marked, dust, losses}
     observer.observe(board);
     return () => observer.disconnect();
   }, []);
+  useLayoutEffect(() => {
+    if (!changes?.size) return;
+    const scroll = paper.current?.parentElement;
+    const highlights = paper.current?.querySelectorAll<HTMLElement>('.result-change');
+    if (!scroll || !highlights?.length) return;
+    const viewport = scroll.getBoundingClientRect();
+    const visible = [...highlights].some(glyph => {
+      const bounds = glyph.getBoundingClientRect();
+      return bounds.right > viewport.left && bounds.left < viewport.right;
+    });
+    if (!visible) {
+      const first = highlights[0].getBoundingClientRect();
+      scroll.scrollLeft += (first.left + first.right - viewport.left - viewport.right) / 2;
+    }
+  }, [changes]);
   const runs = units ?? [{id: 'text', text, stakeable: false}];
   const content = [];
   const allGlyphs = Array.from(text);
@@ -106,7 +123,12 @@ function Paper({text, units, selected, disabled, onToggle, marked, dust, losses}
         const packed = characters.length === 1 ? '' : punctuation.test(characters[1]) ? ' packed-punctuation' : ' packed-kana';
         occupied.add(cell);
         cells.push(<span key={cell} className={`ink-cell${isMarked ? ' marked' : ''}${packed}`}>
-          {characters.map((glyph, i) => <span key={i} className={marked?.has(first + i) ? 'ink-glyph marked-glyph' : 'ink-glyph'}>{glyph}</span>)}
+          {characters.map((glyph, i) => {
+            const offset = first + i;
+            const change = changes?.get(offset);
+            const classes = ['ink-glyph', marked?.has(offset) && 'marked-glyph', change && `result-change ${change}`];
+            return <span key={i} className={classes.filter(Boolean).join(' ')}>{glyph}</span>;
+          })}
         </span>);
       }
       const position = {gridRow: `${row + 1} / span ${cells.length}`, gridColumn: Math.floor(square / rows) + 1};
@@ -133,8 +155,9 @@ function Paper({text, units, selected, disabled, onToggle, marked, dust, losses}
   </div>;
 }
 
-export function Manuscript({text, ...dustProps}: {text: string} & DustProps) {
-  return <><p className="sr-only">{text}</p><Paper text={text} {...dustProps} /></>;
+export function Manuscript({text, before, ...dustProps}: {text: string; before?: string} & DustProps) {
+  const changes = useMemo(() => before === undefined ? undefined : manuscriptChanges(before, text), [before, text]);
+  return <><p className="sr-only">{text}</p><Paper text={text} changes={changes} {...dustProps} /></>;
 }
 
 export function WagerManuscript(props: {
@@ -258,6 +281,7 @@ function animateInk(canvas: HTMLCanvasElement, frame: HTMLElement, dust: Dust, i
 
 export function LossManuscript({ transaction, text, dust, losses }: {transaction: Transaction; text: string} & DustProps) {
   const [playing, setPlaying] = useState(() => !window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  const changes = useMemo(() => manuscriptChanges(transaction.before, text), [transaction.before, text]);
   const previousLosses = useMemo(() => losses.filter(loss => loss.id !== transaction.id), [losses, transaction.id]);
   const frame = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
@@ -299,7 +323,7 @@ export function LossManuscript({ transaction, text, dust, losses }: {transaction
     <p className="sr-only">{text}</p>
     <div className="paper-frame" ref={frame}>
       <Paper text={playing ? transaction.before : text} marked={playing ? marked : undefined}
-        dust={dust} losses={playing ? previousLosses : losses} />
+        changes={playing ? undefined : changes} dust={dust} losses={playing ? previousLosses : losses} />
       {playing && <canvas className="ink-overlay" ref={canvas} aria-hidden="true" />}
     </div>
   </>;
