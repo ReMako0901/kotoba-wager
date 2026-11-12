@@ -46,7 +46,7 @@ function Status({ error, prepared }: Pick<PlayProps, 'error' | 'prepared'>) {
 
 function Finish({ gamble, busy, error, prepared, onFinish }: PlayProps) {
   return <>
-    {gamble.kind === 'slot' && <div className="gamble-outcome"><b>{gamble.label} · 変化の強さ {gamble.strength}</b></div>}
+    {gamble.kind === 'slot' && <div className="gamble-outcome"><b>{gamble.label}</b></div>}
     <div className="gamble-actions">
       <button className="primary" disabled={busy || (!prepared && !error)} onClick={onFinish}>
         {prepared || error ? 'この結果を物語へ' : '物語を準備中…'} <span>→</span>

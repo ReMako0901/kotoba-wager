@@ -160,7 +160,7 @@ export default function App(){
       <h1 className="story-title">{session.title}</h1>
       {resultMode?<>
         <section className={`result-banner${last.outcome === 'win' ? ' result-win' : ''}`}><strong>{last.outcome==='win'?'勝利':'敗北'}</strong><span>{last.outcome==='win'?last.offer.title+'を獲得':'「'+last.stakes.join('・')+'」の意味が消えた'}</span></section>
-        {last.gamble && <p className="reading-hint">{games.find(g => g.id === last.gamble!.kind)?.name}{last.gamble.kind === 'slot' && <> · {last.gamble.label} · 変化の強さ {last.gamble.strength}</>}</p>}
+        {last.gamble && <p className="reading-hint">{games.find(g => g.id === last.gamble!.kind)?.name}{last.gamble.kind === 'slot' && <> · {last.gamble.label}</>}</p>}
         <section className="story-board result-board" aria-label="変わった物語">{last.outcome === 'loss' ? <LossManuscript key={last.id} transaction={last} text={session.text} dust={dust} losses={losses} /> : <Manuscript key={last.id} text={session.text} before={last.before} dust={dust} losses={losses} />}</section>
         <details className="changes"><summary>どこが変わった？</summary><p>{last.summary}</p><p className="quiet">ベット：{last.stakes.join(' / ')}{last.outcome==='loss'&&<> / 失った意味：{last.lost.map(c=>c.label).join('・')}</>}</p><p>{last.before}</p></details>
         <div className="bottom-actions"><button className="primary" disabled={busy} onClick={()=>act(async()=>{setSelected([]);setOfferId('');setChoosingReward(true);accept(await api<Session>(`/sessions/${session.id}/continue`,{}))})}>次は何をねらう？ <span>→</span></button></div>
@@ -200,7 +200,7 @@ export default function App(){
             disabled={busy} onClick={() => trade(option.id)}>
             <span><b>{option.name}</b>
               <small>{option.id === 'rps' ? '勝ち33％・負け33％・あいこ34％' : `勝率${Math.round(option.win_probability * 100)}％${option.id === 'card_guess' ? '〜' : ''}`}</small>
-              <small>{option.description}</small></span>
+              <small>{option.id === 'dice' ? '4〜6で勝ち。' : option.description}</small></span>
           </button>)}</div>
           {busy && <p className="quiet" role="status">ゲームを準備中…</p>}
           {error && <p className="input-error" role="alert">{error}</p>}

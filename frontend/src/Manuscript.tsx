@@ -191,9 +191,13 @@ function animateInk(canvas: HTMLCanvasElement, frame: HTMLElement, dust: Dust, i
 
   const bounds = frame.getBoundingClientRect();
   const paperBounds = paper.getBoundingClientRect();
+  const paperStyle = getComputedStyle(paper);
+  // The settled canvas is inset inside the paper border.
+  const paperRight = paperBounds.right - parseFloat(paperStyle.borderRightWidth);
+  const paperBottom = paperBounds.bottom - parseFloat(paperStyle.borderBottomWidth);
   const floor = paperBounds.bottom - bounds.top - 3;
   const left = Math.max(viewport.left, paperBounds.left) - bounds.left;
-  const right = Math.min(viewport.right, paperBounds.right) - bounds.left;
+  const right = Math.min(viewport.right, paperRight) - bounds.left;
   const scale = Math.min(2, window.devicePixelRatio || 1);
   canvas.width = Math.round(bounds.width * scale);
   canvas.height = Math.round(bounds.height * scale);
@@ -228,12 +232,13 @@ function animateInk(canvas: HTMLCanvasElement, frame: HTMLElement, dust: Dust, i
       const x = rect.left - bounds.left + rect.width / 2 + point.x;
       const y = rect.top - bounds.top + rect.height / 2 + point.y;
       const drift = (Math.random() - .5) * 42;
+      const pointSize = sampleDustSize();
       return {
-        x, y, opacity: point.opacity, dx: Math.max(left, Math.min(right - 1, x + drift)) - x,
+        x, y, opacity: point.opacity, dx: Math.max(left, Math.min(right - pointSize, x + drift)) - x,
         targetY: floor - 10 * (1 - Math.abs(drift) / 21) * Math.random() ** 2,
         delay: delay + Math.random() * 115,
         duration: 550 + Math.sqrt(Math.max(0, floor - y)) * 35 + Math.random() * 230,
-        size: sampleDustSize(),
+        size: pointSize,
       };
     }) : [];
     return {cell, delay, grains};
@@ -261,9 +266,9 @@ function animateInk(canvas: HTMLCanvasElement, frame: HTMLElement, dust: Dust, i
     }
     if (moving) request = requestAnimationFrame(draw);
     else pause = window.setTimeout(() => {
-      const landing = groups.flatMap(({grains}) => grains.filter((_, index) => index % 3 === 0).map(grain => ({
-        x: (bounds.left + grain.x + grain.dx - paperBounds.left) / paperBounds.width,
-        y: (bounds.top + grain.targetY - paperBounds.top) / paperBounds.height,
+      const landing = groups.flatMap(({grains}) => grains.map(grain => ({
+        fromRight: paperRight - (bounds.left + grain.x + grain.dx),
+        fromBottom: paperBottom - (bounds.top + grain.targetY),
         size: grain.size,
         opacity: grain.opacity * .55,
       })));

@@ -39,7 +39,7 @@ function Dice({ gamble, busy, onMove }: Props) {
     {move
       ? <output className="dice-face" aria-label={`${move.face}の目`}>{diceSymbols[move.face - 1]}</output>
       : <><span className="dice-face" aria-hidden="true">⚄</span>
-          <p className="reading-hint">4〜6で勝ち。1と6は物語が大きく変わる。</p>
+          <p className="reading-hint">4〜6で勝ち。</p>
           <button type="button" className="primary" disabled={busy} onClick={() => onMove(0)}>サイコロを振る</button></>}
   </div>;
 }
