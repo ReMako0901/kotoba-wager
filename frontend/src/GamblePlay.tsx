@@ -59,7 +59,7 @@ function Finish({ gamble, busy, error, prepared, onFinish }: PlayProps) {
 const slotSymbols: Record<string, { file: string; label: string }> = {
   ベル: { file: 'bell.png', label: 'ベル' },
   スイカ: { file: 'watermelon.png', label: 'スイカ' },
-  REG: { file: 'bar.png', label: 'BAR' },
+  REG: { file: 'bar.png?v=2', label: 'BAR' },
   BIG: { file: 'seven.png', label: '7' },
 };
 
