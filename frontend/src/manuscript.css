@@ -38,61 +38,45 @@ body, .app-shell, .story-board, .modal { background: #fff; }
 .primary:disabled { background: #f7eeee; border-color: #f7eeee; color: #6e5a59; }
 .secondary { border-color: var(--rule); border-radius: 2px; }
 .story-board { border: 0; border-radius: 0; padding: 6px 0 10px; }
-.manuscript {
-  font: 600 clamp(17px, 4.6vw, 21px)/2.15 var(--serif);
-  white-space: normal;
-  overflow-wrap: normal;
-  --cell-size: 1.29em;
+.paper-frame { position: relative; }
+.paper-scroll { direction: rtl; overflow-x: auto; scrollbar-width: thin; }
+.vertical-paper {
+  --cell-size: clamp(22px, 6.5vw, 29px);
+  display: grid;
+  grid-template-rows: repeat(11, var(--cell-size));
+  grid-auto-columns: var(--cell-size);
+  width: max-content;
+  margin-inline: auto;
+  border: 1px solid var(--rule);
+  background: #fff;
+  font: 500 calc(var(--cell-size) * .74)/1 var(--serif);
 }
 .ink-cell {
-  display: inline-grid;
+  display: grid;
   place-items: center;
   width: var(--cell-size);
-  height: 1.48em;
-  line-height: 1;
-  vertical-align: middle;
-  position: relative;
-  box-shadow: inset 0 0 0 .5px var(--rule);
+  height: var(--cell-size);
+  box-shadow: inset -.5px -.5px 0 var(--rule);
 }
-.story-connector { font: inherit; }
-.manuscript .word-unit {
-  display: inline-block;
-  min-height: 44px;
-  padding: 0;
-  margin: 0;
-  color: var(--ink);
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  font: inherit;
-  vertical-align: middle;
+.ink-glyph { direction: ltr; writing-mode: vertical-rl; text-orientation: upright; white-space: pre; }
+.vertical-run, .vertical-word { display: grid; grid-auto-rows: var(--cell-size); }
+.vertical-word {
+  margin: 0; padding: 0; border: 0; border-radius: 0; min-height: 0;
+  background: #fff; color: var(--ink); font: inherit;
 }
-.word-unit .ink-cell { border-bottom: 2px solid var(--stamp); }
-.manuscript .word-unit.selected .ink-cell { background: var(--stamp); color: #fff; }
-.manuscript .word-unit:disabled { opacity: 1; cursor: default; }
+.vertical-word .ink-cell { border-right: 1px solid var(--stamp); }
+.vertical-word[aria-pressed=true] .ink-cell, .ink-cell.marked { color: var(--stamp); background: #fbf4f3; }
+.vertical-word:disabled { opacity: 1; }
+.vertical-word:focus-visible { z-index: 1; outline-offset: -1px; }
+.ink-overlay { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.ink-dissolving .marked .ink-glyph { visibility: hidden; }
+.ink-dissolving .marked { background: #fff; transition: background .65s ease; }
 .result-banner {
   border: 1px solid var(--rule); border-left: 4px solid var(--stamp);
   border-radius: 0; background: #fff; color: var(--ink);
 }
 .result-banner strong { color: var(--stamp); font-family: var(--serif); }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-.scattering .ink-glyph, .scattering .ink-dust {
-  animation: ink-fall .78s ease-in both;
-  animation-delay: var(--delay);
-}
-.scattering .ink-dust {
-  position: absolute;
-  width: 2px;
-  height: 2px;
-  color: var(--stamp);
-  background: currentColor;
-  box-shadow: -8px 3px currentColor, 8px -7px currentColor, 3px 10px currentColor, -4px -8px currentColor;
-}
-@keyframes ink-fall {
-  0% {opacity: 1; transform: translate(0) scale(1);}
-  45% {opacity: .75; transform: translate(calc(var(--drift-x) * .6), -9px) rotate(var(--spin)) scale(.55);}
-  100% {opacity: 0; transform: translate(var(--drift-x), var(--drift-y)) rotate(var(--spin)) scale(.1);}
-}
 .card-table, .slot-machine { border-radius: 0; background: #fff; color: var(--ink); border: 1px solid var(--rule); }
 .playing-card.face-up, .slot-reel { border: 1px solid var(--rule); }
 .playing-card.face-down, .squeeze-back {
@@ -110,6 +94,3 @@ body, .app-shell, .story-board, .modal { background: #fff; }
 .squeeze-control { display: grid; gap: 3px; flex: 1; font-size: 12px; }
 .squeeze-control input { margin: 0; min-height: 30px; width: 100%; accent-color: var(--stamp); }
 .squeeze-control .secondary { margin: 0; }
-@media (prefers-reduced-motion: reduce) {
-  .scattering .ink-glyph, .scattering .ink-dust { animation: none; }
-}

@@ -1,47 +1,155 @@
-import { useEffect, useState, type CSSProperties } from 'react';
-import type { Transaction } from './types';
+import { useEffect, useRef, useState } from 'react';
+import type { Transaction, Unit } from './types';
 
-export function InkCells({ text, scatter }: {text: string; scatter?: Set<number>}) {
-  return Array.from(text).map((glyph, index) => {
-    if (glyph === '\n') return <br key={index} />;
-    const motion = scatter?.has(index);
-    const style = motion ? {
-      '--drift-x': ((index * 23 % 67) - 33) + 'px',
-      '--drift-y': (30 + index * 17 % 62) + 'px',
-      '--spin': ((index * 29 % 100) - 50) + 'deg',
-      '--delay': (index % 7 * 28) + 'ms',
-    } as CSSProperties : undefined;
-    return <span key={index} className={motion ? 'ink-cell scattering' : 'ink-cell'} style={style}>
-      <span className="ink-glyph">{glyph}</span>{motion && <i className="ink-dust" />}
-    </span>;
+const ROWS = 11;
+
+function Paper({text, units, selected, disabled, onToggle, marked}: {
+  text: string;
+  units?: Unit[];
+  selected?: string[];
+  disabled?: boolean;
+  onToggle?: (id: string) => void;
+  marked?: Set<number>;
+}) {
+  const runs = units ?? [{id: 'text', text, stakeable: false}];
+  const content = [];
+  let offset = 0;
+  for (const run of runs) {
+    const glyphs = Array.from(run.text);
+    let index = 0;
+    while (index < glyphs.length) {
+      const row = offset % ROWS;
+      const length = Math.min(ROWS - row, glyphs.length - index);
+      const cells = glyphs.slice(index, index + length).map((glyph, i) => (
+        <span key={i} className={marked?.has(offset + i) ? 'ink-cell marked' : 'ink-cell'}>
+          <span className="ink-glyph">{glyph}</span>
+        </span>
+      ));
+      const position = {gridRow: `${row + 1} / span ${length}`, gridColumn: Math.floor(offset / ROWS) + 1};
+      content.push(run.stakeable ? (
+        <button className="vertical-word" key={offset} type="button" style={position}
+          aria-label={run.text} aria-pressed={selected?.includes(run.id)}
+          tabIndex={index === 0 ? 0 : -1} disabled={disabled}
+          onClick={() => onToggle?.(run.id)}>{cells}</button>
+      ) : (
+        <span className="vertical-run" key={offset} style={position}>{cells}</span>
+      ));
+      index += length;
+      offset += length;
+    }
+  }
+  const capacity = Math.max(9, Math.ceil(offset / ROWS)) * ROWS;
+  for (let i = offset; i < capacity; i++) {
+    content.push(<span className="ink-cell" key={i} aria-hidden="true"
+      style={{gridRow: i % ROWS + 1, gridColumn: Math.floor(i / ROWS) + 1}} />);
+  }
+  return <div className="paper-scroll" aria-hidden={units ? undefined : true}>
+    <div className="vertical-paper">{content}</div>
+  </div>;
+}
+
+export function Manuscript({text}: {text: string}) {
+  return <><p className="sr-only">{text}</p><Paper text={text} /></>;
+}
+
+export function WagerManuscript(props: {
+  text: string; units: Unit[]; selected: string[]; disabled: boolean; onToggle: (id: string) => void;
+}) {
+  return <Paper {...props} />;
+}
+
+function animateInk(canvas: HTMLCanvasElement, frame: HTMLElement, complete: () => void) {
+  const ctx = canvas.getContext('2d');
+  const mask = document.createElement('canvas');
+  mask.width = mask.height = 54;
+  const sample = mask.getContext('2d', {willReadFrequently: true});
+  if (!ctx || !sample) {
+    complete();
+    return () => {};
+  }
+  const bounds = frame.getBoundingClientRect();
+  const scale = Math.min(2, window.devicePixelRatio || 1);
+  canvas.width = Math.round(bounds.width * scale);
+  canvas.height = Math.round(bounds.height * scale);
+  ctx.scale(scale, scale);
+  const particles = [...frame.querySelectorAll<HTMLElement>('.marked .ink-glyph')].flatMap((glyph, index) => {
+    const rect = glyph.parentElement!.getBoundingClientRect();
+    const font = getComputedStyle(glyph);
+    sample.clearRect(0, 0, 54, 54);
+    sample.font = `${font.fontWeight} ${parseFloat(font.fontSize) * 2}px ${font.fontFamily}`;
+    sample.textAlign = 'center';
+    sample.textBaseline = 'middle';
+    sample.fillText(glyph.textContent ?? '', 27, 27);
+    const alpha = sample.getImageData(0, 0, 54, 54).data;
+    const grains = [];
+    for (let y = 1; y < 54; y += 2) {
+      for (let x = 1; x < 54; x += 2) {
+        const opacity = alpha[(y * 54 + x) * 4 + 3] / 255;
+        if (opacity < .28) continue;
+        grains.push({
+          x: rect.left - bounds.left + rect.width / 2 + (x - 27) / 2,
+          y: rect.top - bounds.top + rect.height / 2 + (y - 27) / 2,
+          opacity, delay: Math.min(index, 5) * 95 + Math.random() * 190,
+          dx: -6 - Math.random() * 26, dy: 7 + Math.random() * 28,
+          duration: 500 + Math.random() * 440,
+        });
+      }
+    }
+    return grains;
   });
+  frame.classList.add('ink-dissolving');
+  const started = performance.now();
+  let request = 0;
+  let pause = 0;
+  function draw(now: number) {
+    ctx!.clearRect(0, 0, bounds.width, bounds.height);
+    let moving = false;
+    for (const grain of particles) {
+      const t = Math.max(0, (now - started - grain.delay) / grain.duration);
+      if (t >= 1) continue;
+      moving = true;
+      ctx!.fillStyle = `rgba(76,43,40,${grain.opacity * (1 - t) ** 1.6})`;
+      const size = 1.05 - .57 * t;
+      ctx!.fillRect(grain.x + grain.dx * t, grain.y + grain.dy * t * t, size, size);
+    }
+    if (moving) request = requestAnimationFrame(draw);
+    else pause = window.setTimeout(complete, 430);
+  }
+  request = requestAnimationFrame(draw);
+  return () => {
+    cancelAnimationFrame(request);
+    window.clearTimeout(pause);
+    frame.classList.remove('ink-dissolving');
+  };
 }
 
 export function LossManuscript({ transaction, text }: {transaction: Transaction; text: string}) {
   const [playing, setPlaying] = useState(() => !window.matchMedia('(prefers-reduced-motion: reduce)').matches);
-  const scatter = new Set<number>();
+  const frame = useRef<HTMLDivElement>(null);
+  const canvas = useRef<HTMLCanvasElement>(null);
+  const marked = new Set<number>();
   for (const unit of transaction.selected_units ?? []) {
-    for (let i = unit.start; i < unit.end; i++) scatter.add(i);
+    for (let i = unit.start; i < unit.end; i++) marked.add(i);
   }
-  if (!scatter.size) {
+  if (!marked.size) {
     for (const stake of transaction.stakes) {
       const offset = transaction.before.indexOf(stake);
       if (offset < 0) continue;
       const start = Array.from(transaction.before.slice(0, offset)).length;
-      for (let i = start; i < start + Array.from(stake).length; i++) scatter.add(i);
+      for (let i = start; i < start + Array.from(stake).length; i++) marked.add(i);
     }
   }
   useEffect(() => {
-    if (!playing) return;
-    const stop = window.setTimeout(() => setPlaying(false), 1080);
-    return () => window.clearTimeout(stop);
+    if (!playing || !frame.current || !canvas.current) return;
+    return animateInk(canvas.current, frame.current, () => setPlaying(false));
   }, [playing]);
 
   return <>
     <p className="sr-only">{text}</p>
-    <p className="manuscript prose" aria-hidden="true">
-      <InkCells text={playing ? transaction.before : text} scatter={playing ? scatter : undefined} />
-    </p>
+    <div className="paper-frame" ref={frame}>
+      <Paper text={playing ? transaction.before : text} marked={playing ? marked : undefined} />
+      {playing && <canvas className="ink-overlay" ref={canvas} aria-hidden="true" />}
+    </div>
     {playing && <button type="button" className="text-button" onClick={() => setPlaying(false)}>演出をスキップ</button>}
   </>;
 }
