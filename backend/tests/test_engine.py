@@ -255,3 +255,42 @@ def test_generation_timeout_uses_fallback_without_waiting_for_provider(tmp_path,
     done = repo.load(session['id'])
     assert done['status'] == 'ready' and done['transactions'][0]['used_fallback']
     assert draws == [.5] and done['text'].startswith(BEFORE)
+
+
+def test_beginner_tie_and_retried_move_do_not_generate_or_redraw(tmp_path, monkeypatch):
+    from app import gambles
+    from app.models import GameMoveRequest
+
+    class FixedThrows:
+        def __init__(self):
+            self.rolls = iter([99, 0])
+
+        def randrange(self, stop):
+            assert stop == 100
+            return next(self.rolls)
+
+    random_source = FixedThrows()
+    monkeypatch.setattr(gambles.secrets, 'SystemRandom', lambda: random_source)
+    repo, session, ai, engine, _, request = setup(tmp_path, True)
+    request = request.model_copy(update={'game': 'rps'})
+    tx_id = request.request_id
+    assert not engine.settle_draw(session, request)
+    assert session['status'] == 'awaiting_play'
+    assert session['transactions'][0]['outcome'] is None
+    with pytest.raises(ValueError, match='まだ決まっていません'):
+        asyncio.run(engine.finish_gamble(session['id'], tx_id))
+
+    first = GameMoveRequest(attempt=0, choice=0)
+    assert not engine.apply_game_move(session, tx_id, first)
+    assert not engine.apply_game_move(session, tx_id, first)
+    tx = session['transactions'][0]
+    assert tx['gamble']['moves'] == [{'choice': 0, 'opponent': 0, 'outcome': 'tie'}]
+    assert session['api_calls'] == ai.rewrites == 0
+    assert not repo.recover()
+
+    second = GameMoveRequest(attempt=1, choice=2)
+    assert engine.apply_game_move(session, tx_id, second)
+    assert not engine.apply_game_move(session, tx_id, second)
+    assert tx['outcome'] == 'win'
+    assert tx['offer']['narrative_change'] == {'strength': 2, 'outcome': 'win'}
+    assert len(tx['gamble']['moves']) == 2

@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 from .config import settings
 from .engine import engine
 from .gemini import GenerationError, gemini
-from .models import CreateSession, TradeRequest
+from .models import CreateSession, GameMoveRequest, TradeRequest
 from .analysis import build_analysis, make_offers, BETTING_MODE
 from .segmentation import external_lexicon, selection_dictionary
 from .store import store
@@ -129,10 +129,23 @@ async def trade(sid:str,request:TradeRequest):
     async with store.lock(sid):
         session=load(sid)
         try:
-            created=engine.settle_draw(session,request)
+            generate=engine.settle_draw(session,request)
         except ValueError as error:
             raise HTTPException(409,str(error)) from None
-        if created:
+        if generate:
+            engine.spawn(engine.process_transaction(sid))
+        return public(session)
+
+
+@app.post("/api/sessions/{sid}/transactions/{transaction_id}/play", status_code=202)
+async def play_game(sid: str, transaction_id: str, request: GameMoveRequest):
+    async with store.lock(sid):
+        session = load(sid)
+        try:
+            settled = engine.apply_game_move(session, transaction_id, request)
+        except ValueError as error:
+            raise HTTPException(409, str(error)) from None
+        if settled:
             engine.spawn(engine.process_transaction(sid))
         return public(session)
 

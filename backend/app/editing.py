@@ -55,7 +55,7 @@ def edit_plan(text, outcome, stakes, dependencies, offer=None, narrative_change=
         return plan
     strength = change['strength']
     plan['narrative_change'] = change
-    budget = {1: 24, 2: 36, 4: 65, 8: 112, 9: 126, 10: 140}[strength]
+    budget = {1: 24, 2: 36, 3: 50, 4: 65, 8: 112, 9: 126, 10: 140}[strength]
     if outcome == 'win':
         plan['max_changed_characters'] = budget
         plan['max_edited_sentences'] = min(strength, len(plan['sentences']))

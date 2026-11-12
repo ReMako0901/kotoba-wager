@@ -1,7 +1,13 @@
-"""Cashless game outcomes and complete presentation plans, fixed before generation."""
+"""Game plans and outcomes used before story generation."""
 import secrets
 
 GAMES = [
+    {'id': 'rps', 'name': 'じゃんけん', 'tier': 'beginner', 'win_probability': .33,
+     'description': '手を選ぶ。あいこならもう一回。'},
+    {'id': 'card_guess', 'name': 'カード当て', 'tier': 'beginner', 'win_probability': 1 / 3,
+     'description': '高速で混ざる3枚から当たりを追う。'},
+    {'id': 'dice', 'name': '一発サイコロ', 'tier': 'beginner', 'win_probability': .5,
+     'description': '4〜6で勝ち。1と6は大きく変わる。'},
     {'id': 'slot', 'name': 'スロット', 'win_probability': .5,
      'description': '7が揃うと！？'},
     {'id': 'blackjack', 'name': 'ブラックジャック', 'win_probability': .6,
@@ -107,8 +113,56 @@ def matching_deal(kind, outcome, rng, differences=None):
     raise ValueError('カードの配列を準備できませんでした。もう一度開始してください。')
 
 
+BEGINNER_GAMES = {'rps', 'card_guess', 'dice'}
+
+
+def prepare_beginner_game(kind, rng):
+    game = {'kind': kind, 'outcome': None, 'rounds': [], 'moves': []}
+    if kind == 'card_guess':
+        pairs = [(0, 1), (1, 2), (0, 2)]
+        swaps = []
+        for _ in range(8):
+            swaps.append(rng.choice([pair for pair in pairs if not swaps or pair != swaps[-1]]))
+        game.update(cards=deck(rng)[:3], target=rng.randrange(3), swaps=swaps)
+    return game
+
+
+def play_beginner_game(game, choice, rng=None):
+    rng = rng or secrets.SystemRandom()
+    kind = game['kind']
+    if kind == 'dice':
+        if choice is not None:
+            raise ValueError('サイコロには選択肢がありません。')
+        face = rng.randrange(1, 7)
+        outcome = 'win' if face >= 4 else 'loss'
+        strength = 8 if face in (1, 6) else 1
+        move = {'face': face, 'outcome': outcome}
+    elif choice not in (0, 1, 2):
+        raise ValueError('三つの中から選んでください。')
+    elif kind == 'rps':
+        roll = rng.randrange(100)
+        outcome = 'win' if roll < 33 else 'loss' if roll < 66 else 'tie'
+        opponent = (choice + {'win': -1, 'loss': 1, 'tie': 0}[outcome]) % 3
+        strength = 2
+        move = {'choice': choice, 'opponent': opponent, 'outcome': outcome}
+    else:
+        order = list(range(3))
+        for left, right in game['swaps']:
+            order[left], order[right] = order[right], order[left]
+        answer = order.index(game['target'])
+        outcome = 'win' if choice == answer else 'loss'
+        strength = 3 if outcome == 'win' else 4
+        move = {'choice': choice, 'answer': answer, 'outcome': outcome}
+    game['moves'].append(move)
+    if outcome != 'tie':
+        game.update(outcome=outcome, strength=strength, label='WIN' if outcome == 'win' else 'LOSE')
+
+
+
 def make_gamble(kind, draw, rng=None):
     rng = rng or secrets.SystemRandom()
+    if kind in BEGINNER_GAMES:
+        return prepare_beginner_game(kind, rng)
     if kind == 'slot':
         outcome = 'win' if draw(.5) else 'loss'
         if outcome == 'win':

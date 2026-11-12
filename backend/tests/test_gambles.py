@@ -74,3 +74,56 @@ def test_blackjack_hit_or_stand_keeps_result_and_uses_the_same_deck(wins):
             if len(dealer) > 2:
                 assert blackjack_total(dealer[:-1]) < 17 <= blackjack_total(dealer)
     assert hands_with_hits
+
+
+def test_rock_paper_scissors_has_exact_per_throw_odds():
+    from collections import Counter
+    from app.gambles import play_beginner_game
+
+    counts = Counter()
+    for value in range(100):
+        class FixedRoll:
+            def randrange(self, stop):
+                assert stop == 100
+                return value
+
+        game = make_gamble('rps', lambda _: None)
+        play_beginner_game(game, 1, FixedRoll())
+        move = game['moves'][0]
+        counts[move['outcome']] += 1
+        expected = {'win': 0, 'loss': 2, 'tie': 1}
+        assert move['opponent'] == expected[move['outcome']]
+        assert game.get('strength') == (None if move['outcome'] == 'tie' else 2)
+    assert counts == {'win': 33, 'loss': 33, 'tie': 34}
+
+
+def test_card_choice_resolves_against_the_fixed_shuffle():
+    from app.gambles import play_beginner_game
+
+    game = make_gamble('card_guess', lambda _: None, Random(1))
+    assert game['outcome'] is None and len(game['swaps']) == 8
+    outcomes = []
+    for choice in range(3):
+        plan = {**game, 'moves': []}
+        play_beginner_game(plan, choice)
+        outcomes.append(plan['outcome'])
+        assert plan['strength'] == (3 if plan['outcome'] == 'win' else 4)
+    assert outcomes.count('win') == 1 and outcomes.count('loss') == 2
+
+
+@pytest.mark.parametrize('face, outcome, strength', [
+    (1, 'loss', 8), (2, 'loss', 1), (3, 'loss', 1),
+    (4, 'win', 1), (5, 'win', 1), (6, 'win', 8),
+])
+def test_dice_has_two_extreme_faces(face, outcome, strength):
+    from app.gambles import play_beginner_game
+
+    class FixedDie:
+        def randrange(self, start, stop):
+            assert (start, stop) == (1, 7)
+            return face
+
+    game = make_gamble('dice', lambda _: None)
+    play_beginner_game(game, None, FixedDie())
+    assert game['moves'][0]['face'] == face
+    assert (game['outcome'], game['strength']) == (outcome, strength)

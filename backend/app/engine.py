@@ -6,7 +6,7 @@ from .config import settings
 from .gemini import gemini, EditBudgetExceeded, EditRejected, GenerationError, ReviewRejected
 from .store import store
 from .quota import reserve_call
-from .gambles import make_gamble
+from .gambles import BEGINNER_GAMES, make_gamble, play_beginner_game
 from .story_fallback import complete_story, local_concepts
 
 STORY_GENERATION_TIMEOUT = 24
@@ -50,7 +50,7 @@ class GameEngine:
             self.store.save(session)
 
     def settle_draw(self, session, request):
-        """Caller holds session lock. Persist the draw before any generation."""
+        """Persist the wager under the session lock. Return whether generation can start."""
         existing = next((tx for tx in session["transactions"] if tx["id"]==request.request_id), None)
         if existing:
             if (existing["unit_ids"] != request.unit_ids or existing["offer"]["id"] != request.offer_id
@@ -71,11 +71,33 @@ class GameEngine:
         if gamble:
             tx['gamble'] = gamble
             tx['presentation_completed'] = False
-            tx['offer']['narrative_change'] = {'strength': gamble['strength'], 'outcome': outcome}
+            if outcome is not None:
+                tx['offer']['narrative_change'] = {'strength': gamble['strength'], 'outcome': outcome}
         session["transactions"].append(tx)
-        session.update(status="generating",pending_transaction_id=tx["id"],error=None)
+        if outcome is None:
+            tx['status'] = 'awaiting_play'
+        session.update(status=tx['status'], pending_transaction_id=tx['id'], error=None)
         self.store.save(session)
-        return True
+        return outcome is not None
+
+    def apply_game_move(self, session, transaction_id, request):
+        tx = next((item for item in session['transactions'] if item['id'] == transaction_id), None)
+        game = tx.get('gamble') if tx else None
+        if not game or game['kind'] not in BEGINNER_GAMES:
+            raise ValueError('操作できるゲームが見つかりません。')
+        attempt = len(game['moves'])
+        if request.attempt < attempt:
+            return False
+        if request.attempt != attempt or tx['status'] != 'awaiting_play' or session.get('pending_transaction_id') != transaction_id:
+            raise ValueError('現在の手番を確認してください。')
+        play_beginner_game(game, request.choice)
+        outcome = game['outcome']
+        if outcome is not None:
+            tx.update(outcome=outcome, status='generating')
+            tx['offer']['narrative_change'] = {'strength': game['strength'], 'outcome': outcome}
+            session.update(status='generating', error=None)
+        self.store.save(session)
+        return outcome is not None
 
     async def process_transaction(self,sid):
         async with self.store.lock(sid):
@@ -193,6 +215,8 @@ class GameEngine:
                 return session
             if session.get('pending_transaction_id') != transaction_id:
                 raise ValueError('別の取引が進行中です。')
+            if tx['status'] == 'awaiting_play':
+                raise ValueError('ゲームの結果がまだ決まっていません。')
             tx['presentation_completed'] = True
             if tx['status'] == 'prepared':
                 self.commit_transaction(session, tx)
