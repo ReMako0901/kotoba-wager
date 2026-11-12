@@ -2,6 +2,38 @@ import { useEffect, useRef, useState } from 'react';
 import type { Transaction, Unit } from './types';
 
 const ROWS = 9;
+const noColumnStart = /^[、。，．！？!?：；・…‥ー〜～々〻ゝゞヽヾぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮヵヶ」』）〕］｝〉》】〗〙〛’”)]/u;
+const noColumnEnd = /^[「『（〔［｛〈《【〖〘〚‘“(]/u;
+const dialogueStart = /^[「『]/u;
+
+function paperPositions(text: string) {
+  const positions = new Map<number, number>();
+  let offset = 0;
+  let column = 0;
+  for (const paragraph of text.split('\n')) {
+    const glyphs = Array.from(paragraph);
+    const first = glyphs.findIndex(glyph => !/^[ \t　]$/.test(glyph));
+    if (first >= 0) {
+      let start = first;
+      let row = dialogueStart.test(glyphs[first]) ? 0 : 1;
+      while (start < glyphs.length) {
+        const full = Math.min(start + ROWS - row, glyphs.length);
+        let end = full;
+        while (end > start && end < glyphs.length &&
+          (noColumnStart.test(glyphs[end]) || noColumnEnd.test(glyphs[end - 1]))) end--;
+        if (end === start) end = full;
+        for (let i = start; i < end; i++) positions.set(offset + i, column * ROWS + row + i - start);
+        start = end;
+        row = 0;
+        column++;
+      }
+    } else if (offset > 0) {
+      column++;
+    }
+    offset += glyphs.length + 1;
+  }
+  return { positions, columns: Math.max(8, column) };
+}
 
 function Paper({text, units, selected, disabled, onToggle, marked}: {
   text: string;
@@ -13,34 +45,44 @@ function Paper({text, units, selected, disabled, onToggle, marked}: {
 }) {
   const runs = units ?? [{id: 'text', text, stakeable: false}];
   const content = [];
+  const { positions, columns } = paperPositions(text);
+  const occupied = new Set<number>();
   let offset = 0;
   for (const run of runs) {
     const glyphs = Array.from(run.text);
+    let firstFragment = true;
     let index = 0;
     while (index < glyphs.length) {
-      const row = offset % ROWS;
-      const length = Math.min(ROWS - row, glyphs.length - index);
-      const cells = glyphs.slice(index, index + length).map((glyph, i) => (
-        <span key={i} className={marked?.has(offset + i) ? 'ink-cell marked' : 'ink-cell'}>
+      const source = offset + index;
+      const square = positions.get(source);
+      if (square === undefined) { index++; continue; }
+      const row = square % ROWS;
+      let length = 1;
+      while (index + length < glyphs.length && row + length < ROWS &&
+        positions.get(source + length) === square + length) length++;
+      const cells = glyphs.slice(index, index + length).map((glyph, i) => {
+        occupied.add(square + i);
+        return <span key={i} className={marked?.has(source + i) ? 'ink-cell marked' : 'ink-cell'}>
           <span className="ink-glyph">{glyph}</span>
-        </span>
-      ));
-      const position = {gridRow: `${row + 1} / span ${length}`, gridColumn: Math.floor(offset / ROWS) + 1};
+        </span>;
+      });
+      const position = {gridRow: `${row + 1} / span ${length}`, gridColumn: Math.floor(square / ROWS) + 1};
       content.push(run.stakeable ? (
-        <button className="vertical-word" key={offset} type="button" style={position}
+        <button className="vertical-word" key={source} type="button" style={position}
           aria-label={run.text} aria-pressed={selected?.includes(run.id)}
-          tabIndex={index === 0 ? 0 : -1} disabled={disabled}
+          tabIndex={firstFragment ? 0 : -1} disabled={disabled}
           onClick={() => onToggle?.(run.id)}>{cells}</button>
       ) : (
-        <span className="vertical-run" key={offset} style={position}>{cells}</span>
+        <span className="vertical-run" key={source} style={position}>{cells}</span>
       ));
+      firstFragment = false;
       index += length;
-      offset += length;
     }
+    offset += glyphs.length;
   }
-  const capacity = Math.max(8, Math.ceil(offset / ROWS)) * ROWS;
-  for (let i = offset; i < capacity; i++) {
-    content.push(<span className="ink-cell" key={i} aria-hidden="true"
+  for (let i = 0; i < columns * ROWS; i++) {
+    if (occupied.has(i)) continue;
+    content.push(<span className="ink-cell" key={`blank-${i}`} aria-hidden="true"
       style={{gridRow: i % ROWS + 1, gridColumn: Math.floor(i / ROWS) + 1}} />);
   }
   return <div className="paper-scroll" aria-hidden={units ? undefined : true}>
