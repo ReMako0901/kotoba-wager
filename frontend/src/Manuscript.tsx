@@ -1,5 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Transaction, Unit } from './types';
+import { addPaperDust, PaperDust } from './PaperDust';
+import type { Dust, DustProps } from './PaperDust';
 
 const ROWS = 9;
 const noColumnStart = /^[、。，．！？!?：；・…‥ー〜～々〻ゝゞヽヾぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮヵヶ」』）〕］｝〉》】〗〙〛’”)]/u;
@@ -35,14 +37,14 @@ function paperPositions(text: string) {
   return { positions, columns: Math.max(8, column) };
 }
 
-function Paper({text, units, selected, disabled, onToggle, marked}: {
+function Paper({text, units, selected, disabled, onToggle, marked, dust, losses}: {
   text: string;
   units?: Unit[];
   selected?: string[];
   disabled?: boolean;
   onToggle?: (id: string) => void;
   marked?: Set<number>;
-}) {
+} & DustProps) {
   const runs = units ?? [{id: 'text', text, stakeable: false}];
   const content = [];
   const { positions, columns } = paperPositions(text);
@@ -86,21 +88,21 @@ function Paper({text, units, selected, disabled, onToggle, marked}: {
       style={{gridRow: i % ROWS + 1, gridColumn: Math.floor(i / ROWS) + 1}} />);
   }
   return <div className="paper-scroll" aria-hidden={units ? undefined : true}>
-    <div className="vertical-paper">{content}</div>
+    <div className="vertical-paper">{content}<PaperDust dust={dust} losses={losses} /></div>
   </div>;
 }
 
-export function Manuscript({text}: {text: string}) {
-  return <><p className="sr-only">{text}</p><Paper text={text} /></>;
+export function Manuscript({text, ...dustProps}: {text: string} & DustProps) {
+  return <><p className="sr-only">{text}</p><Paper text={text} {...dustProps} /></>;
 }
 
 export function WagerManuscript(props: {
   text: string; units: Unit[]; selected: string[]; disabled: boolean; onToggle: (id: string) => void;
-}) {
+} & DustProps) {
   return <Paper {...props} />;
 }
 
-function animateInk(canvas: HTMLCanvasElement, frame: HTMLElement, complete: () => void) {
+function animateInk(canvas: HTMLCanvasElement, frame: HTMLElement, dust: Dust, id: string, complete: () => void) {
   const ctx = canvas.getContext('2d');
   const mask = document.createElement('canvas');
   mask.width = mask.height = 64;
@@ -125,7 +127,7 @@ function animateInk(canvas: HTMLCanvasElement, frame: HTMLElement, complete: () 
 
   const bounds = frame.getBoundingClientRect();
   const paperBounds = paper.getBoundingClientRect();
-  const floor = paperBounds.bottom - bounds.top + 21;
+  const floor = paperBounds.bottom - bounds.top - 3;
   const left = Math.max(viewport.left, paperBounds.left) - bounds.left;
   const right = Math.min(viewport.right, paperBounds.right) - bounds.left;
   const scale = Math.min(2, window.devicePixelRatio || 1);
@@ -190,7 +192,16 @@ function animateInk(canvas: HTMLCanvasElement, frame: HTMLElement, complete: () 
       }
     }
     if (moving) request = requestAnimationFrame(draw);
-    else pause = window.setTimeout(complete, 440);
+    else pause = window.setTimeout(() => {
+      const landing = groups.flatMap(({grains}) => grains.filter((_, index) => index % 3 === 0).map(grain => ({
+        x: (bounds.left + grain.x + grain.dx - paperBounds.left) / paperBounds.width,
+        y: (bounds.top + grain.targetY - paperBounds.top) / paperBounds.height,
+        size: grain.size,
+        opacity: grain.opacity * .55,
+      })));
+      addPaperDust(dust, id, landing);
+      complete();
+    }, 220);
   }
   request = requestAnimationFrame(draw);
   return () => {
@@ -200,10 +211,9 @@ function animateInk(canvas: HTMLCanvasElement, frame: HTMLElement, complete: () 
   };
 }
 
-export function LossManuscript({ transaction, text }: {transaction: Transaction; text: string}) {
-  const [phase, setPhase] = useState<'falling' | 'settled' | 'skipped'>(() =>
-    window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'skipped' : 'falling');
-  const playing = phase === 'falling';
+export function LossManuscript({ transaction, text, dust, losses }: {transaction: Transaction; text: string} & DustProps) {
+  const [playing, setPlaying] = useState(() => !window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  const previousLosses = useMemo(() => losses.filter(loss => loss.id !== transaction.id), [losses, transaction.id]);
   const frame = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
   const marked = new Set<number>();
@@ -227,7 +237,7 @@ export function LossManuscript({ transaction, text }: {transaction: Transaction;
       function start() {
         if (cancelled || stop || !frame.current || !canvas.current) return;
         window.clearTimeout(fallback);
-        stop = animateInk(canvas.current, frame.current, () => setPhase('settled'));
+        stop = animateInk(canvas.current, frame.current, dust, transaction.id, () => setPlaying(false));
       }
       fallback = window.setTimeout(start, 400);
       void document.fonts.ready.then(start, start);
@@ -238,14 +248,14 @@ export function LossManuscript({ transaction, text }: {transaction: Transaction;
       window.clearTimeout(fallback);
       stop?.();
     };
-  }, [playing]);
+  }, [playing, dust, transaction.id]);
 
   return <>
     <p className="sr-only">{text}</p>
     <div className="paper-frame" ref={frame}>
-      <Paper text={playing ? transaction.before : text} marked={playing ? marked : undefined} />
-      {phase !== 'skipped' && <canvas className="ink-overlay" ref={canvas} aria-hidden="true" />}
+      <Paper text={playing ? transaction.before : text} marked={playing ? marked : undefined}
+        dust={dust} losses={playing ? previousLosses : losses} />
+      {playing && <canvas className="ink-overlay" ref={canvas} aria-hidden="true" />}
     </div>
-    {playing && <button type="button" className="text-button" onClick={() => setPhase('skipped')}>演出をスキップ</button>}
   </>;
 }
