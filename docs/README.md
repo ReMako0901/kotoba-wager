@@ -16,6 +16,7 @@
 |[HOSTING_OPTIONS.md](HOSTING_OPTIONS.md)|Google AI Proのクレジット・RenderとCloud Runの比較|
 |[PHASE0_GUIDE.md](PHASE0_GUIDE.md)|Cloud Run移行 Phase 0 のユーザー作業手順（プロジェクト・課金・クレジット・Firestore・Secret）|
 |[PHASE1_INSTRUCTIONS.md](PHASE1_INSTRUCTIONS.md)|Cloud Run移行 Phase 1 の Codex 向け実装指示書（Firestore 化・Cloud Tasks 化・デプロイ定義）|
+|[SLIDE_PROGRESS_REPORT.md](SLIDE_PROGRESS_REPORT.md)|ゼミ進捗報告スライドの原稿（音楽版研究提案を小説版へ転換、16枚＋付録）|
 
 最短の読み順：STATUS → GAME_OVERVIEW → TODO。実装前に ARCHITECTURE・TECH_STACK・SHARED_NOTES と、対象機能の資料を読む。
 
