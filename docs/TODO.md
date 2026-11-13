@@ -4,7 +4,8 @@
 
 ## サーバー移行 Phase 0（ユーザー作業）
 
-- [ ] `docs/PHASE0_GUIDE.md` の手順で Phase 0 を実施する（プロジェクト作成、請求先と予算アラート、AI Proクレジット適用、Firestore asia-northeast1、Secret Manager へのキー登録、API有効化）。結果はガイド末尾の項目で報告する。移行の実装（Phase 1）は未着手。
+- [x] Phase 0 の大半を実施（2026-11-13）: プロジェクト kotoba-wager（番号 108927229642）作成、AI Pro クレジット適用、Firestore asia-northeast1 / Native / Standard、Secret Manager kotoba-wager-key 登録と secretAccessor 付与、必要 API の有効化まで完了を確認。
+- [ ] 予算アラートの設定（ユーザーが設定中、金額の報告待ち）。完了次第 Phase 0 は完了。移行の実装（Phase 1）は未着手。
 
 ## 粉の形と結果表示
 

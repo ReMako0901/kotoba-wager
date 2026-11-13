@@ -2,6 +2,12 @@
 
 日付は作業整理日。親リポジトリと公開専用リポジトリのハッシュは別物。実際のコミット時刻・全差分は各 `git log` を参照。現在仕様はGAME_OVERVIEWとSTATUSを優先する。
 
+## Phase 0 をほぼ完了（2026-11-13）
+
+- プロジェクト kotoba-wager（番号 108927229642）で、AI Pro クレジット適用、Firestore
+  （asia-northeast1 / Native / Standard）、Secret Manager `kotoba-wager-key` 登録と
+  secretAccessor 付与、必要 API の有効化まで完了を確認。残りは予算アラートの設定のみ。
+
 ## Secret Manager のシークレット名を確定（2026-11-13）
 
 - Gemini API キーを入れるシークレット名は `kotoba-wager-key` で確定（ユーザーが Phase 0 で
