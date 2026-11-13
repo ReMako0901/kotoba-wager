@@ -5,11 +5,17 @@
 ## サーバー移行 Phase 0（ユーザー作業）
 
 - [x] Phase 0 の大半を実施（2026-11-13）: プロジェクト kotoba-wager（番号 108927229642）作成、AI Pro クレジット適用、Firestore asia-northeast1 / Native / Standard、Secret Manager kotoba-wager-key 登録と secretAccessor 付与、必要 API の有効化まで完了を確認。
-- [x] 予算アラートは設定しないと決定（2026-11-13、ユーザー判断。通知のみの仕組みのため任意）。Phase 0 は完了。移行の実装（Phase 1）は未着手。
+- [x] 予算アラートは設定しないと決定（2026-11-13、ユーザー判断。通知のみの仕組みのため任意）。Phase 0 は完了。
 
 ## サーバー移行 Phase 1（Codex 実装）
 
-- [ ] `docs/PHASE1_INSTRUCTIONS.md` に従って実装する（store / quota の Firestore 化、生成の Cloud Tasks 化、デプロイ定義と手順書）。Phase 0 の確定値は同書 §0。デプロイ実行と切替は Phase 2 でユーザー承認後。
+- [x] Firestore 保存・日次上限、Cloud Tasks による生成、デプロイ定義・手順をローカル実装。
+- [x] 既定モードの既存テストとエミュレータ結合テスト、開始から次ラウンドまでの通し確認。
+
+## サーバー移行 Phase 2（ユーザー承認後）
+
+- [ ] [Cloud Run 手順](DEPLOY_CLOUD_RUN.md) に従い、キュー・権限・新 API を準備。実 Gemini、実 Cloud Tasks の OIDC と再配信、Cloud Run 再起動をまたぐ保存を確認する。
+- [ ] コールドスタートを実測し、最小インスタンス数の最終判断を行う。確認後にだけ Pages の接続先を切り替える。Render は切り戻し用に保持する。
 
 ## 粉の形と結果表示
 
