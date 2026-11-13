@@ -118,6 +118,10 @@ Google の画面から Secret Manager へ直接貼るだけにする。
    ※このサービスアカウントは Compute Engine API が有効化されるまで自動作成されず、新規プロジェクトでは
    「有効な Google アカウントに関連付けられている必要があります」というエラーで付与できないことがある。
    その場合は無理に進めず、付与は Phase 1 のデプロイ時に、実際に使うサービスアカウントへ行う（2026-11-13 実例）
+   ※サービスアカウントが存在していても、付与ダイアログにアドレスを貼っただけでは人間用アドレスとして
+   判定され同じエラーになることがある。入力中に表示される候補から選択すると通る場合がある。
+   候補が出ない場合は Cloud Shell で次を実行する（シークレット単位の付与、プロジェクトはコンソールの選択に従う）:
+   `gcloud secrets add-iam-policy-binding kotoba-wager-key --member="serviceAccount:<プロジェクト番号>-compute@developer.gserviceaccount.com" --role="roles/secretmanager.secretAccessor"`
 4. 確認: シークレット一覧に `kotoba-wager-key` があり、バージョンが1つ登録されていること（値は開いて確認しなくてよい）
 
 ## Step 8: API の有効化
