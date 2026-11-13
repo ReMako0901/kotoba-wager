@@ -21,7 +21,9 @@ class EditRejected(GenerationError):
 
 
 class ReviewRejected(EditRejected):
-    pass
+    def __init__(self, message, *, reason_code="unspecified"):
+        super().__init__(message)
+        self.reason_code = reason_code
 
 
 class EditBudgetExceeded(GenerationError):
@@ -167,26 +169,26 @@ class Gemini:
         }, StoryReview, thinking_level="MEDIUM")
         review = result.value
         if review.verdict == 'reject':
-            raise ReviewRejected('文章全体の読み直しで違和感が残りました。')
+            raise ReviewRejected('文章全体の読み直しで違和感が残りました。', reason_code="model_rejected")
         if review.verdict == 'repair':
             try:
                 proposal = EditProposal.model_validate(review.model_dump())
             except ValidationError:
-                raise ReviewRejected('文章の修正案が必要な形式を満たしませんでした。') from None
+                raise ReviewRejected('文章の修正案が必要な形式を満たしませんでした。', reason_code="repair_schema_invalid") from None
             try:
                 result.value = apply_edits(original, proposal, plan)
             except GenerationError as error:
-                raise ReviewRejected(str(error)) from error
+                raise ReviewRejected(str(error), reason_code="repair_edit_rule_violation") from error
             if result.value.text == candidate.text:
-                raise ReviewRejected('修正案を適用しても初稿と同じ本文になりました。')
+                raise ReviewRejected('修正案を適用しても初稿と同じ本文になりました。', reason_code="repair_unchanged")
             if outcome == 'loss' and any(
                 surface not in candidate.text and surface in result.value.text
                 for concept in stakes for surface in concept['selected_surfaces']
             ):
-                raise ReviewRejected('修正案が失われたことばを戻しました。')
+                raise ReviewRejected('修正案が失われたことばを戻しました。', reason_code="repair_restored_lost_word")
         else:
             if review.edits:
-                raise ReviewRejected('採用判定に修正案が付いていました。')
+                raise ReviewRejected('採用判定に修正案が付いていました。', reason_code="accept_with_edits")
             result.value = candidate.model_copy(update={'checks': review.checks})
         return result
 

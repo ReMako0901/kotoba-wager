@@ -1,5 +1,6 @@
 import asyncio
 import hmac
+import logging
 import random
 import secrets
 from copy import deepcopy
@@ -12,7 +13,9 @@ from .quota import reserve_call
 from .gambles import BEGINNER_GAMES, make_gamble, play_beginner_game
 from .story_fallback import complete_story, local_concepts
 
+logger = logging.getLogger(__name__)
 STORY_GENERATION_TIMEOUT = 24
+CLOUD_STORY_GENERATION_TIMEOUT = 50
 # Longer than the generation deadline. A reclaimed job uses the existing
 # same-outcome fallback instead of reissuing potentially billed requests.
 GENERATION_LEASE_SECONDS = 90
@@ -74,7 +77,11 @@ class GameEngine:
 
         call_number = await self.update_generation(context, begin)
         await reserve_call()
-        result = await method(*args, **kwargs)
+        try:
+            result = await method(*args, **kwargs)
+        except (GenerationError, asyncio.CancelledError) as error:
+            logger.warning("Gemini stage %s did not complete (%s)", method.__name__, type(error).__name__)
+            raise
 
         def record(session, tx):
             for key in session["usage"]:
@@ -265,13 +272,20 @@ class GameEngine:
             if tx.get("draft"):
                 edited = None
             elif interrupted:
+                logger.warning("Story generation fallback after an interrupted attempt")
                 edited = self.fallback(tx, session)
             else:
+                timeout = (
+                    CLOUD_STORY_GENERATION_TIMEOUT
+                    if settings.generation_tasks_mode == "cloud"
+                    else STORY_GENERATION_TIMEOUT
+                )
                 try:
                     edited = await asyncio.wait_for(
-                        self.generate_story(context, session, tx), timeout=STORY_GENERATION_TIMEOUT,
+                        self.generate_story(context, session, tx), timeout=timeout,
                     )
-                except (GenerationError, TimeoutError):
+                except (GenerationError, TimeoutError) as error:
+                    logger.warning("Story generation fallback (%s, deadline=%ss)", type(error).__name__, timeout)
                     edited = self.fallback(tx, session)
 
             def finish(current, live_tx):
@@ -346,21 +360,26 @@ class GameEngine:
                         loss_args += (offer["narrative_change"],)
                     candidate = await self.call(context, self.ai.loss, *loss_args, **feedback)
                 if feedback and candidate.text == feedback["previous_review"].get("rejected_text"):
-                    raise ReviewRejected("不採用になった本文と同じ文章が返りました。")
+                    raise ReviewRejected("不採用になった本文と同じ文章が返りました。", reason_code="repeat_rejected_candidate")
                 review_options = {"relax_budget": True} if relaxed else {}
                 edited = await self.call(context, self.ai.review, original, candidate, outcome, offer, stakes, lost, **review_options)
                 if edited.text == original:
-                    raise ReviewRejected("編集後の本文が原文と同じです。")
+                    raise ReviewRejected("編集後の本文が原文と同じです。", reason_code="unchanged_original")
                 if outcome == "win" and not lost:
                     edited.checks.lost_absent = True
                 if not edited.checks.lost_absent:
-                    raise ReviewRejected("消失設定が本文に残っています。")
+                    raise ReviewRejected("消失設定が本文に残っています。", reason_code="lost_setting_remains")
                 if outcome == "win" and not (edited.checks.protected_retained and edited.checks.reward_realized):
-                    raise ReviewRejected("賭けた設定の保持または報酬の実現を確認できません。")
+                    raise ReviewRejected("賭けた設定の保持または報酬の実現を確認できません。", reason_code="win_checks_failed")
                 if outcome == "loss" and edited.checks.reward_realized:
-                    raise ReviewRejected("敗北時に報酬が反映されています。")
+                    raise ReviewRejected("敗北時に報酬が反映されています。", reason_code="loss_reward_realized")
                 return edited
             except EditRejected as error:
+                if isinstance(error, ReviewRejected):
+                    logger.warning(
+                        "Story review rejected transaction_id=%s attempt=%d reason_code=%s",
+                        tx["id"], attempt + 1, error.reason_code,
+                    )
                 if attempt == 1:
                     raise GenerationError("本文を自動で作り直しましたが、確認を通りませんでした。元の本文と勝敗は保存されています。") from error
                 relaxed = isinstance(error.__cause__, EditBudgetExceeded)
