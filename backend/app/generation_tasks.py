@@ -4,6 +4,7 @@ import hashlib
 import json
 import logging
 from functools import lru_cache
+from time import time
 from typing import Literal
 from urllib.parse import urlsplit
 
@@ -11,7 +12,7 @@ from fastapi import HTTPException
 from pydantic import BaseModel, Field, model_validator
 
 from .config import settings
-from .engine import generation_target
+from .engine import GenerationBusy, generation_target
 
 logger = logging.getLogger(__name__)
 INTERNAL_PATH = "/internal/generation/process"
@@ -112,8 +113,20 @@ async def dispatch(engine, session, target, *, fresh=False, recovering=False):
     sid = session["id"]
     if settings.generation_tasks_mode == "inline":
         if fresh or recovering:
-            engine.spawn(engine.process_transaction(sid, target) if target[0] == "transaction"
-                         else engine.prepare_initial(sid, target))
+            async def run():
+                process = engine.process_transaction if target[0] == "transaction" else engine.prepare_initial
+                try:
+                    await process(sid, target)
+                except GenerationBusy:
+                    if recovering:
+                        claim = session.get("_generation_claim") or {}
+                        await asyncio.sleep(max(0, claim.get("expires", 0) - time()) + 1)
+                        try:
+                            await process(sid, target)
+                        except GenerationBusy:
+                            pass
+
+            engine.spawn(run())
         return
 
     task = GenerationTask(session_id=sid, kind=target[0], transaction_id=target[1], epoch=target[2])

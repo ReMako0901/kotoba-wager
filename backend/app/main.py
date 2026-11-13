@@ -1,7 +1,7 @@
 import json
 import secrets
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Header, HTTPException, Response
+from fastapi import Depends, FastAPI, Header, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from .config import settings
@@ -195,9 +195,13 @@ async def continue_play(sid: str):
         return validate_session(None)
 
 
-@app.post(INTERNAL_PATH, status_code=204, include_in_schema=False)
-async def process_generation(task: GenerationTask, authorization: str | None = Header(default=None)):
+async def authenticate_generation(authorization: str | None = Header(default=None)):
     await authenticate(authorization)
+
+
+@app.post(INTERNAL_PATH, status_code=204, include_in_schema=False,
+          dependencies=[Depends(authenticate_generation)])
+async def process_generation(task: GenerationTask):
     try:
         if task.kind == "transaction":
             await engine.process_transaction(task.session_id, task.target)
