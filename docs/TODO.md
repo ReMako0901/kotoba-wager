@@ -5,7 +5,7 @@
 ## サーバー移行 Phase 0（ユーザー作業）
 
 - [x] Phase 0 の大半を実施（2026-11-13）: プロジェクト kotoba-wager（番号 108927229642）作成、AI Pro クレジット適用、Firestore asia-northeast1 / Native / Standard、Secret Manager kotoba-wager-key 登録と secretAccessor 付与、必要 API の有効化まで完了を確認。
-- [ ] 予算アラートの設定（ユーザーが設定中、金額の報告待ち）。完了次第 Phase 0 は完了。移行の実装（Phase 1）は未着手。
+- [x] 予算アラートは設定しないと決定（2026-11-13、ユーザー判断。通知のみの仕組みのため任意）。Phase 0 は完了。移行の実装（Phase 1）は未着手。
 
 ## 粉の形と結果表示
 

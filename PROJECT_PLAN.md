@@ -68,14 +68,16 @@ Render 無料枠の制約（15分で休止、再起動・再デプロイでロ�
 - Firestore（Native）作成、Secret Manager 登録
 - 受け入れ: API キーがコード・Git・画面に出ていないこと
 
-実施状況（2026-11-13）: 予算アラートを除き完了。
+実施状況（2026-11-13）: 完了。予算アラートのみ、ユーザー判断で設定しないこととした
+（通知のみの仕組みで必須ではない。暴走防止はアプリ側の日次呼出上限100回と、Phase 1 で
+設定する Cloud Run の最大インスタンス数で担保する）。
 - プロジェクト `kotoba-wager`（番号 108927229642）作成、AI Pro クレジット適用 OK
 - Firestore `(default)`: asia-northeast1 / FIRESTORE_NATIVE / STANDARD を gcloud で確認済み
 - Gemini キーは AI Studio でこのプロジェクトを指定して作成し、Secret Manager の
   `kotoba-wager-key` に登録。compute デフォルト SA へ secretAccessor を Cloud Shell で付与済み
   （コンソールの付与ダイアログでは developer.gserviceaccount.com のプリンシパルが検証エラーになる）
 - Step 8 の必要 API 7件の有効化完了
-- 残り: 予算アラートの設定（ユーザーが設定中、金額は報告待ち）
+
 
 ### Phase 1: 移行（Codex 実装）
 - store の Firestore 化（トランザクションで冪等性・version 検査・再抽選防止を保証）
