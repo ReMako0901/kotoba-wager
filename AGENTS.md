@@ -4,7 +4,7 @@
 
 ## 着手前
 
-1. [引き継ぎ入口](docs/README.md) → [現在の進捗](docs/STATUS.md) → [ゲーム概要](docs/GAME_OVERVIEW.md) → [次の作業](docs/TODO.md) を読む。
+1. [現在の作業指示](docs/CURRENT_INSTRUCTIONS.md) で今回の指示範囲を確認し、[引き継ぎ入口](docs/README.md) → [現在の進捗](docs/STATUS.md) → [ゲーム概要](docs/GAME_OVERVIEW.md) → [次の作業](docs/TODO.md) を読む。
 2. [構成](docs/ARCHITECTURE.md)、[使用ツール・起動](docs/TECH_STACK.md)、[共有事項](docs/SHARED_NOTES.md) を確認。
 3. `git status` と直近の履歴を確認。他者の変更を削除・混在コミットしない。
 4. 区切り変更なら [辞書の仕様](docs/WORD_DICTIONARY.md) を読む。

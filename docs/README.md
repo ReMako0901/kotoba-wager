@@ -4,6 +4,7 @@
 
 |資料|内容|
 |---|---|
+|[CURRENT_INSTRUCTIONS.md](CURRENT_INSTRUCTIONS.md)|Codex への現在の作業指示の入口（Muse が随時更新）|
 |[STATUS.md](STATUS.md)|現在動くもの、検証済み範囲、公開版との差分|
 |[GAME_OVERVIEW.md](GAME_OVERVIEW.md)|ゲームの目的、遊び方、決定事項、過去案との違い|
 |[TECH_STACK.md](TECH_STACK.md)|使用ツール、依存関係、環境変数、起動・確認コマンド|
@@ -18,6 +19,8 @@
 |[PHASE1_INSTRUCTIONS.md](PHASE1_INSTRUCTIONS.md)|Cloud Run移行 Phase 1 の Codex 向け実装指示書（Firestore 化・Cloud Tasks 化・デプロイ定義）|
 |[SLIDE_PROGRESS_REPORT.md](SLIDE_PROGRESS_REPORT.md)|ゼミ進捗報告スライドの原稿（音楽版研究提案を小説版へ転換、16枚＋付録）|
 |[PHASE2_GUIDE.md](PHASE2_GUIDE.md)|Cloud Run移行 Phase 2 のユーザー作業ガイド（事前作業・検証・コールドスタート実測・切替）|
+|[PHASE4_BETTING_SCOPE_AND_INTRO.md](PHASE4_BETTING_SCOPE_AND_INTRO.md)|Phase 4 仕様書（賭け対象の入口制限・ストーリーの導入）|
+|[PHASE4_INSTRUCTIONS.md](PHASE4_INSTRUCTIONS.md)|Phase 4 仕様A・B の Codex 向け実装指示書|
 
 最短の読み順：STATUS → GAME_OVERVIEW → TODO。実装前に ARCHITECTURE・TECH_STACK・SHARED_NOTES と、対象機能の資料を読む。
 
