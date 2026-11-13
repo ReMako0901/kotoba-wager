@@ -4,7 +4,9 @@
 前提: Phase 0 完了、Phase 1 実装済み（ブランチ `codex/phase1-cloud-run`、未 push）。
 デプロイコマンドの正本は Phase 1 で作成された `docs/DEPLOY_CLOUD_RUN.md`。
 このガイドは実行の順番と、判断・確認のポイントを定める。
-課金・権限・公開に関わる実行はすべてユーザーが行う（Muse / Codex は代行しない）。
+実行主体は 2026-11-13 の D7 改訂により、A〜E は Codex が条件付きで実行する
+（コマンド事前表示、エラー時は止めて報告）。F の切替だけはユーザーの明示承認後に
+ユーザーが行う。Render の停止はこのガイドの範囲外。
 
 確定値: プロジェクト `kotoba-wager`（番号 108927229642）、リージョン `asia-northeast1`、
 キュー名 `generation`、実行 SA `108927229642-compute@developer.gserviceaccount.com`、
@@ -17,7 +19,7 @@ D. 新 API だけでの検証 → E. コールドスタート実測と D4 判断
 
 切替（F）までは本番（GitHub Pages → Render）に一切影響しない。
 
-## A. 事前作業（Cloud Shell）
+## A. 事前作業（Codex が実行。gcloud 未ログインなら最初にユーザーが `gcloud auth login` を1回だけ承認する）
 
 ```
 gcloud config set project kotoba-wager
@@ -45,7 +47,7 @@ gcloud projects add-iam-policy-binding kotoba-wager \
 ## B. 初回デプロイ
 
 `docs/DEPLOY_CLOUD_RUN.md` のコマンド（または `scripts/deploy_cloud_run.sh`）を
-ユーザーが実行する。実行前に1点だけ目視確認する。
+Codex が実行する。実行前に1点だけ確認する（食い違っていたら実行せず報告する）。
 
 - 公開範囲: フロント（GitHub Pages）はブラウザから API を直接叩くため、サービスは
   未認証アクセス可（`--allow-unauthenticated`）でなければブラウザから使えない。

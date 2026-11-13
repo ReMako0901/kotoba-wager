@@ -2,6 +2,13 @@
 
 日付は作業整理日。親リポジトリと公開専用リポジトリのハッシュは別物。実際のコミット時刻・全差分は各 `git log` を参照。現在仕様はGAME_OVERVIEWとSTATUSを優先する。
 
+## D7 を改訂し、Phase 2 の実行を Codex に委任可能にした（2026-11-13）
+
+- ユーザーの明示指示により、Phase 2 以降の定型的な権限・デプロイ操作は Codex が
+  条件付き（コマンド事前表示、エラー時停止）で実行してよいことに変更。
+  PROJECT_PLAN の D7 と AGENTS の移行節、PHASE2_GUIDE の実行主体を更新。
+  公開切替と Render 停止は引き続きユーザーの明示承認が必要。
+
 ## Phase 2 ガイドを作成（2026-11-13）
 
 - `docs/PHASE2_GUIDE.md` を追加。Phase 1 実装済み（ブランチ codex/phase1-cloud-run、
