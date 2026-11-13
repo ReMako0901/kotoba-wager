@@ -1,11 +1,12 @@
 import json
 import secrets
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, Header, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from .config import settings
-from .engine import engine, generation_target
+from .engine import GenerationBusy, engine, generation_target
+from .generation_tasks import INTERNAL_PATH, GenerationTask, authenticate, dispatch
 from .gemini import GenerationError, gemini
 from .models import CreateSession, GameMoveRequest, TradeRequest
 from .analysis import build_analysis, make_offers, BETTING_MODE
@@ -27,10 +28,7 @@ async def lifespan(app):
             session = await store.read(sid)
         except FileNotFoundError:
             continue
-        target = generation_target(session)
-        if target:
-            engine.spawn(engine.process_transaction(sid, target) if target[0] == "transaction"
-                         else engine.prepare_initial(sid, target))
+        await dispatch(engine, session, generation_target(session), recovering=True)
     yield
 
 
@@ -130,7 +128,10 @@ async def create_session(request:CreateSession):
 
 @app.get("/api/sessions/{sid}")
 async def get_session(sid: str):
-    return public(await load(sid))
+    session = await load(sid)
+    if settings.generation_tasks_mode == "cloud":
+        await dispatch(engine, session, generation_target(session))
+    return public(session)
 
 
 @app.post("/api/sessions/{sid}/transactions",status_code=202)
@@ -141,8 +142,7 @@ async def trade(sid:str,request:TradeRequest):
         return validate_session(None)
     except ValueError as error:
         raise HTTPException(409, str(error)) from None
-    if generate:
-        engine.spawn(engine.process_transaction(sid, target))
+    await dispatch(engine, session, target, fresh=generate)
     return public(session)
 
 
@@ -154,8 +154,7 @@ async def play_game(sid: str, transaction_id: str, request: GameMoveRequest):
         return validate_session(None)
     except ValueError as error:
         raise HTTPException(409, str(error)) from None
-    if settled:
-        engine.spawn(engine.process_transaction(sid, target))
+    await dispatch(engine, session, target, fresh=settled)
     return public(session)
 
 
@@ -171,11 +170,14 @@ async def finish_gamble(sid: str, transaction_id: str):
 
 @app.post("/api/sessions/{sid}/retry", status_code=202)
 async def retry(sid: str):
-    await load(sid)
     try:
-        return public(await engine.retry(sid))
+        session, target = await engine.prepare_retry(sid, validate_session)
+    except FileNotFoundError:
+        return validate_session(None)
     except ValueError as error:
         raise HTTPException(409, str(error)) from None
+    await dispatch(engine, session, target, fresh=True)
+    return public(session)
 
 
 @app.post("/api/sessions/{sid}/continue")
@@ -191,3 +193,18 @@ async def continue_play(sid: str):
         return await store.mutate(sid, change)
     except FileNotFoundError:
         return validate_session(None)
+
+
+@app.post(INTERNAL_PATH, status_code=204, include_in_schema=False)
+async def process_generation(task: GenerationTask, authorization: str | None = Header(default=None)):
+    await authenticate(authorization)
+    try:
+        if task.kind == "transaction":
+            await engine.process_transaction(task.session_id, task.target)
+        else:
+            await engine.prepare_initial(task.session_id, task.target)
+    except GenerationBusy:
+        # A previous delivery still holds the lease. Ask Cloud Tasks to retry
+        # in case that delivery died and its lease needs to be reclaimed.
+        raise HTTPException(503, "Generation already in progress", headers={"Retry-After": "10"}) from None
+    return Response(status_code=204)
