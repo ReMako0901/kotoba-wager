@@ -82,4 +82,78 @@
   - ユーザーが実行する事前作業: Cloud Tasks キューの作成コマンド
     （`gcloud tasks queues create generation --location=asia-northeast1`）、
     実行 SA への `roles/cloudtasks.enqueuer
-...[truncated 2700 chars]
+...[truncated 2700 chars]` と
+    `roles/run.invoker` の付与コマンド（対象は実行 SA。OIDC トークンの呼び出し用）。
+  - `gcloud run deploy` の完全なコマンド: `--region asia-northeast1`、
+    `--min-instances 0`、`--max-instances 3`、`--memory 1Gi`（初期値。実測で見直す）、
+    `--set-secrets=GEMINI_API_KEY=kotoba-wager-key:latest`、環境変数
+    `GEMINI_MODEL=gemini-3.1-flash-lite`、`GEMINI_DAILY_CALL_LIMIT=100`、
+    `ALLOWED_ORIGINS=https://remako0901.github.io`、`STORAGE_BACKEND=firestore`、
+    `GENERATION_TASKS_MODE=cloud`、`CLOUD_TASKS_PROJECT=kotoba-wager`、
+    `CLOUD_TASKS_LOCATION=asia-northeast1`、`CLOUD_TASKS_QUEUE=generation`、
+    `TASKS_SERVICE_ACCOUNT=108927229642-compute@developer.gserviceaccount.com`。
+    実行 SA は既定の compute SA のまま（secretAccessor 付与済みのため）。
+  - `TASKS_TARGET_URL` は自サービスの URL を指すため、初回デプロイ後に確定する。
+    確定後に環境変数を更新するコマンドも手順に含める（自己参照になる点に注意）。
+  - Phase 2 用に、切替手順（GitHub の Repository variable `API_BASE_URL` を新 URL へ）と
+    切り戻し手順（`API_BASE_URL` を Render の URL へ戻す。Render は承認まで残す）を書く。
+- 同内容を `scripts/deploy_cloud_run.sh` として用意してもよいが、実行は Phase 2 で
+  ユーザーが行う。スクリプト冒頭に「ユーザー承認後に実行すること」と明記する。
+
+### T6. テストと検証
+
+- 既存 pytest を全て通す（既定モード: `STORAGE_BACKEND=file`、
+  `GENERATION_TASKS_MODE=inline`。現行の Render 運用が壊れていないことが前提）。
+- Firestore エミュレータを使う store テストを新規追加する。対象は少なくとも次の4点。
+  - 冪等性: 同一 `request_id` の再送で再抽選しない（既存取引が返る）
+  - version 検査: 古い version での保存が弾かれる
+  - committed 取引の再処理防止: 内部エンドポイントを再配信しても二重生成しない
+  - quota: 上限到達で `reserve_call` が現行どおりのエラーになり、並行実行でも上限を超えない
+- エミュレータを用意できない場合は fake 実装で代替してよいが、その場合は
+  `docs/STATUS.md` と完了報告に「エミュレータ未実施」と明記する（実施済みにしない）。
+- ローカル通し確認: 開始 → 取引 → 生成 → 反映 → 次ラウンドまで進むこと。
+  少なくとも既定モード（file + inline）で必須。Firestore + エミュレータでも行うのが望ましい。
+
+### T7. 文書の更新
+
+- `docs/STATUS.md`、`docs/TODO.md`、`docs/CHANGELOG.md` を実際の変更と検証結果に合わせて更新する。
+- PROJECT_PLAN.md の決定事項（§4）を変える必要が生じたら、勝手に書き換えず、
+  理由と合わせてユーザーへ報告して止まる。
+
+## 2. やらないこと（Phase 1 の範囲外）
+
+- みんなの物語（`public_stories`、Phase 3）の実装。
+- フロントエンドの変更。API の外部契約と `frontend/src/types.ts` の変更。
+- 本番デプロイの実行、GitHub の `API_BASE_URL` 切替、`render.yaml` の削除、Render の停止。
+- 課金・権限に関わる操作の実行（Cloud Tasks キュー作成、IAM 付与、Secret の変更）。
+  これらはコマンドと手順の提示までを行い、実行はユーザーが Phase 2 で行う。
+- 旧データの移行（D5 で移行しないと確定済み）。
+- 分割（Sudachi 系）、抽選方式、個数方式、生成失敗時のフォールバック仕様の変更。
+
+## 3. 守る仕様（要点）
+
+詳細は PROJECT_PLAN.md §6 と AGENTS.md「サーバー移行」節が正本。
+
+- 抽選は一度だけ確定して保存する。再送・再試行・再配信で再抽選しない。
+- 生成失敗を敗北扱いにしない。失敗時は同じ勝敗で定型文フォールバックする。
+- 本文とオフセットの対応を変えない。形態素解析を差し替えない。
+- Gemini のキーをコード・Git・ログ・画面に出さない。Secret Manager 経由のみ。
+
+## 4. 受け入れ条件（Phase 1 の完了の定義）
+
+- 既存 pytest が全て通過し、Firestore エミュレータでの store テストが追加されている
+  （代替した場合はその旨が明記されている）。
+- ローカルで 開始→取引→生成→反映→次ラウンド が通り、再送で再抽選しないことを確認済み。
+- 既定モード（file + inline）で現行の動作が壊れていない。
+- `docs/DEPLOY_CLOUD_RUN.md` に、ユーザーの事前作業・デプロイコマンド・切替と
+  切り戻しの手順が揃っている。
+
+## 5. 完了時の報告
+
+- 実装内容を T1〜T7 の番号ごとにまとめ、変更ファイルの一覧を添える。
+- 検証は「既存 pytest」「エミュレータでの store テスト」「ローカル通し」「実 Gemini」
+  「ブラウザ確認」「公開配信」の区分ごとに、実施したかどうかを分けて書く。
+  未実施のものを実施済みと書かない。
+- ユーザーが Phase 2 で実行する手順（キュー作成、IAM 付与、デプロイ、切替）への
+  参照を明示する。
+- 残課題と、Phase 2 への引き継ぎ事項（コールドスタート実測と D4 の最終判断を含む）を書く。
