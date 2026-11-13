@@ -2,6 +2,12 @@
 
 日付は作業整理日。親リポジトリと公開専用リポジトリのハッシュは別物。実際のコミット時刻・全差分は各 `git log` を参照。現在仕様はGAME_OVERVIEWとSTATUSを優先する。
 
+## Secret Manager のシークレット名を確定（2026-11-13）
+
+- Gemini API キーを入れるシークレット名は `kotoba-wager-key` で確定（ユーザーが Phase 0 で
+  その名前で作成済み）。`PROJECT_PLAN.md`、`AGENTS.md`、`docs/PHASE0_GUIDE.md` の記載を合わせた。
+  Cloud Run では環境変数 `GEMINI_API_KEY` として渡し、環境変数名とコードは変更しない。
+
 ## サーバー移行の計画文書を追加（2026-11-13）
 
 - `PROJECT_PLAN.md` を追加。Render無料枠から Cloud Run + Firestore への移行方針・決定事項（2026-11-13確定）・フェーズ計画を記録。実装はまだ行っていない。

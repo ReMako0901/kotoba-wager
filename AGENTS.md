@@ -42,7 +42,10 @@
 - 生成は `asyncio.create_task` の応答後処理に頼らない。Cloud Tasks から内部エンドポイントを
   叩き、そのリクエスト内で生成を完了させる。内部エンドポイントは OIDC 等で保護する
 - SudachiPy・辞書・Wiktionary 索引はそのまま使う。形態素解析の差し替えは移行の範囲外
-- Gemini のキーは Secret Manager 経由のみ。`.env`、Git、ログ、画面へ出さない
+- Gemini のキーは Secret Manager 経由のみ。`.env`、Git、ログ、画面へ出さない。
+  シークレット名は `kotoba-wager-key` で確定している。デプロイ設定では環境変数
+  `GEMINI_API_KEY` にこのシークレットを結び付ける（例: `--set-secrets=GEMINI_API_KEY=kotoba-wager-key:latest`）。
+  環境変数名とコード側の参照名は変えない
 - 課金・権限に関わる操作（Cloud プロジェクト作成、Billing 有効化、クレジット請求、
   Secret 登録、公開切替、Render 停止）は実装者が行わない。手順を提示して止まる
 - `render.yaml` と Render 向け手順は、切替完了とユーザーの承認まで削除しない

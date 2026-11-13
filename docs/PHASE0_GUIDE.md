@@ -11,7 +11,7 @@
 - [ ] 予算アラートが設定されている
 - [ ] Google AI Pro の月 $10 Cloud クレジットが、その請求先アカウントに適用されている（または適用できない理由が判明している）
 - [ ] Firestore（Native モード、asia-northeast1）が作成されている
-- [ ] このプロジェクトで作成した Gemini API キーが、Secret Manager の `GEMINI_API_KEY` に登録されている
+- [ ] このプロジェクトで作成した Gemini API キーが、Secret Manager の `kotoba-wager-key` に登録されている
 - [ ] 必要な API が有効化されている
 
 ## 用意するもの
@@ -108,12 +108,14 @@ Google の画面から Secret Manager へ直接貼るだけにする。
 ## Step 7: Secret Manager にキーを登録する
 
 1. コンソールで [Secret Manager] へ移動し、求められれば API を有効化する
-2. [シークレットを作成]: 名前は `GEMINI_API_KEY`、シークレットの値に Step 6 のキーを貼る
+2. [シークレットを作成]: 名前は `kotoba-wager-key`、シークレットの値に Step 6 のキーを貼る
+   （シークレット名は `kotoba-wager-key` で確定。2026-11-13 ユーザー決定。Cloud Run では
+   このシークレットを環境変数 `GEMINI_API_KEY` として渡す。環境変数名は従来通り変えない）
 3. 作成したシークレットの [権限] から、Cloud Run が使うサービスアカウントに
    ロール **Secret Manager のシークレット アクセサー**（`roles/secretmanager.secretAccessor`）を付ける。
    付与先の候補: `<プロジェクト番号>-compute@developer.gserviceaccount.com`
    （Cloud Run のデフォルト実行アカウント。Phase 1 で専用サービスアカウントに替える場合は付け直す）
-4. 確認: シークレット一覧に `GEMINI_API_KEY` があり、バージョンが1つ登録されていること（値は開いて確認しなくてよい）
+4. 確認: シークレット一覧に `kotoba-wager-key` があり、バージョンが1つ登録されていること（値は開いて確認しなくてよい）
 
 ## Step 8: API の有効化
 

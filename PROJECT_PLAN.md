@@ -31,7 +31,9 @@ Render 無料枠の制約（15分で休止、再起動・再デプロイでロ�
 - 画面は GitHub Pages のまま。切替は GitHub の Repository variable `API_BASE_URL` の差し替えのみ
 - API は Google Cloud Run（Docker の Python/FastAPI をそのまま動かす）
 - 保存は Firestore。セッション本体と transactions を分け、1ドキュメント 1MiB 上限を踏まない
-- Gemini の API キーは Secret Manager 経由でバックエンドだけに渡す
+- Gemini の API キーは Secret Manager 経由でバックエンドだけに渡す。シークレット名は
+  `kotoba-wager-key`（Phase 0 で作成、2026-11-13 確定）で、Cloud Run では環境変数
+  `GEMINI_API_KEY` としてマウントする
 - Render は検証が終わるまで残し、切り戻せる状態を保つ。切替と Render 停止はユーザーの承認後
 
 ### 移行しない選択肢の扱い
