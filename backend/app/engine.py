@@ -1,4 +1,6 @@
 import asyncio
+import hmac
+import random
 import secrets
 from copy import deepcopy
 from time import time
@@ -33,6 +35,14 @@ def require_session(session):
 def pending_transaction(session):
     return next((tx for tx in session["transactions"]
                  if tx["id"] == session.get("pending_transaction_id")), None)
+
+
+def wager_random(session, *parts):
+    seed = session.get("_wager_seed")
+    if seed is None:
+        return None
+    message = ":".join(map(str, parts)).encode()
+    return random.Random(hmac.digest(bytes.fromhex(seed), message, "sha256"))
 
 
 def generation_target(session):
@@ -141,8 +151,10 @@ class GameEngine:
         def sample(session):
             nonlocal plan
             if plan is None:
-                gamble = make_gamble(request.game, self.draw) if request.game else None
-                outcome = gamble["outcome"] if gamble else "win" if self.draw(session["win_probability"]) else "loss"
+                rng = wager_random(session, "trade", request.request_id)
+                draw = self.draw if rng is None else lambda chance: rng.randrange(1_000_000) < chance * 1_000_000
+                gamble = make_gamble(request.game, draw, rng) if request.game else None
+                outcome = gamble["outcome"] if gamble else "win" if draw(session["win_probability"]) else "loss"
                 plan = gamble, outcome
             return deepcopy(plan)
 
@@ -159,16 +171,19 @@ class GameEngine:
     async def make_move(self, sid, transaction_id, request, validate=require_session):
         sampled_game = None
 
-        def play(game):
-            nonlocal sampled_game
-            if sampled_game is None:
-                play_beginner_game(game, request.choice)
-                sampled_game = deepcopy(game)
-            else:
-                game.update(deepcopy(sampled_game))
-
         def change(session):
+            nonlocal sampled_game
             session = validate(session)
+
+            def play(game):
+                nonlocal sampled_game
+                if sampled_game is None:
+                    rng = wager_random(session, "move", transaction_id, request.attempt)
+                    play_beginner_game(game, request.choice, rng)
+                    sampled_game = deepcopy(game)
+                else:
+                    game.update(deepcopy(sampled_game))
+
             tx = next((item for item in session["transactions"] if item["id"] == transaction_id), None)
             before = len(tx["gamble"]["moves"]) if tx and tx.get("gamble", {}).get("kind") in BEGINNER_GAMES else 0
             settled = self.apply_game_move(session, transaction_id, request, save=False, play=play)

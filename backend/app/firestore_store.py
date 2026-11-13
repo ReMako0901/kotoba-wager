@@ -3,7 +3,10 @@ import asyncio
 from copy import deepcopy
 from functools import lru_cache
 import json
+import random
+import secrets
 
+from google.api_core.exceptions import Aborted
 from google.cloud import firestore
 from google.cloud.firestore_v1.base_query import FieldFilter
 
@@ -58,6 +61,8 @@ class FirestoreStore:
         revision = (before["_revision"] if before else 0) + 1
         after["_revision"] = revision
         body = {k: v for k, v in after.items() if k not in ("transactions", "api_events", "lost_concepts", "_revision")}
+        if before is None:
+            after["_wager_seed"] = body["_wager_seed"] = secrets.token_hex(32)
         transaction.set(ref, {"status": body["status"], "version": body["version"],
                               "revision": revision, "payload": encode(body)})
         previous = {tx["id"]: tx for tx in before["transactions"]} if before else {}
@@ -129,4 +134,12 @@ class FirestoreStore:
             transaction.set(ref, {"calls": count + 1})
             return True
 
-        return await asyncio.to_thread(reserve, self.client.transaction())
+        # The emulator can abort bursts of concurrent transactions on the
+        # same counter. Back off between bounded SDK retry groups.
+        for attempt in range(4):
+            try:
+                return await asyncio.to_thread(reserve, self.client.transaction(max_attempts=3))
+            except (Aborted, ValueError) as error:
+                if attempt == 3 or not (isinstance(error, Aborted) or isinstance(error.__cause__, Aborted)):
+                    raise
+                await asyncio.sleep(random.uniform(.04, .14) * (2 ** attempt))
