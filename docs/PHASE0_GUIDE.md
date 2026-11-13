@@ -115,6 +115,9 @@ Google の画面から Secret Manager へ直接貼るだけにする。
    ロール **Secret Manager のシークレット アクセサー**（`roles/secretmanager.secretAccessor`）を付ける。
    付与先の候補: `<プロジェクト番号>-compute@developer.gserviceaccount.com`
    （Cloud Run のデフォルト実行アカウント。Phase 1 で専用サービスアカウントに替える場合は付け直す）
+   ※このサービスアカウントは Compute Engine API が有効化されるまで自動作成されず、新規プロジェクトでは
+   「有効な Google アカウントに関連付けられている必要があります」というエラーで付与できないことがある。
+   その場合は無理に進めず、付与は Phase 1 のデプロイ時に、実際に使うサービスアカウントへ行う（2026-11-13 実例）
 4. 確認: シークレット一覧に `kotoba-wager-key` があり、バージョンが1つ登録されていること（値は開いて確認しなくてよい）
 
 ## Step 8: API の有効化
