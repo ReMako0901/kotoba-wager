@@ -2,6 +2,13 @@
 
 日付は作業整理日。親リポジトリと公開専用リポジトリのハッシュは別物。実際のコミット時刻・全差分は各 `git log` を参照。現在仕様はGAME_OVERVIEWとSTATUSを優先する。
 
+## Phase 1 の実装指示書を作成（2026-11-13）
+
+- `docs/PHASE1_INSTRUCTIONS.md` を追加。Phase 0 の確定値（プロジェクト・リージョン・
+  シークレット名・実行 SA）を前提に、store / quota の Firestore 化、生成の Cloud Tasks 化、
+  依存追加、デプロイ定義と手順書、テストと受け入れ条件を Codex 向けに明記。
+  実装は Codex、デプロイ実行と切替は Phase 2 でユーザー承認後。
+
 ## Phase 0 を完了（2026-11-13）
 
 - プロジェクト kotoba-wager（番号 108927229642）で、AI Pro クレジット適用、Firestore

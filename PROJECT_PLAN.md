@@ -80,6 +80,8 @@ Render 無料枠の制約（15分で休止、再起動・再デプロイでロ�
 
 
 ### Phase 1: 移行（Codex 実装）
+実装指示の正本は `docs/PHASE1_INSTRUCTIONS.md`（2026-11-13 作成。Phase 0 の確定値と
+環境変数名・データ設計・受け入れ条件を含む）。
 - store の Firestore 化（トランザクションで冪等性・version 検査・再抽選防止を保証）
 - quota カウンターの Firestore 化
 - 生成方式の Cloud Tasks 化（D2）。フォールバック（同じ勝敗で定型文完成）は維持

@@ -7,6 +7,10 @@
 - [x] Phase 0 の大半を実施（2026-11-13）: プロジェクト kotoba-wager（番号 108927229642）作成、AI Pro クレジット適用、Firestore asia-northeast1 / Native / Standard、Secret Manager kotoba-wager-key 登録と secretAccessor 付与、必要 API の有効化まで完了を確認。
 - [x] 予算アラートは設定しないと決定（2026-11-13、ユーザー判断。通知のみの仕組みのため任意）。Phase 0 は完了。移行の実装（Phase 1）は未着手。
 
+## サーバー移行 Phase 1（Codex 実装）
+
+- [ ] `docs/PHASE1_INSTRUCTIONS.md` に従って実装する（store / quota の Firestore 化、生成の Cloud Tasks 化、デプロイ定義と手順書）。Phase 0 の確定値は同書 §0。デプロイ実行と切替は Phase 2 でユーザー承認後。
+
 ## 粉の形と結果表示
 
 - [x] 粒の間引きと再配置をなくし、着地した形を次ラウンドまで保持。変化量の表示を外す。
