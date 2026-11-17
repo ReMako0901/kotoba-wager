@@ -1,3 +1,16 @@
+## UI再設計 Phase A：アノマ常駐ステージ（2026-11-18、ローカル作業ツリー）
+
+- main、開始時 `197ae0b`、作業前差分なし。ユーザー指示でpull省略。フロントエンドのみ。バックエンド・API契約・確率・強さ・抽選・保存・台詞データ・手動操作は無変更。Phase Bは未着手。
+- `Anoma.tsx` にContextベースの `AnomaStageProvider`、常駐 `AnomaStage`、描画しない `StagePublisher` を追加。発行者の更新で台詞群と表情を同期し、アンマウント時はnormal・台詞なしに戻す。配列の内容で依存を比較し、同文面の再描画では発行を繰り返さない。
+- `App.tsx` のapp-shell内、navigation-bar直下に常設。タイトルでもナビゲーションの高さを予約し、全画面で位置・寸法を共通化。asideはaria-label「アノマ」とdata-expressionを持つ。帯はsticky/top:0、高さ116px、左に88pxの正方形タイル、顔寄りの拡大切り抜き、右に打ち消し線の名前と台詞群。台詞領域は4行分の高さを確保し、長文は領域内でスクロールする。
+- 読み込み済み直前表情の保持・約900msクロスフェード・画像エラー時の非表示・BASE_URL・reduced-motion対応を維持。画像ファイルの加工なし。
+- Opening／StoryDecision／NormalEnding／通常結果をStagePublisherへ置換し、AnomaFrameとAnomaResultを削除。通常結果の決定的な台詞選択を純粋関数 `resultReaction` に抽出。ギャンブル中はtaunt・台詞なし、発行者のないタイトル／選択／生成中は既定のnormal・台詞なし。オープニングの本文ナレーション・送りボタンとPhase Bの説明文は維持。
+- テスト：既存 `anoma-phase2`／`story-s1`／`story-s2` を新構造へ更新。`anoma-stage.test.cjs` と共有 `anoma-stage-harness.cjs` を追加し、発行・更新・既定復帰・複数行・共通配置・各画面の割り当てを検査。既存component-harnessにContext、安定したsetter、effect後の再描画、アンマウントcleanupを追加。
+- 検証：`timeout 40s node --test frontend/tests/*.test.cjs` を1回試行。既存7ファイル（anoma-phase2／gamble-motion／history／manuscript-layout／playtest-fixes-2／story-s1／story-s2）は成功。新規anoma-stageは未完了・cancelled 1、全体は終了124。個別ケース数としては扱わない。再試行なし。静的レビューで新規テストのdice fixtureに既存形式のmoves／rounds／outcomeを補完したが、修正後は未実行。
+- ビルド：frontendで `timeout 40s npx -y pnpm@latest run build` を1回試行。40秒間無出力で終了124、再試行なし。最終のCSS顔寄り拡大と関数整形は静的確認のみ。Muse側で新規を含む全フロントテスト・ビルドが必要。
+- 未実施：ブラウザでスマートフォン縦画面・短い画面・全画面の共通配置／スクロール・台詞領域・連続表情切替・画像失敗・reduced-motion・Pagesサブパスの目視。実Gemini、既存pytest、Firestoreエミュレータ、公開配信確認も未実施（バックエンド無変更）。
+- コミット未実施（.git読み取り専用）。作業ツリーに保持。push・デプロイなし。公開ソース・Pages・Cloud Run・Renderは今回更新していない。
+
 ## アノマ画像と表情切替（2026-11-18、ローカル作業ツリー）
 
 - main、開始時 `a3111c9`、作業前差分なし。ユーザー指示でpull省略。フロントエンドのみ。バックエンド・API契約・確率・強さ・抽選・保存・台詞・ギャンブルの手動進行は無変更。配置済みWebP8枚の生成・加工なし。

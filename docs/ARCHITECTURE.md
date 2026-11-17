@@ -104,3 +104,7 @@ JSONファイルの原子的置換＋単一プロセスのセッションロッ�
 `POST /api/sessions/{sid}/story-choice` は `{request_id, version, choice: "escape" | "continue"}` を受け取りセッションを返す。同一request_idは同じchoiceとversionなら再送可能。新規選択は最新のreadyな結果画面に限定。終了後・到達時選択前の新規取引およびcontinueを拒否する。
 
 `frontend/src/StoryProgress.tsx` が集計・到達選択・延長戦入口・エンディングを描画。確定台詞はscenario.tsに集約。両モードの共通結果経路に適用し、終了後は復帰IDを削除して再開対象から外す。
+
+## アノマ常駐ステージ（UI再設計 Phase A、2026-11-18）
+
+`App` の `AnomaStageProvider` が画面と共通ステージを包む。`AnomaStage` はapp-shellのnavigation-bar直下に一度だけ配置する。各画面の `StagePublisher` は描画せず、台詞群・表情をContextへ発行し、アンマウント時にnormal・台詞なしへ戻す。タイトル／物語選択／言葉選び／生成中は既定、ギャンブル中はtaunt、オープニング／結果／到達／延長戦／エンディングは各画面が発行する。通常結果は純粋関数 `resultReaction` が確定取引と取引IDから従来どおり決定する。保存・APIは使用しない。旧AnomaFrame／AnomaResultは廃止。検証保留の詳細はSTATUSを参照。
