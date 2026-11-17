@@ -1,3 +1,15 @@
+## UI再設計 Phase B（2026-11-18、ローカル作業ツリー）
+
+- main、開始時 `893c39b`、開始時差分なし。ユーザー指示でpull省略。フロントエンドのみ。Phase Aの常駐ステージ構造、バックエンド、API契約、確率・抽選・保存・強さ計算、scenario.ts、ギャンブルの手動進行は無変更。
+- App／GamblePlay／BeginnerPlay／StoryHistory／StoryProgressからPhase Bの削除リストにある説明・メタ情報・状態文を除去。生成スケルトンの準備文と経過説明もスピナーへ置換。結果反映ボタンは「この結果を物語へ」に統一。要求数との過不足は個数と無効な選択ボタンで示す。
+- ブラックジャックとジャンケンの対戦相手表示をアノマへ変更。バカラの競技用語、台詞、本文・導入、勝敗、集計、版・ラウンド、入力ラベル・文字数・上限エラー、遊び方、操作ボタンを維持。Status廃止後も生成エラー本文をrole=alertで表示する。
+- 紙の既存方向条件に従い右下↖／左上↘を追加。1.6秒の小さな斜め移動、reduced-motionで静止、aria-labelと既存ドラッグ・キーボード操作を維持。未使用のchangeShapesと専用CSSを整理。削除リスト外のBaccaratCardのスワイプ案内とreading-hintの共通CSSは残した。
+- テスト追加：`ui-phase-b.test.cjs`で主要削除文言・メタ情報の不在、残す表示・準備中の無効状態、矢印の条件・方向・周期・reduced-motionを検査。historyに片方向／両方向／版なしの矢印検査を追加。gamble-motion／history／playtest-fixes-2／story-s2の旧表示依存を更新。
+- 検証：`timeout 40s node --test frontend/tests/*.test.cjs`を1回試行し9ファイル中8成功・1失敗（playtest-fixes-2）。新規ui-phase-bを含む8ファイルは初回成功。失敗ファイルの削除文言期待値を追加修正し、生成スケルトンの残存状態文も削除した。最終修正後のテストは未実行、再試行なし。ファイル単位の結果であり個別ケース数ではない。
+- ビルド：frontendで`timeout 40s npx -y pnpm@latest run build`を1回試行。無出力で終了124、再試行なし。Muse側で最終状態の全フロントテストとビルドが必要。
+- 未実施：ブラウザ（縦画面・短い画面・対戦呼称・準備中／エラー・原稿の両方向ヒント・reduced-motion・手動操作）、実Gemini、既存pytest、Firestoreエミュレータ、公開配信確認。
+- コミット未実施（.git読み取り専用）。変更は作業ツリーに保持。push・デプロイなし。公開ソース・Pages・Cloud Run・Renderは更新していない。
+
 ## UI再設計 Phase A：アノマ常駐ステージ（2026-11-18、ローカル作業ツリー）
 
 - main、開始時 `197ae0b`、作業前差分なし。ユーザー指示でpull省略。フロントエンドのみ。バックエンド・API契約・確率・強さ・抽選・保存・台詞データ・手動操作は無変更。Phase Bは未着手。
