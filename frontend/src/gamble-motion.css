@@ -1,0 +1,76 @@
+/* Phase 4: pure white paper, Mincho headings, red rules; 4px spacing scale.
+   All motion belongs to presentation. No animation gates a server request. */
+:root {
+  --paper-white: #fff;
+  --motion-ink: var(--ink);
+  --motion-rule: var(--rule);
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --type-caption: 12px;
+  --type-body: 14px;
+  --type-heading: clamp(20px, 5.5vw, 24px);
+  --tap-size: 44px;
+  --motion-fade: 250ms;
+  --motion-spring: 400ms;
+}
+.game-screen { gap: var(--space-3); }
+.modal { padding: var(--space-6) var(--space-4); }
+.modal h2 { font: 600 var(--type-heading)/1.5 var(--serif); }
+.game-option { font-size: var(--type-body); }
+.bet-label { display: flex; align-items: center; gap: var(--space-2); }
+.reward-options { gap: var(--space-3); }
+.reward-option { padding: var(--space-4) var(--space-3); }
+.reward-option small, .reading-hint, .gamble-actions .quiet { font-size: var(--type-caption); }
+.text-button, .changes summary, .banker-open { min-height: var(--tap-size); }
+.change-shape { border-left: 2px solid var(--stamp); padding-left: var(--space-2); }
+.reward-option { animation: reward-arrive 250ms ease-out both; }
+.reward-option:nth-child(2) { animation-delay: 60ms; }
+.reward-option:nth-child(3) { animation-delay: 120ms; }
+@keyframes reward-arrive { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+.gamble-motion, .motion-result { display: flex; flex-direction: column; flex: 1; min-height: 0; gap: var(--space-3); }
+.gamble-motion { overflow: auto; }
+.saved-reveal { display: flex; justify-content: center; align-items: center; gap: var(--space-3); min-height: 180px; margin-block: var(--space-6); font: 32px var(--serif); }
+.saved-reveal > span { display: grid; place-items: center; min-width: 64px; min-height: 88px; border-block: 1px solid var(--motion-rule); }
+.saved-reveal .unrevealed { opacity: .3; }
+.saved-reveal .revealed { animation: ink-fade 250ms ease-out; font-size: 22px; }
+.saved-reveal .reveal-card { border: 1px solid var(--motion-rule); background: var(--paper-white); animation: turn-card 600ms ease-in-out infinite alternate; }
+.stage-1 .reveal-card:last-child { animation-delay: 120ms; }
+.rolling-die { animation: tumble 600ms ease-in-out infinite; font-size: 72px; }
+.hand-count { animation: hand-beat 600ms ease-in-out infinite; }
+.motion-result, .result-banner { animation: result-spring var(--motion-spring) both; }
+.near-pulse .saved-reveal { animation: near-pulse 600ms ease-in-out; }
+.near-pulse .slot-machine, .near-pulse .card-table { animation: near-pulse 600ms ease-in-out; }
+.playing-card.face-up { animation: ink-fade 250ms ease-out; }
+.story-board > :not(.generation-skeleton) { animation: ink-fade var(--motion-fade) ease-out; }
+.ink-cell.marked { animation: ink-fade var(--motion-fade) ease-out; }
+@keyframes turn-card { from { transform: rotateY(-35deg); } to { transform: rotateY(35deg); } }
+@keyframes tumble { 50% { transform: translateY(-12px) rotate(90deg); } to { transform: rotate(180deg); } }
+@keyframes hand-beat { 50% { transform: translateY(-8px); } }
+@keyframes near-pulse { 50% { transform: scale(1.045); opacity: .5; } }
+@keyframes result-spring { 0% { opacity: 0; transform: translateY(16px) scale(.96); } 65% { opacity: 1; transform: translateY(-3px) scale(1.015); } 100% { transform: none; } }
+.generation-skeleton { position: relative; display: flex; flex-direction: column; gap: var(--space-3); min-height: 120px; flex: 1; overflow: hidden; font: var(--type-caption)/1.8 var(--serif); }
+.skeleton-paper { flex: 1; min-height: 96px; border: 1px solid var(--motion-rule); background: repeating-linear-gradient(0deg, transparent 0 23px, var(--motion-rule) 23px 24px), repeating-linear-gradient(90deg, transparent 0 23px, var(--motion-rule) 23px 24px); opacity: .5; position: relative; overflow: hidden; }
+.skeleton-paper::after { content: ''; position: absolute; inset: 0; background: linear-gradient(100deg, transparent 20%, #fff 50%, transparent 80%); animation: paper-shimmer 1600ms linear infinite; }
+@keyframes paper-shimmer { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
+.result-story { position: relative; display: flex; flex: 1; min-height: 0; isolation: isolate; }
+.result-story .story-comparison { animation: ink-fade 500ms 400ms both; padding-bottom: var(--space-4); }
+.result-story > .paper-dust { pointer-events: none; z-index: 2; }
+.loss-ink { position: absolute; inset: 15% var(--space-4) auto; text-align: center; z-index: 3; font: 24px/1.8 var(--serif); animation: lost-words 800ms ease-in both; pointer-events: none; }
+@keyframes lost-words { 0%, 20% { opacity: 1; filter: blur(0); } 100% { opacity: 0; filter: blur(5px); transform: translateY(36px); } }
+.loss-to-paper::after { content: ''; pointer-events: none; position: absolute; inset: 8% 12% 18%; background: radial-gradient(circle, var(--ink) 0 1px, transparent 1.6px) 0 0 / 9px 11px; animation: ink-to-dust 800ms ease-in both; }
+@keyframes ink-to-dust { from { opacity: .45; transform: translateY(-12px); } to { opacity: 0; transform: translateY(70px); } }
+@keyframes ink-fade { from { opacity: 0; } to { opacity: 1; } }
+.round-reveal { position: relative; }
+.round-reveal::after { content: ''; pointer-events: none; position: absolute; inset: 0; z-index: 5; background: var(--motion-ink); animation: round-ink 350ms ease-out both; }
+@keyframes round-ink { 0% { clip-path: circle(0 at 50% 50%); opacity: .4; } 65% { clip-path: circle(100% at 50% 50%); opacity: .12; } 100% { clip-path: circle(150% at 50% 50%); opacity: 0; } }
+.loading-bet { justify-content: center; }
+.loading-bet .spinner { flex-shrink: 0; }
+@media (max-height: 720px) { .game-screen { gap: var(--space-2); } .modal { padding: var(--space-4); } .saved-reveal { min-height: 120px; margin-block: var(--space-3); } }
+@media (prefers-reduced-motion: reduce) {
+  .app-shell *, .app-shell *::before, .app-shell *::after, dialog *, dialog *::before, dialog *::after { animation: ink-fade 150ms ease-out both !important; animation-delay: 0ms !important; transition: opacity 150ms !important; }
+  .round-reveal::after, .loss-to-paper::after, .skeleton-paper::after { display: none; }
+  .loss-ink { display: none; }
+}

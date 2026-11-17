@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { BaccaratCard, CardFace } from './BaccaratCard';
+import { GambleMotion, GenerationSkeleton } from './GambleMotion';
 import { BeginnerPlay } from './BeginnerPlay';
+import { isNearMiss } from './gamblePresentation';
 import type { CardRound, Gamble, PlayingCard } from './types';
 
 function total(cards: PlayingCard[], blackjack: boolean) {
@@ -47,9 +49,11 @@ function Status({ error, prepared }: Pick<PlayProps, 'error' | 'prepared'>) {
 function Finish({ gamble, busy, error, prepared, onFinish }: PlayProps) {
   return <>
     {gamble.kind === 'slot' && <div className="gamble-outcome"><b>{gamble.label}</b></div>}
+    {!prepared && !error && <GenerationSkeleton />}
     <div className="gamble-actions">
-      <button className="primary" disabled={busy || (!prepared && !error)} onClick={onFinish}>
-        {prepared || error ? 'この結果を物語へ' : '物語を準備中…'} <span>→</span>
+      <button className={`primary${!prepared && !error ? ' loading-bet' : ''}`} aria-busy={!prepared && !error} disabled={busy || (!prepared && !error)} onClick={onFinish}>
+        {!prepared && !error && <span className="spinner" aria-hidden="true" />}
+        {prepared || error ? 'この結果を物語へ' : '賭ける・物語を準備中…'} <span>→</span>
       </button>
       <Status error={error} prepared={prepared} />
     </div>
@@ -66,8 +70,15 @@ const slotSymbols: Record<string, { file: string; label: string }> = {
 function SlotPlay(props: PlayProps) {
   const [stopped, setStopped] = useState([false, false, false]);
   const complete = stopped.every(Boolean);
+  useEffect(() => {
+    if (complete) return;
+    const timer = window.setTimeout(() => setStopped(current => {
+      const next = [...current]; next[next.indexOf(false)] = true; return next;
+    }), 500);
+    return () => window.clearTimeout(timer);
+  }, [stopped, complete]);
   const won = props.gamble.outcome === 'win';
-  return <section className="gamble-screen" aria-label="スロットの進行">
+  return <section className={`gamble-screen${complete ? ' motion-result' : isNearMiss(props.gamble) && stopped.filter(Boolean).length === 2 ? ' near-pulse' : ''}`} aria-label="スロットの進行">
     <p className="eyebrow">スロット</p>
     <h1>{complete ? won ? '勝利' : '敗北' : 'リールを止める'}</h1>
     <div className="slot-machine">
@@ -85,22 +96,30 @@ function SlotPlay(props: PlayProps) {
         <button key={i} disabled={stop || props.busy}
           onClick={() => setStopped(current => current.map((value, index) => value || index === i))}>STOP {i + 1}</button>)}</div>
     </div>
-    {complete ? <Finish {...props} /> : <div className="gamble-actions"><Status {...props} /></div>}
+    {complete ? <Finish {...props} /> : <div className="gamble-actions"><button className="text-button" onClick={() => setStopped([true, true, true])}>演出をスキップ</button><Status {...props} /></div>}
   </section>;
 }
 
 function BlackjackPlay(props: PlayProps) {
   const round = props.gamble.rounds[0];
+  const [skipped, setSkipped] = useState(false);
   const [hits, setHits] = useState(0);
   const [stood, setStood] = useState(false);
   const [dealerCount, setDealerCount] = useState(2);
+  useEffect(() => {
+    // This component is keyed by transaction ID. Polling must not restart its clock.
+    const deal = window.setTimeout(() => setHits(round.player.length - 2), 600);
+    const turn = window.setTimeout(() => { setStood(true); setDealerCount(round.banker.length); }, 1200);
+    const timer = window.setTimeout(() => { setHits(round.player.length - 2); setDealerCount(round.banker.length); setStood(true); setSkipped(true); }, 1800);
+    return () => { window.clearTimeout(deal); window.clearTimeout(turn); window.clearTimeout(timer); };
+  }, []);
   const player = round.player.slice(0, hits + 2);
-  const dealer = round.dealer_hands?.[hits] ?? round.banker;
+  const dealer = skipped ? round.banker : round.dealer_hands?.[hits] ?? round.banker;
   const playerTotal = total(player, true);
   const canHit = hits + 2 < round.player.length && playerTotal < 21;
   const canStand = Boolean(round.dealer_hands) || !canHit;
   const ended = stood || (hits > 0 && playerTotal >= 21);
-  const complete = ended && dealerCount >= dealer.length;
+  const complete = skipped || (ended && dealerCount >= dealer.length);
   const won = props.gamble.outcome === 'win';
 
   useEffect(() => {
@@ -109,9 +128,10 @@ function BlackjackPlay(props: PlayProps) {
     return () => window.clearTimeout(timer);
   }, [ended, complete, dealerCount]);
 
-  return <section className="gamble-screen blackjack-screen" aria-label="ブラックジャックの進行">
+  return <section className={`gamble-screen blackjack-screen${complete ? ' motion-result' : ''}`} aria-label="ブラックジャックの進行">
     <p className="eyebrow">ブラックジャック</p>
     {complete && <h1>{won ? '勝利' : '敗北'}</h1>}
+    {!complete && <button className="text-button" onClick={() => { setHits(round.player.length - 2); setDealerCount(round.banker.length); setStood(true); setSkipped(true); }}>演出をスキップ</button>}
     <div className="card-table">
       <CardHand cards={dealer.slice(0, dealerCount)} label="ディーラー" isOpen={index => index === 0 || ended} blackjack />
       <CardHand cards={player} label="あなた / プレイヤー" isOpen={() => true} blackjack />
@@ -140,6 +160,15 @@ function BaccaratRound({ round, nextRound, ...props }: PlayProps & { round: Card
   const bankerCards = round.banker.slice(0, firstTwoOpen('banker') && playerDone ? round.banker.length : 2);
   const complete = playerDone && opened.banker.length === round.banker.length;
   const tied = complete && round.outcome === 'tie';
+  useEffect(() => {
+    if (complete) return;
+    const timer = window.setTimeout(() => setOpened(current => {
+      const side = current.player.length < round.player.length ? 'player' : 'banker';
+      const next = round[side].findIndex((_, index) => !current[side].includes(index));
+      return { ...current, [side]: [...current[side], next] };
+    }), 220);
+    return () => window.clearTimeout(timer);
+  }, [opened, complete, round]);
 
   function reveal(side: Side, indices: number[]) {
     setOpened(current => ({ ...current, [side]: [...new Set([...current[side], ...indices])] }));
@@ -153,7 +182,7 @@ function BaccaratRound({ round, nextRound, ...props }: PlayProps & { round: Card
   }
 
   return <section className={`gamble-screen baccarat-screen${complete ? ' baccarat-complete' : ''}`} aria-label="バカラの進行">
-    {complete && <h1>{tied ? '引き分け' : round.outcome === 'win' ? '勝利' : '敗北'}</h1>}
+    {tied && <h1>引き分け</h1>}
     <div className="card-table">
       {hand(bankerCards, 'banker', 'バンカー')}{hand(playerCards, 'player', 'あなた / プレイヤー')}
       {complete && <p className="hand-comparison">{round.player_total} 対 {round.banker_total}</p>}
@@ -161,25 +190,41 @@ function BaccaratRound({ round, nextRound, ...props }: PlayProps & { round: Card
     {selected && <BaccaratCard key={`${selected.side}-${selected.index}`}
       card={selected.card} label={selected.label} open={opened[selected.side].includes(selected.index)}
       onOpen={() => reveal(selected.side, [selected.index])} />}
-    {complete && !tied ? <Finish {...props} /> : <div className="gamble-actions">
+    <div className="gamble-actions">
       {tied && <button className="primary" disabled={props.busy} onClick={nextRound}>同じことばでもう一度 <span>→</span></button>}
       {!complete && !selected && <p className="reading-hint">裏向きのカードを選ぶ。</p>}
       <Status {...props} />
-    </div>}
+    </div>
   </section>;
 }
 
 function BaccaratPlay(props: PlayProps) {
   const [roundIndex, setRoundIndex] = useState(0);
-  return <BaccaratRound key={roundIndex} {...props} round={props.gamble.rounds[roundIndex]}
-    nextRound={() => setRoundIndex(index => index + 1)} />;
+  const [skipped, setSkipped] = useState(false);
+  const [pulse, setPulse] = useState(false);
+  useEffect(() => {
+    const beat = window.setTimeout(() => setPulse(isNearMiss(props.gamble)), 1200);
+    const timer = window.setTimeout(() => setSkipped(true), 1800);
+    return () => { window.clearTimeout(beat); window.clearTimeout(timer); };
+  }, []);
+  if (skipped) return <section className="gamble-screen motion-result"><h1>{props.gamble.outcome === 'win' ? '勝利' : '敗北'}</h1>
+    <div className="card-table"><CardHand cards={props.gamble.rounds.at(-1)!.banker} label="バンカー" isOpen={() => true} />
+    <CardHand cards={props.gamble.rounds.at(-1)!.player} label="あなた / プレイヤー" isOpen={() => true} /></div><Finish {...props} /></section>;
+  return <div className={pulse ? 'near-pulse' : undefined}><button className="text-button" onClick={() => setSkipped(true)}>演出をスキップ</button><BaccaratRound key={roundIndex} {...props} round={props.gamble.rounds[roundIndex]}
+    nextRound={() => setRoundIndex(index => index + 1)} /></div>;
 }
 
-export function GamblePlay(props: PlayProps) {
+function GameContent(props: PlayProps) {
   if (props.gamble.kind === 'slot') return <SlotPlay {...props} />;
   if (props.gamble.kind === 'blackjack') return <BlackjackPlay {...props} />;
   if (props.gamble.moves) return <BeginnerPlay gamble={props.gamble} busy={props.busy} onMove={props.onMove}>
     {props.gamble.outcome && <Finish {...props} />}
   </BeginnerPlay>;
   return <BaccaratPlay {...props} />;
+}
+
+export function GamblePlay(props: PlayProps) {
+  // Beginner games still require a real move. Never submit a choice while skipping.
+  if (!props.gamble.moves || !props.gamble.outcome) return <GameContent {...props} />;
+  return <GambleMotion gamble={props.gamble}><GameContent {...props} /></GambleMotion>;
 }

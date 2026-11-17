@@ -8,6 +8,10 @@ import { Manuscript, WagerManuscript } from './Manuscript';
 import { usePaperDust } from './PaperDust';
 import { StoryComparison, StoryHistory } from './StoryHistory';
 import './history.css';
+import './gamble-motion.css';
+import { changeShapes } from './gamblePresentation';
+import { GenerationSkeleton } from './GambleMotion';
+import { PaperDust } from './PaperDust';
 
 function requestId() {
   const b=crypto.getRandomValues(new Uint8Array(16)); b[6]=(b[6]&15)|64; b[8]=(b[8]&63)|128;
@@ -159,7 +163,7 @@ export default function App(){
         </form>
       </Modal>}
     </main>}
-    {screen==='game'&&session&&<main className="game-screen">
+    {screen==='game'&&session&&<main key={`${session.id}-${session.version}-${session.view}`} className={`game-screen${session.version > 1 && session.view !== 'result' ? ' round-reveal' : ''}`}>
       {gambleMode && last?.gamble ? <GamblePlay key={last.id} gamble={last.gamble} busy={busy} error={session.error} prepared={session.status === 'awaiting_reveal'}
         onMove={(attempt, choice) => act(async () => accept(await api<Session>(`/sessions/${session.id}/transactions/${last.id}/play`, { attempt, choice })))}
         onFinish={() => act(async () => accept(await api<Session>(`/sessions/${session.id}/transactions/${last.id}/finish`, {})))} /> : <>
@@ -169,13 +173,17 @@ export default function App(){
       {resultMode?<>
         <section className={`result-banner${last.outcome === 'win' ? ' result-win' : ''}`}><strong>{last.outcome==='win'?'勝利':'敗北'}</strong><span>{last.outcome==='win'?last.offer.title+'を獲得':'「'+last.stakes.join('・')+'」の意味が消えた'}</span></section>
         {last.gamble && <p className="reading-hint">{games.find(g => g.id === last.gamble!.kind)?.name}{last.gamble.kind === 'slot' && <> · {last.gamble.label}</>}</p>}
-        <StoryComparison before={last.before} after={last.after ?? session.text} />
+        <div className={`result-story${last.outcome === 'loss' ? ' loss-to-paper' : ''}`}>
+          {last.outcome === 'loss' && <span className="loss-ink" aria-hidden="true">{last.stakes.join('　')}</span>}
+          <StoryComparison before={last.before} after={last.after ?? session.text} />
+          <PaperDust dust={dust} losses={losses} />
+        </div>
         <details className="changes"><summary>どこが変わった？</summary><p>{last.summary}</p><p className="quiet">ベット：{last.stakes.join(' / ')}{last.outcome==='loss'&&<> / 失った意味：{last.lost.map(c=>c.label).join('・')}</>}</p>{last.changes?.map((change,i)=><p key={i}>{change}</p>)}</details>
         <div className="bottom-actions"><button className="primary" disabled={busy} onClick={()=>act(async()=>{setSelected([]);setOfferId('');setChoosingReward(true);accept(await api<Session>(`/sessions/${session.id}/continue`,{}))})}>次は何をねらう？ <span>→</span></button></div>
       </>:<>
         <button className="reward-summary" disabled={!ready||busy} onClick={()=>{setChoosingGame(false);setChoosingReward(true)}}><span><small>今回ねらうもの</small><b>{offer?.title||'報酬を選ぼう'}</b></span><span>{offer?`${offer.required_count}個`:`${session.offers.length}つから`} <small>変更 ↗</small></span></button>
         {processing&&<p className="processing" role="status"><span className="spinner"/>{session.status==='analyzing'?'ことばを仕分け中…':'結果は確定！ お話をリミックス中…'}</p>}
-        <section className="story-board" aria-label="賭ける言葉を選ぶ">{session.analysis ? <WagerManuscript text={session.text} units={units} selected={selected}
+        <section className="story-board" aria-label="賭ける言葉を選ぶ">{processing ? <GenerationSkeleton /> : session.analysis ? <WagerManuscript text={session.text} units={units} selected={selected}
           disabled={!ready || !offer || busy || choosingReward || choosingGame} onToggle={toggle} dust={dust} losses={losses} />
           : <Manuscript text={session.text} dust={dust} losses={losses} />}</section>
         {session.status === 'error' ? <div className="api-error" role="alert"><p>{session.error}</p></div> : ready && offer &&
@@ -205,12 +213,12 @@ export default function App(){
             <button type="button" aria-pressed={gameTier === 'advanced'} disabled={busy} onClick={() => setGameTier('advanced')}>上級者</button>
           </div>}
           <div className="reward-options">{shownGames.map(option => <button className="reward-option game-option" key={option.id}
-            disabled={busy} onClick={() => trade(option.id)}>
+            disabled={busy} aria-busy={busy && action.current?.game === option.id} onClick={() => trade(option.id)}>
             <span><b>{option.name}</b>
+              <small className="change-shape">{changeShapes[option.id]}</small>
               <small>{option.id === 'rps' ? '勝ち33％・負け33％・あいこ34％' : `勝率${Math.round(option.win_probability * 100)}％${option.id === 'card_guess' ? '〜' : ''}`}</small>
-              <small>{option.id === 'dice' ? '4〜6で勝ち。' : option.description}</small></span>
+              <small>{option.id === 'dice' ? '4〜6で勝ち。' : option.description}</small><small className="bet-label">{busy && action.current?.game === option.id && <span className="spinner" aria-hidden="true" />}{busy && action.current?.game === option.id ? '賭ける・準備中…' : 'このギャンブルで賭ける →'}</small></span>
           </button>)}</div>
-          {busy && <p className="quiet" role="status">ゲームを準備中…</p>}
           {error && <p className="input-error" role="alert">{error}</p>}
         </Modal>}
       {historyOpen&&<Modal title="物語の変遷" onClose={()=>setHistoryOpen(false)}><StoryHistory session={session} /></Modal>}

@@ -56,6 +56,7 @@ function CardGuess({ gamble, busy, onMove }: Props) {
   const animations = useRef<Animation[]>([]);
   const mounted = useRef(true);
   const shuffling = useRef(false);
+  const skipShuffle = useRef(false);
   useEffect(() => {
     mounted.current = true;
     return () => {
@@ -79,7 +80,7 @@ function CardGuess({ gamble, busy, onMove }: Props) {
     // Wait for React to render the card backs before starting the first swap.
     await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
     for (const [left, right] of swaps) {
-      if (!mounted.current || !board.current) return;
+      if (!mounted.current || !board.current || skipShuffle.current) return;
       if (!reduced) {
         const step = board.current.clientWidth / 3;
         const crossed = [[left, right, -1], [right, left, 1]];
@@ -97,7 +98,7 @@ function CardGuess({ gamble, busy, onMove }: Props) {
       }
       [positions[left], positions[right]] = [positions[right], positions[left]];
     }
-    if (mounted.current) {
+    if (mounted.current && !skipShuffle.current) {
       setOrder(positions);
       setPhase('pick');
     }
@@ -125,6 +126,14 @@ function CardGuess({ gamble, busy, onMove }: Props) {
         </button>;
       })}
     </div>
+    {phase === 'shuffle' && !move && <button type="button" className="text-button" onClick={() => {
+      skipShuffle.current = true;
+      animations.current.forEach(animation => animation.cancel());
+      setOrder(swaps.reduce((positions, [left, right]) => {
+        [positions[left], positions[right]] = [positions[right], positions[left]]; return positions;
+      }, [...startingOrder]));
+      setPhase('pick');
+    }}>シャッフル演出をスキップ</button>}
     {phase === 'show' && !move && <button type="button" className="primary" onClick={() => void shuffle()}>シャッフル開始</button>}
   </div>;
 }
