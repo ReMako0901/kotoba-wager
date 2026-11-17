@@ -8,6 +8,7 @@ from pydantic import BaseModel, ValidationError
 from .config import settings
 from .models import EditProposal, MeaningResponse, StakesResolution, ResolvedConcept, StoryReview
 from .prompts import SYSTEM, RESOLVE, WIN, LOSS, REVIEW
+from .rewards import reward_policy
 
 T = TypeVar("T", bound=BaseModel)
 
@@ -144,7 +145,7 @@ class Gemini:
         return result
 
     async def win(self, text, offer, stakes, lost, *, previous_review=None, intro=""):
-        return await self.edit(WIN, text, {"intro": intro, "text": text, "reward": offer, "protected_stakes": stakes, "past_lost_concepts": lost, "previous_review": previous_review}, "win", stakes)
+        return await self.edit(WIN + "\n" + reward_policy(offer), text, {"intro": intro, "text": text, "reward": offer, "protected_stakes": stakes, "past_lost_concepts": lost, "previous_review": previous_review}, "win", stakes)
 
     async def loss(self, text, stakes, lost, dependencies, narrative_change=None, *, previous_review=None, intro=""):
         return await self.edit(LOSS, text, {"intro": intro, "text": text, "new_lost_concepts": stakes, "past_lost_concepts": lost, "existing_concepts_and_dependencies": dependencies, "narrative_change": narrative_change, "previous_review": previous_review}, "loss", stakes)
@@ -155,7 +156,7 @@ class Gemini:
         plan = edit_plan(original, outcome, stakes, [], offer)
         if relax_budget:
             relax_edit_budget(plan)
-        result = await self.generate(REVIEW, {
+        result = await self.generate(REVIEW + ("\n" + reward_policy(offer) if outcome == "win" else ""), {
             **plan,
             'intro': intro,
             'original_text': original,

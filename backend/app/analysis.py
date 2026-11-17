@@ -1,6 +1,7 @@
 """Local, equal-weight phrase selection. AI cannot determine availability or price."""
 import unicodedata
 from .models import Analysis,Unit
+from .rewards import draw_offers
 from .segmentation import split_phrases,is_stakeable_phrase
 from .gemini import GenerationError
 
@@ -29,13 +30,7 @@ def make_offers(analysis: dict,round_number: int,version: int):
     if not available:
         raise GenerationError('賭けられるコマがありません。')
     phase=min(3,(round_number-1)//2+1)
-    menus={
-        1:[('ちょっと名文','今の場面を、くすっとする短い比喩で彩る。'),('ラッキーな発見','登場人物が、ちょっと嬉しいものや手がかりを発見する。'),('まさかの出来事','今の場面から、意外で楽しい新展開を起こす。')],
-        2:[('いい感じの空気','今の場面に気持ちのよい音や香りを少し加える。'),('うれしい知らせ','今いる人物に、うれしい知らせが届く。'),('新しい出会い','物語に関わる新たな人物との出会いを起こす。')],
-        3:[('ひとことの魔法','今の場面を彩る、印象的な短い表現を加える。'),('まさかの正体','今ある物や人物の、楽しい秘密が一つ明らかになる。'),('新しい行き先','登場人物が異なる目的や生き方へ踏み出す展開を起こす。')],
-    }
-    # Never discount a three-chip reward just because only one chip remains.
-    return [{'id':f'v{version}-offer-{i}','title':title,'description':description,'required_count':i+1,'change_scale':i+1,'tier':phase} for i,(title,description) in enumerate(menus[phase]) if i+1<=available]
+    return draw_offers(available,phase,version)
 
 
 def validate_stakes(analysis: dict,unit_ids: list[str],required_count: int):
