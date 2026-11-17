@@ -5,7 +5,9 @@
 |ファイル|責務|
 |---|---|
 |`frontend/src/App.tsx`|タイトル、開始文3択、報酬ポップアップ、コマ選択、結果、履歴、ポーリング|
-|`frontend/src/GamblePlay.tsx`|リール停止・カード公開・タイ時の配り直し・反映ボタン|
+|`frontend/src/GamblePlay.tsx`|手動リール停止・HIT／STAND・カードの絞り／公開・手動再戦・反映。自動進行タイマーなし|
+|`frontend/src/StoryHistory.tsx`|既存の確定済み版を縦書き原稿の束として表示。結果／履歴で共通の前後めくり。API・保存形式を変更しない|
+|`frontend/src/history.css`|原稿の重なり・めくり・最新紙の到着とreduced motion時のフェード|
 |`backend/app/gambles.py`|ゲーム別の抽選・変化の強さ・図柄・事前配列カード|
 |`frontend/src/types.ts`|APIの画面側型。Python側モデルと同期する|
 |`frontend/src/api.ts`|fetch、公開APIホストの切替、エラー表示用例外|
