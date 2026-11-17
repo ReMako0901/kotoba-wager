@@ -44,6 +44,7 @@ def load(sid):
 
 def public(session):
     result={k:v for k,v in session.items() if k not in ("api_events", "custom_text")}
+    result.setdefault("intro", "")
     result["transactions"]=[{k:v for k,v in t.items() if k!="draft"} for t in session["transactions"]]
     for tx in result['transactions']:
         if tx.get('gamble'):
@@ -92,12 +93,12 @@ async def create_session(request:CreateSession):
             if existing.get('betting_mode')!=BETTING_MODE:
                 raise HTTPException(409,'旧点数方式の開始IDです。新しく「はじめる」から開始してください。')
             if existing["story_id"] != story_id or (
-                request.custom_text is not None and existing.get("custom_text") != request.custom_text
+                request.custom_text is not None and (existing.get("custom_text") != request.custom_text or existing.get("intro", "") != request.intro)
             ):
                 raise HTTPException(409,"同じ開始IDで違う物語は開始できません。")
             return public(existing)
         story = (
-            {"id": story_id, "title": "自分の物語", "text": request.custom_text}
+            {"id": story_id, "title": "自分の物語", "text": request.custom_text, "intro": request.intro}
             if request.custom_text is not None
             else next((s for s in STORIES if s["id"] == story_id), None)
         )
@@ -114,7 +115,7 @@ async def create_session(request:CreateSession):
         if request.custom_text is not None and sum(unit.stakeable for unit in starter_analysis.units) < 3:
             raise HTTPException(422, "文章が短すぎます。人物や物、様子を表す言葉を足して、もう一度入力してください")
         analysis = starter_analysis.model_dump()
-        session={"betting_mode":BETTING_MODE,"id":sid,"story_id":story["id"],"title":story["title"],"text":story["text"],"version":1,"status":"ready","analysis":analysis,"offers":make_offers(analysis,1,1),"win_probability":settings.win_probability,"transactions":[],"lost_concepts":[],"pending_transaction_id":None,"view":"game","api_calls":0,"api_events":[],"usage":{"input":0,"output":0,"thoughts":0},"model":settings.model,"analysis_attempts":0,"error":None}
+        session={"betting_mode":BETTING_MODE,"id":sid,"story_id":story["id"],"title":story["title"],"intro":story.get("intro", ""),"text":story["text"],"version":1,"status":"ready","analysis":analysis,"offers":make_offers(analysis,1,1),"win_probability":settings.win_probability,"transactions":[],"lost_concepts":[],"pending_transaction_id":None,"view":"game","api_calls":0,"api_events":[],"usage":{"input":0,"output":0,"thoughts":0},"model":settings.model,"analysis_attempts":0,"error":None}
         if request.custom_text is not None:
             session["custom_text"] = request.custom_text
         store.save(session)

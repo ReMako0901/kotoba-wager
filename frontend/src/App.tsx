@@ -30,6 +30,7 @@ export default function App(){
   const losses = useMemo(() => transactions?.filter(tx => tx.status === 'committed' && tx.outcome === 'loss') ?? [], [transactions]);
   const [customOpen, setCustomOpen] = useState(false);
   const [customText, setCustomText] = useState('');
+  const [customIntro, setCustomIntro] = useState('');
   const customCount = Array.from(customText.trim()).length;
   const [choices,setChoices]=useState<Story[]>([]),[seen,setSeen]=useState<string[]>([]);
   const [selected,setSelected]=useState<string[]>([]),[offerId,setOfferId]=useState('');
@@ -109,7 +110,7 @@ export default function App(){
   function startCustom() {
     if (customCount < MIN_STORY || customCount > MAX_STORY) return;
     void act(async () => {
-      const next = await api<Session>('/sessions', { custom_text: customText.trim(), request_id: requestId() });
+      const next = await api<Session>('/sessions', { intro: customIntro.trim(), custom_text: customText.trim(), request_id: requestId() });
       setCustomOpen(false);
       setCustomText('');
       accept(next);
@@ -139,10 +140,14 @@ export default function App(){
       <div className="story-list">{choices.map(story => <button key={story.id} className="story-card" disabled={busy}
         onClick={() => act(async () => accept(await api<Session>('/sessions', { story_id: story.id, request_id: requestId() })))}>
         <div className="story-card-top"><span>{story.genre}</span><b aria-hidden="true">↗</b></div>
-        <h2>{story.title}</h2><p>{story.text}</p>
+        <h2>{story.title}</h2>{story.intro && <p className="story-intro">{story.intro}</p>}<p>{story.text}</p>
       </button>)}</div>
       {customOpen && <Modal title="自分で物語を入力" onClose={() => { if (!busy) { setCustomOpen(false); setError(''); } }}>
         <form className="custom-story" onSubmit={event => { event.preventDefault(); startCustom(); }}>
+          <label htmlFor="custom-story-intro">導入（任意・1〜2文）</label>
+          <textarea id="custom-story-intro" value={customIntro} rows={2} disabled={busy}
+            placeholder="誰が・どこで・何をしているか" onChange={event => setCustomIntro(event.target.value)} />
+          <p className="quiet">導入は賭けや書き換えの対象になりません。</p>
           <label htmlFor="custom-story-text">本文（{MIN_STORY}〜{MAX_STORY}文字）</label>
           <textarea id="custom-story-text" value={customText} rows={5} disabled={busy}
             onChange={event => { setCustomText(event.target.value); setError(''); }} />
@@ -158,6 +163,7 @@ export default function App(){
         onFinish={() => act(async () => accept(await api<Session>(`/sessions/${session.id}/transactions/${last.id}/finish`, {})))} /> : <>
       <div className="chapter-line"><span>第{round}章</span>{(resultMode || processing) && <span>{resultMode ? '結果' : '準備中'}</span>}</div>
       <h1 className="story-title">{session.title}</h1>
+      {session.intro && <p className="story-intro" aria-label="物語の導入">{session.intro}</p>}
       {resultMode?<>
         <section className={`result-banner${last.outcome === 'win' ? ' result-win' : ''}`}><strong>{last.outcome==='win'?'勝利':'敗北'}</strong><span>{last.outcome==='win'?last.offer.title+'を獲得':'「'+last.stakes.join('・')+'」の意味が消えた'}</span></section>
         {last.gamble && <p className="reading-hint">{games.find(g => g.id === last.gamble!.kind)?.name}{last.gamble.kind === 'slot' && <> · {last.gamble.label}</>}</p>}

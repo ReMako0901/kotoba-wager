@@ -61,10 +61,11 @@ class Rewrite(BaseModel):
 
 class CreateSession(BaseModel):
     story_id: str | None = None
+    intro: str = ""
     custom_text: str | None = Field(default=None, min_length=20, max_length=100)
     request_id: str = Field(pattern=r'^[a-zA-Z0-9_-]{8,80}$')
 
-    @field_validator('custom_text', mode='before')
+    @field_validator('custom_text', 'intro', mode='before')
     @classmethod
     def normalize_text(cls, value):
         return value.replace('\r\n', '\n').replace('\r', '\n').strip() if isinstance(value, str) else value
@@ -73,6 +74,8 @@ class CreateSession(BaseModel):
     def one_story_source(self):
         if bool(self.story_id) == bool(self.custom_text):
             raise ValueError('物語を選ぶか、本文を入力してください。')
+        if self.story_id and self.intro:
+            raise ValueError('開始文の導入は変更できません。')
         return self
 
 

@@ -138,8 +138,9 @@ class GameEngine:
             self.store.save(session)
 
     async def generate_story(self, session, tx):
+        context = {"intro": session["intro"]} if session.get("intro") else {}
         if not tx.get("meanings_resolved"):
-            resolution = await self.call(session, self.ai.resolve_stakes, tx["before"], tx["selected_units"], session["lost_concepts"])
+            resolution = await self.call(session, self.ai.resolve_stakes, tx["before"], tx["selected_units"], session["lost_concepts"], **context)
             tx["staked_concepts"] = [concept.model_dump() for concept in resolution.concepts]
             tx["lost"] = deepcopy(tx["staked_concepts"]) if tx["outcome"] == "loss" else []
             tx["meanings_resolved"] = True
@@ -154,22 +155,23 @@ class GameEngine:
         offer = tx["offer"]
         stakes = tx["staked_concepts"]
         lost = session["lost_concepts"]
+        context = {"intro": session["intro"]} if session.get("intro") else {}
         feedback = {}
         relaxed = False
         for attempt in range(2):
             candidate = None
             try:
                 if outcome == "win":
-                    candidate = await self.call(session, self.ai.win, original, offer, stakes, lost, **feedback)
+                    candidate = await self.call(session, self.ai.win, original, offer, stakes, lost, **context, **feedback)
                 else:
                     loss_args = (original, stakes, lost, [])
                     if tx.get("gamble"):
                         loss_args += (offer["narrative_change"],)
-                    candidate = await self.call(session, self.ai.loss, *loss_args, **feedback)
+                    candidate = await self.call(session, self.ai.loss, *loss_args, **context, **feedback)
                 if feedback and candidate.text == feedback["previous_review"].get("rejected_text"):
                     raise ReviewRejected("不採用になった本文と同じ文章が返りました。")
                 review_options = {"relax_budget": True} if relaxed else {}
-                edited = await self.call(session, self.ai.review, original, candidate, outcome, offer, stakes, lost, **review_options)
+                edited = await self.call(session, self.ai.review, original, candidate, outcome, offer, stakes, lost, **context, **review_options)
                 if edited.text == original:
                     raise ReviewRejected("編集後の本文が原文と同じです。")
                 if outcome == "win" and not lost:

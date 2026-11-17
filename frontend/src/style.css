@@ -28,3 +28,5 @@
 .gamble-outcome{font-size:12px;border-left:3px solid;padding:1px 10px}
 .gamble-actions{margin-top:auto;display:grid;gap:6px}
 @media(prefers-reduced-motion:reduce){.slot-reel.rolling{animation:none}}
+
+.story-intro { white-space: pre-wrap; overflow-wrap: anywhere; font-family: var(--font-serif, serif); line-height: 1.8; }

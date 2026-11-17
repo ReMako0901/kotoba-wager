@@ -121,9 +121,9 @@ class Gemini:
         usage = envelope.get("usageMetadata", {})
         return Result(value=value, usage={"input": usage.get("promptTokenCount", 0), "output": usage.get("candidatesTokenCount", 0), "thoughts": usage.get("thoughtsTokenCount", 0)}, elapsed_seconds=round(time.monotonic()-started, 2))
 
-    async def resolve_stakes(self,text,units,lost):
+    async def resolve_stakes(self,text,units,lost, *, intro=""):
         # No scoring, availability decisions or number adjustment is delegated to AI.
-        result=await self.generate(RESOLVE,{'text':text,'selected_units':[{'unit_id':u['id'],'source_text':u['text']} for u in units],'past_lost_concepts':lost},MeaningResponse)
+        result=await self.generate(RESOLVE,{'intro':intro,'text':text,'selected_units':[{'unit_id':u['id'],'source_text':u['text']} for u in units],'past_lost_concepts':lost},MeaningResponse)
         result.value=materialize_meanings(text,units,result.value)
         return result
 
@@ -143,13 +143,13 @@ class Gemini:
             raise EditRejected(str(error)) from error
         return result
 
-    async def win(self, text, offer, stakes, lost, *, previous_review=None):
-        return await self.edit(WIN, text, {"text": text, "reward": offer, "protected_stakes": stakes, "past_lost_concepts": lost, "previous_review": previous_review}, "win", stakes)
+    async def win(self, text, offer, stakes, lost, *, previous_review=None, intro=""):
+        return await self.edit(WIN, text, {"intro": intro, "text": text, "reward": offer, "protected_stakes": stakes, "past_lost_concepts": lost, "previous_review": previous_review}, "win", stakes)
 
-    async def loss(self, text, stakes, lost, dependencies, narrative_change=None, *, previous_review=None):
-        return await self.edit(LOSS, text, {"text": text, "new_lost_concepts": stakes, "past_lost_concepts": lost, "existing_concepts_and_dependencies": dependencies, "narrative_change": narrative_change, "previous_review": previous_review}, "loss", stakes)
+    async def loss(self, text, stakes, lost, dependencies, narrative_change=None, *, previous_review=None, intro=""):
+        return await self.edit(LOSS, text, {"intro": intro, "text": text, "new_lost_concepts": stakes, "past_lost_concepts": lost, "existing_concepts_and_dependencies": dependencies, "narrative_change": narrative_change, "previous_review": previous_review}, "loss", stakes)
 
-    async def review(self, original, candidate, outcome, offer, stakes, lost, *, relax_budget=False):
+    async def review(self, original, candidate, outcome, offer, stakes, lost, *, relax_budget=False, intro=""):
         from .editing import edit_plan, apply_edits
 
         plan = edit_plan(original, outcome, stakes, [], offer)
@@ -157,6 +157,7 @@ class Gemini:
             relax_edit_budget(plan)
         result = await self.generate(REVIEW, {
             **plan,
+            'intro': intro,
             'original_text': original,
             'candidate_text': candidate.text,
             'outcome': outcome,
