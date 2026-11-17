@@ -146,7 +146,7 @@ def is_stakeable_phrase(surface: str) -> bool:
     if surface in selection_dictionary()[1]:
         return False
     tokens = _dictionary().create().tokenize(surface, tokenizer.Tokenizer.SplitMode.C)
-    rows = _lexical_tokens(tokens)
+    rows = iter(_lexical_tokens(tokens))
     head = next(rows, None)
     if head is None:
         return False
@@ -154,4 +154,22 @@ def is_stakeable_phrase(surface: str) -> bool:
     if tags[0] == '動詞' and base == '消える':
         return True
     content = {'名詞', '代名詞', '形容詞', '形状詞', '慣用句'}
-    return tags[0] in content or any(row_tags[0] in content for _, row_tags, _ in rows)
+    tail = list(rows)
+    existing = tags[0] in content or any(row_tags[0] in content for _, row_tags, _ in tail)
+    if not existing:
+        return False
+    # Preserve the existing meaningful verb groups (including attached time nouns).
+    if tags[0] == '動詞':
+        return True
+    # Availability only: do not change boundaries, surfaces or offsets.
+    while tags[0] in {'接頭辞', '連体詞'} and tail:
+        _, tags, base = tail.pop(0)
+    if tags[0] not in content:
+        return False
+    if tags[0] == '名詞' and base in {'こと', 'もの', 'ため', 'わけ', 'はず', 'つもり'}:
+        return False
+    if tags[0] == '形容詞' and tags[5] == '連用形-一般':
+        return False
+    if tags[0] == '形状詞' and tail and tail[0][1][5] == '連用形-ニ':
+        return False
+    return True

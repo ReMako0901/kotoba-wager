@@ -1,6 +1,7 @@
 from fastapi.testclient import TestClient
 from app import main
 from app.store import Store
+import pytest
 
 
 def test_session_is_selectable_immediately_without_an_ai_call(tmp_path,monkeypatch):
@@ -61,3 +62,22 @@ def test_custom_story_preserves_paragraphs_and_is_retryable(tmp_path, monkeypatc
         assert client.post('/api/sessions', json={**payload, 'custom_text': '雨' * 101}).status_code == 422
         assert client.post('/api/sessions', json={**payload, 'custom_text': '短い。'}).status_code == 422
         assert len(client.post('/api/stories/draw', json={'count': 5}).json()['stories']) == 5
+
+
+@pytest.mark.parametrize('nouns', ['', '猫。', '猫。犬。', '猫。犬。鳥。'])
+def test_custom_story_requires_three_stakeable_units(tmp_path, monkeypatch, nouns):
+    repo = Store(tmp_path)
+    monkeypatch.setattr(main, 'store', repo)
+    text = nouns + 'ただずっとゆっくり歩いて、またただ歩いていた。'
+    payload = {'custom_text': text, 'request_id': 'custom-entry-filter'}
+    with TestClient(main.app) as client:
+        response = client.post('/api/sessions', json=payload)
+        if nouns == '猫。犬。鳥。':
+            assert response.status_code == 202
+            assert [o['required_count'] for o in response.json()['offers']] == [1, 2, 3]
+            assert client.post('/api/sessions', json=payload).json() == response.json()
+        else:
+            assert response.status_code == 422
+            assert response.json()['detail'] == '文章が短すぎます。人物や物、様子を表す言葉を足して、もう一度入力してください'
+            with pytest.raises(FileNotFoundError):
+                repo.load(payload['request_id'])

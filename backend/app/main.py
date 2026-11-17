@@ -110,7 +110,9 @@ async def create_session(request:CreateSession):
             except GenerationError as error:
                 if request.custom_text is None:
                     raise
-                raise HTTPException(422, "賭けられることばが見つかりません。人物や物、場所を入れてください。") from error
+                raise HTTPException(422, "文章が短すぎます。人物や物、様子を表す言葉を足して、もう一度入力してください") from error
+        if request.custom_text is not None and sum(unit.stakeable for unit in starter_analysis.units) < 3:
+            raise HTTPException(422, "文章が短すぎます。人物や物、様子を表す言葉を足して、もう一度入力してください")
         analysis = starter_analysis.model_dump()
         session={"betting_mode":BETTING_MODE,"id":sid,"story_id":story["id"],"title":story["title"],"text":story["text"],"version":1,"status":"ready","analysis":analysis,"offers":make_offers(analysis,1,1),"win_probability":settings.win_probability,"transactions":[],"lost_concepts":[],"pending_transaction_id":None,"view":"game","api_calls":0,"api_events":[],"usage":{"input":0,"output":0,"thoughts":0},"model":settings.model,"analysis_attempts":0,"error":None}
         if request.custom_text is not None:

@@ -91,3 +91,34 @@ def test_eraser_story_groups_short_meanings_without_absorbing_the_predicate():
         '、', '借りた', '。', '、', '掘られた', 'すっかり', '。',
     ]
     assert ''.join(unit.text for unit in analysis.units) == text
+
+
+def test_entry_filter_keeps_entities_and_modifiers_with_original_boundaries():
+    text = '黄色い日傘を持って出た。小さな王様がお弁当を見た。同じ帽子が大きかった。'
+    analysis = build_analysis(text, 1)
+    assert [u.text for u in analysis.units] == [
+        '黄色い', '日傘を', '持って出た', '。', '小さな王様が', 'お弁当を',
+        '見た', '。', '同じ帽子が', '大きかった', '。',
+    ]
+    assert [u.text for u in analysis.units if u.stakeable] == [
+        '黄色い', '日傘を', '小さな王様が', 'お弁当を', '同じ帽子が', '大きかった',
+    ]
+    assert ''.join(u.text for u in analysis.units) == text
+    assert all(text[u.start:u.end] == u.text for u in analysis.units)
+
+
+@pytest.mark.parametrize('surface', [
+    'とても', 'ゆっくり', '代わりに', 'とたんに', 'ことが', 'ものを',
+    'ために', 'わけが', 'はずだ', 'つもりだったのに', '静かに', '早く', '持って出た',
+])
+def test_entry_filter_excludes_light_phrases(surface):
+    from app.segmentation import is_stakeable_phrase
+    assert not is_stakeable_phrase(surface)
+
+
+def test_entry_filter_excludes_light_phrases_in_context():
+    text = '猫は早く静かに歩くことができた。犬は走るつもりだったのに。'
+    analysis = build_analysis(text, 1)
+    assert [u.text for u in analysis.units if u.stakeable] == ['猫は', '犬は']
+    assert ''.join(u.text for u in analysis.units) == text
+    assert all(text[u.start:u.end] == u.text for u in analysis.units)
