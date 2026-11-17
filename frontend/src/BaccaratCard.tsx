@@ -98,7 +98,6 @@ export function BaccaratCard({ card, label, open, onOpen }: {
       })}
     </div>
     {!open && <div className="baccarat-controls">
-      <p className="reading-hint">上下左右にスワイプして絞る</p>
       <button className="secondary" type="button" onClick={onOpen}>表にする</button>
     </div>}
   </section>;

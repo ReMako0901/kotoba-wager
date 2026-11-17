@@ -5,10 +5,38 @@ import './anoma.css';
 
 // Presentation memory only: no session storage or game state changes.
 let previousExpression: AnomaExpression | undefined;
+const unavailableClosedExpressions = new Set<AnomaExpression>();
 function AnomaPortrait({ expression }: { expression: AnomaExpression }) {
   const [previous, setPrevious] = useState(() => previousExpression);
   const [loaded, setLoaded] = useState(false);
   const [failed, setFailed] = useState(false);
+  const [settled, setSettled] = useState(false);
+  const [reducedMotion, setReducedMotion] = useState(true);
+  const [closedFailed, setClosedFailed] = useState(() => unavailableClosedExpressions.has(expression));
+  const [closedLoaded, setClosedLoaded] = useState(false);
+  const [blinking, setBlinking] = useState(false);
+  useEffect(() => {
+    const media = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const update = () => { setReducedMotion(media.matches); setBlinking(false); };
+    update();
+    media.addEventListener('change', update);
+    return () => media.removeEventListener('change', update);
+  }, []);
+  useEffect(() => {
+    if (!settled || !closedLoaded || closedFailed || failed || reducedMotion) return;
+    let timer: number;
+    const schedule = () => {
+      timer = window.setTimeout(() => {
+        setBlinking(true);
+        timer = window.setTimeout(() => {
+          setBlinking(false);
+          schedule();
+        }, 130);
+      }, 2800 + Math.random() * 2700);
+    };
+    schedule();
+    return () => window.clearTimeout(timer);
+  }, [settled, closedLoaded, closedFailed, failed, reducedMotion]);
   useEffect(() => {
     if (loaded && !failed) previousExpression = expression;
   }, [expression, loaded, failed]);
@@ -18,7 +46,16 @@ function AnomaPortrait({ expression }: { expression: AnomaExpression }) {
     {previous && previous !== expression && <img className="anoma-portrait-previous" src={source(previous)} alt="" onError={() => setFailed(true)} />}
     <img key={expression} className={`anoma-portrait-current${loaded ? ' anoma-portrait-fade' : ''}`}
       src={source(expression)} alt="" onLoad={() => setLoaded(true)} onError={() => setFailed(true)}
-      onAnimationEnd={() => setPrevious(undefined)} />
+      onAnimationEnd={() => { setPrevious(undefined); setSettled(true); }} />
+    {settled && !reducedMotion && !closedFailed && <img
+      className={`anoma-portrait-closed${blinking && closedLoaded ? ' anoma-portrait-blinking' : ''}`}
+      src={`${import.meta.env.BASE_URL}anoma/${expression}-closed.webp`} alt=""
+      onLoad={() => setClosedLoaded(true)}
+      onError={() => {
+        unavailableClosedExpressions.add(expression);
+        setClosedFailed(true);
+        setBlinking(false);
+      }} />}
   </div>;
 }
 

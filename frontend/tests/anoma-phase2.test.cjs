@@ -44,7 +44,7 @@ test('portrait remembers the last loaded expression across frames, overlays and 
   assert.ok(current(next).props.className.includes('anoma-portrait-fade'));
   assert.ok(next.all(n => n.type === 'img').every(n => n.props.alt === ''));
   current(next).props.onAnimationEnd(); next.draw();
-  assert.equal(next.all(n => n.type === 'img').length, 1);
+  assert.equal(next.all(n => n.type === 'img' && !n.props.className.includes('anoma-portrait-closed')).length, 1);
   next.draw({ line: 'c', expression: 'laugh' });
   assert.equal(current(next).props.src, '/anoma/laugh.webp');
   assert.equal(next.find(n => n.props.className === 'anoma-portrait-previous').props.src, '/anoma/surprise.webp');

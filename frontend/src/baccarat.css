@@ -46,6 +46,26 @@
 }
 .baccarat-zoom.squeeze-back { cursor: grab; touch-action: none; }
 .baccarat-zoom.squeeze-back:active { cursor: grabbing; }
+.baccarat-zoom.squeeze-back::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 20px;
+  height: 20px;
+  background: linear-gradient(135deg, #ddd, #fff);
+  clip-path: polygon(100% 0, 0 100%, 100% 100%);
+  transform-origin: bottom right;
+  pointer-events: none;
+  animation: baccarat-corner-hint 3.6s ease-in-out infinite;
+}
+@keyframes baccarat-corner-hint {
+  0%, 65%, 100% { transform: scale(0); opacity: 0; }
+  80% { transform: scale(1) translate(-2px, -2px); opacity: .85; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .baccarat-zoom.squeeze-back::after { animation: none; display: none; }
+}
 .baccarat-face { display: block; width: 100%; height: 100%; object-fit: fill; }
 .baccarat-peek {
   position: absolute;
