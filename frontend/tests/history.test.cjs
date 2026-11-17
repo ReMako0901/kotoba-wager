@@ -1,27 +1,17 @@
 // Run: node --test frontend/tests/history.test.cjs
 // Compile the real TS/TSX modules in memory; no generated files or extra dependencies.
-const { createRequire } = require('node:module');
 const fs = require('node:fs');
 const path = require('node:path');
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const local = createRequire(path.resolve(__dirname, '../package.json'));
-const ts = local('typescript');
-for (const ext of ['.ts', '.tsx']) require.extensions[ext] = (module, filename) => {
-  const result = ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: {
-    module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, target: ts.ScriptTarget.ES2022,
-  }, fileName: filename });
-  module._compile(result.outputText, filename);
-};
-const React = local('react');
-const { renderToStaticMarkup } = local('react-dom/server');
+const { mount, text } = require('./component-harness.cjs');
 const { storyVersions, changedCharacters } = require('../src/storyVersions.ts');
-const { StoryComparison, StoryHistory } = require('../src/StoryHistory.tsx');
+const { StoryPaperStack, StoryHistory } = require('../src/StoryHistory.tsx');
 const tx = (source, before, after, outcome = 'win') => ({ id: `tx-${source}`, source_version: source,
   before, after, outcome, status: 'committed', stakes: ['鍵'], offer: { title: '新しい出会い' } });
 const session = transactions => ({ version: 3, text: '最新の本文。', transactions,
   lost_concepts: [], api_calls: 0, model: 'test', usage: { input: 0, output: 0 } });
-const render = (component, props) => renderToStaticMarkup(React.createElement(component, props));
+const paperProps = session => ({ session, dust: { grains: new Map() }, losses: [] });
 
 test('versions use source version order and exclude uncommitted drafts without mutating data', () => {
   const s = session([tx(2, '中間。', '最新の本文。', 'loss'), tx(1, '最初。', '中間。'),
@@ -48,24 +38,47 @@ test('diff highlights additions, deletions, replacements, repeated characters an
   }
   assert.equal(changedCharacters('同じ。', '同じ。').after.size, 0);
 });
-test('win and loss results render both full texts and persistent highlighted changes together', () => {
-  for (const outcome of ['win', 'loss']) {
-    const transaction = tx(1, '猫。', '犬。', outcome);
-    const html = render(StoryComparison, transaction);
-    assert.match(html, /変化前/); assert.match(html, /変化後/);
-    assert.match(html, /class="diff-before">猫/); assert.match(html, /class="diff-after">犬/);
-  }
+for (const outcome of ['win', 'loss']) test(`${outcome}: latest manuscript is on top and pages turn both ways`, () => {
+  const s = session([tx(1, '最初。', '中間。'), tx(2, '中間。', '最新の本文。', outcome)]);
+  const snapshot = JSON.stringify(s);
+  const ui = mount(StoryPaperStack, paperProps(s), true);
+  const manuscript = () => text(ui.find(n => n.props?.className === 'sr-only'));
+  assert.equal(manuscript(), '最新の本文。');
+  assert.equal(ui.find(n => n.props?.['data-paper-count']).props['data-paper-count'], 3);
+  assert.equal(ui.all(n => n.props?.className === 'paper-underlay').length, 2);
+  assert.ok(ui.find(n => n.type === 'button' && text(n) === '次の原稿へ').props.disabled);
+  assert.equal(ui.all(n => n.props?.className === 'vertical-paper').length, 1);
+  assert.ok(ui.find(n => n.props?.className?.includes('result-change')));
+  ui.click('前の原稿へ'); assert.equal(manuscript(), '中間。');
+  assert.match(ui.find(n => n.type === 'article').props.className, /page-back/);
+  assert.equal(ui.all(n => n.props?.className?.includes('result-change')).length, 0);
+  ui.click('前の原稿へ'); assert.equal(manuscript(), '最初。');
+  assert.ok(ui.find(n => n.type === 'button' && text(n) === '前の原稿へ').props.disabled);
+  ui.click('次の原稿へ'); assert.equal(manuscript(), '中間。');
+  assert.match(ui.find(n => n.type === 'article').props.className, /page-forward/);
+  ui.click('次の原稿へ'); assert.equal(manuscript(), '最新の本文。');
+  assert.ok(text(ui.tree).includes('賭けた言葉：鍵')); assert.ok(text(ui.tree).includes('報酬：新しい出会い'));
+  assert.ok(text(ui.tree).includes(outcome === 'win' ? '勝利' : '敗北'));
+  assert.equal(JSON.stringify(s), snapshot);
+});
+test('history retains losses and generation stats, initial and legacy pages remain readable', () => {
+  const s = { ...session([tx(1, '最初。', '中間。')]), lost_concepts: [{ label: '鍵の意味' }], api_calls: 3 };
+  const ui = mount(StoryHistory, { session: s });
+  assert.match(text(ui.tree), /鍵の意味/); assert.match(text(ui.tree), /生成 3回/);
+  ui.click('前の原稿へ'); assert.match(text(ui.tree), /最初。/);
+  const initial = mount(StoryPaperStack, paperProps({ ...session([]), version: 1 }));
+  assert.equal(initial.all(n => n.props?.className === 'paper-underlay').length, 0);
+  assert.equal(initial.all(n => n.type === 'button' && n.props.disabled).length, 2);
+});
+test('result and history share manuscript stack and contain no comparison view', () => {
   const app = fs.readFileSync(path.resolve(__dirname, '../src/App.tsx'), 'utf8');
-  assert.match(app, /<StoryComparison before=\{last.before\} after=\{last.after \?\? session.text\}/);
-});
-test('history opens every version and compares initial and latest snapshots', () => {
-  const html = render(StoryHistory, { session: session([tx(1, '最初。', '中間。'), tx(2, '中間。', '最新の本文。', 'loss')]) });
-  for (const label of ['最初と最新を比べる', '最初・第1版', '最新・第3版', '第1ラウンド', '第2ラウンド', '勝利', '敗北', '賭けた言葉：鍵', '報酬：新しい出会い']) assert.ok(html.includes(label), label);
-  assert.match(html, /<details><summary>最初の物語/);
-  assert.match(html, /class="version-text" tabindex="0">中間。/);
-});
-test('history contains only supplied session and escapes player text', () => {
-  const html = render(StoryHistory, { session: session([tx(1, '<script>危険</script>', '自分の本文。')]) });
-  assert.ok(!html.includes('<script>')); assert.ok(html.includes('&lt;script&gt;'));
-  assert.ok(!html.includes('別セッションの本文')); assert.ok(!html.includes('fetch('));
+  const source = fs.readFileSync(path.resolve(__dirname, '../src/StoryHistory.tsx'), 'utf8');
+  assert.match(app, /<StoryPaperStack session=\{session\} dust=\{dust\} losses=\{losses\} result/);
+  assert.match(source, /<StoryPaperStack key=/);
+  for (const value of [app, source]) assert.doesNotMatch(value, /StoryComparison|comparison-pair|変化前|変化後|最初と最新を比べる|dangerouslySetInnerHTML/);
+  const ui = mount(StoryPaperStack, paperProps(session([tx(1, '<script>危険</script>', '自分の本文。')])));
+  assert.ok(!text(ui.tree).includes('危険')); ui.click('前の原稿へ');
+  assert.ok(text(ui.tree).includes('<script>危険</script>'));
+  assert.equal(ui.all(n => n.type === 'script').length, 0);
+  assert.equal(ui.all(n => n.props?.dangerouslySetInnerHTML).length, 0);
 });

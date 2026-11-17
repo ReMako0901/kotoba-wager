@@ -1,122 +1,109 @@
-const { createRequire } = require('node:module');
-const Module = require('node:module');
-const fs = require('node:fs');
-const path = require('node:path');
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const local = createRequire(path.resolve(__dirname, '../package.json'));
-const ts = local('typescript');
-for (const ext of ['.ts', '.tsx']) require.extensions[ext] = (module, filename) => {
-  module._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: {
-    module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, target: ts.ScriptTarget.ES2022,
-  }, fileName: filename }).outputText, filename);
-};
-const { revealStep, revealDuration, isNearMiss, changeShapes } = require('../src/gamblePresentation.ts');
-// Exercise the real component's state/effects with a deterministic clock and media query.
-let values, cursor, effects, timers, reduced;
-const actualLoad = Module._load;
-Module._load = function(name, parent, main) {
-  if (name === 'react' && /(?:GambleMotion|GamblePlay)\.tsx$/.test(parent.filename)) return {
-    useState(initial) { const i = cursor++; if (!(i in values)) values[i] = initial;
-      return [values[i], value => { values[i] = typeof value === 'function' ? value(values[i]) : value; }]; },
-    useEffect(effect) { effects.push(effect); },
-  };
-  return actualLoad.call(this, name, parent, main);
-};
-const { GambleMotion, GenerationSkeleton } = require('../src/GambleMotion.tsx');
-// Load the actual advanced players without Vite's asset URL or browser-only card UI.
-const playerPath = path.resolve(__dirname, '../src/GamblePlay.tsx');
-const playerModule = new Module(playerPath, module);
-playerModule.filename = playerPath;
-playerModule.paths = Module._nodeModulePaths(path.dirname(playerPath));
-const motionLoad = Module._load;
-Module._load = function(name, parent, main) {
-  if (parent.filename === playerPath && name === './BeginnerPlay') return { BeginnerPlay() {} };
-  if (parent.filename === playerPath && name === './BaccaratCard') return { CardFace() {}, BaccaratCard() {} };
-  return motionLoad.call(this, name, parent, main);
-};
-playerModule._compile(ts.transpileModule(fs.readFileSync(playerPath, 'utf8').replaceAll('import.meta.env.BASE_URL', '"/"') +
-  '\nexport const testPlayers = { slot: SlotPlay, blackjack: BlackjackPlay, baccarat: BaccaratPlay };', {
-  compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, target: ts.ScriptTarget.ES2022 },
-}).outputText, playerPath);
-Module._load = actualLoad;
-const { testPlayers } = playerModule.exports;
-function render(gamble, children) {
-  cursor = 0; effects = []; timers = [];
-  global.window = { matchMedia: () => ({ matches: reduced, addEventListener() {}, removeEventListener() {} }),
-    setTimeout: fn => { timers.push(fn); return timers.length; }, clearTimeout() {} };
-  const tree = GambleMotion({ gamble, children });
-  effects.forEach(effect => effect());
-  return tree;
+const { mount, text } = require('./component-harness.cjs');
+const { GamblePlay } = require('../src/GamblePlay.tsx');
+const { GenerationSkeleton } = require('../src/GambleMotion.tsx');
+const { isNearMiss, changeShapes } = require('../src/gamblePresentation.ts');
+const card = rank => ({ rank, suit: '♠' });
+const round = outcome => ({ player: [card('4'), card('5'), card('2')], banker: [card('3'), card('6'), card('A')],
+  dealer_hands: [[card('K'), card('8')], [card('K'), card('7')]], outcome, player_total: 1, banker_total: 0, difference: 1 });
+function fixture(kind, outcome = 'win') {
+  return { kind, outcome: ['rps', 'dice', 'card_guess'].includes(kind) ? null : outcome,
+    reels: ['ベル', 'ベル', 'BIG'], rounds: [round(outcome)],
+    ...(['rps', 'dice', 'card_guess'].includes(kind) ? { moves: [] } : {}),
+    cards: [card('A'), card('K'), card('Q')], target: 0, swaps: [[0, 1], [1, 2]] };
 }
-function find(node, predicate) {
-  if (!node || typeof node !== 'object') return;
-  if (predicate(node)) return node;
-  for (const child of [node.props?.children].flat(Infinity)) { const result = find(child, predicate); if (result) return result; }
+function play(gamble, reduced = false) {
+  const calls = [];
+  const props = { gamble, busy: false, prepared: true, onMove: (...args) => calls.push(['move', ...args]), onFinish: () => calls.push(['finish']) };
+  return { ui: mount(GamblePlay, props, reduced), props, calls };
 }
-for (const kind of Object.keys(changeShapes)) test(`${kind}: full playback, skip and reduced motion retain identical transaction and child result`, () => {
-  for (const outcome of ['win', 'loss']) for (const mode of ['play', 'skip', 'reduce']) {
-    const gamble = Object.freeze({ kind, outcome, strength: 8, reels: Object.freeze(['ベル', 'ベル', 'BIG']),
-      rounds: Object.freeze([{ difference: 1 }]), moves: Object.freeze([{ face: 3 }]) });
-    const transaction = Object.freeze({ gamble, outcome, strength: 8, after: '変更済みの本文。' });
-    const original = JSON.stringify(transaction);
-    const child = { type: 'output', props: { children: transaction.after } };
-    values = []; reduced = mode === 'reduce';
-    let tree = render(gamble, child);
-    if (mode === 'skip') find(tree, n => n.type === 'button').props.onClick();
-    for (let i = 0; i < 4 && !find(tree, n => n === child); i++) {
-      if (mode === 'play') timers.forEach(fn => fn());
-      tree = render(gamble, child);
-    }
-    assert.ok(find(tree, n => n === child));
-    assert.equal(JSON.stringify(transaction), original);
-  }
+const hasFinish = ui => !!ui.find(n => n.type === 'button' && text(n).includes('この結果を物語へ'));
+for (const kind of Object.keys(changeShapes)) for (const reduced of [false, true]) test(`${kind}: no input never completes (reduced=${reduced})`, () => {
+  const { ui, calls } = play(fixture(kind), reduced);
+  for (let i = 0; i < 12; i++) ui.tick();
+  assert.equal(hasFinish(ui), false);
+  assert.deepEqual(calls, []);
 });
-test('bounded timing and factual near misses only', () => {
-  assert.equal(revealStep(revealDuration), 3);
-  assert.equal(revealStep(0, true), 3); assert.equal(revealStep(0, false, true), 3);
-  assert.equal(revealStep(-100), 0);
+for (const outcome of ['win', 'loss']) for (const skip of [false, true]) test(`slot: manual stops / explicit skip (${outcome}, skip=${skip})`, () => {
+  const gamble = fixture('slot', outcome), snapshot = JSON.stringify(gamble);
+  const { ui, calls } = play(gamble);
+  if (skip) ui.click('演出をスキップ');
+  else {
+    ui.click('STOP 2'); ui.tick(); assert.equal(hasFinish(ui), false);
+    ui.click('STOP 1'); ui.tick(); assert.equal(hasFinish(ui), false);
+    ui.click('STOP 3');
+  }
+  assert.equal(hasFinish(ui), true); assert.deepEqual(calls, []);
+  ui.click('この結果を物語へ'); assert.deepEqual(calls, [['finish']]);
+  assert.equal(JSON.stringify(gamble), snapshot);
+});
+for (const outcome of ['win', 'loss']) test(`blackjack: HIT and STAND control completion (${outcome})`, () => {
+  const { ui, calls } = play(fixture('blackjack', outcome));
+  ui.click('HIT'); for (let i = 0; i < 5; i++) ui.tick();
+  assert.equal(hasFinish(ui), false);
+  ui.click('結果を見る'); assert.equal(hasFinish(ui), true);
+  assert.deepEqual(calls, []); ui.click('この結果を物語へ'); assert.deepEqual(calls, [['finish']]);
+});
+test('blackjack: initial 21 still waits for STAND; explicit skip is independent of timers', () => {
+  const gamble = fixture('blackjack'); gamble.rounds[0].player = [card('A'), card('K')];
+  const { ui } = play(gamble); ui.tick(); assert.equal(hasFinish(ui), false);
+  ui.click('結果を見る'); assert.equal(hasFinish(ui), true);
+  const skipped = play(fixture('blackjack')); skipped.ui.click('演出をスキップ'); assert.equal(hasFinish(skipped.ui), true);
+});
+function openRound(ui) {
+  for (const label of ['あなた / プレイヤー', 'バンカー']) for (let i = 1; i <= 3; i++) {
+    ui.click(`${label}の${i}枚目`); ui.click('表にする');
+  }
+}
+for (const outcome of ['win', 'loss']) test(`baccarat: manually opening every card reaches result (${outcome})`, () => {
+  const gamble = fixture('baccarat', outcome), snapshot = JSON.stringify(gamble);
+  const { ui, calls } = play(gamble); openRound(ui);
+  assert.equal(hasFinish(ui), true); assert.deepEqual(calls, []);
+  ui.click('この結果を物語へ'); assert.deepEqual(calls, [['finish']]);
+  assert.equal(JSON.stringify(gamble), snapshot);
+});
+test('baccarat: tie waits for replay action, final round and skip reach result', () => {
+  const gamble = fixture('baccarat'); gamble.rounds.unshift(round('tie'));
+  const { ui } = play(gamble); openRound(ui); ui.tick(); assert.equal(hasFinish(ui), false);
+  ui.click('同じことばでもう一度'); ui.tick(); assert.equal(hasFinish(ui), false);
+  openRound(ui); assert.equal(hasFinish(ui), true);
+  const skipped = play(gamble); skipped.ui.click('演出をスキップ'); assert.equal(hasFinish(skipped.ui), true);
+});
+test('baccarat: keyboard squeeze and banker open remain manual', () => {
+  const gamble = fixture('baccarat'); gamble.rounds[0].player = [card('4'), card('5')]; gamble.rounds[0].banker = [card('3'), card('6')];
+  const { ui } = play(gamble);
+  for (let i = 1; i <= 2; i++) {
+    ui.click(`あなた / プレイヤーの${i}枚目`);
+    for (let j = 0; j < 7; j++) {
+      ui.find(n => n.props?.className?.includes('baccarat-zoom')).props.onKeyDown({ key: 'ArrowRight', preventDefault() {} }); ui.draw();
+    }
+  }
+  assert.equal(hasFinish(ui), false); ui.click('バンカーオープン'); assert.equal(hasFinish(ui), true);
+});
+for (const kind of ['rps', 'dice', 'card_guess']) test(`${kind}: explicit move, saved result, explicit finish`, () => {
+  const gamble = fixture(kind); const { ui, props, calls } = play(gamble, true);
+  if (kind === 'card_guess') { ui.click('シャッフル開始'); ui.click('シャッフル演出をスキップ'); assert.deepEqual(calls, []); ui.click('中央のカード'); }
+  else ui.click(kind === 'rps' ? 'グー' : 'サイコロを振る');
+  assert.deepEqual(calls, [['move', 0, ...(kind === 'rps' ? [0] : kind === 'card_guess' ? [1] : [])]]);
+  assert.equal(hasFinish(ui), false);
+  const move = kind === 'rps' ? { choice: 0, opponent: 2, outcome: 'win' } : kind === 'dice' ? { face: 6, outcome: 'win' } : { choice: 1, answer: 1, outcome: 'win' };
+  const saved = { ...gamble, outcome: 'win', moves: [move] }, snapshot = JSON.stringify(saved);
+  ui.draw({ ...props, gamble: saved }); assert.equal(hasFinish(ui), true);
+  ui.click('この結果を物語へ'); assert.equal(calls.at(-1)[0], 'finish'); assert.equal(JSON.stringify(saved), snapshot);
+});
+test('rps: tie does not complete and replay uses the next attempt', () => {
+  const gamble = { ...fixture('rps'), moves: [{ choice: 0, opponent: 0, outcome: 'tie' }] };
+  const { ui, calls } = play(gamble); ui.tick(); assert.equal(hasFinish(ui), false);
+  ui.click('パー'); assert.deepEqual(calls, [['move', 1, 1]]);
+});
+test('factual near misses and busy generation remain', () => {
   assert.equal(isNearMiss({ kind: 'slot', outcome: 'loss', reels: ['A', 'A', 'B'] }), true);
   assert.equal(isNearMiss({ kind: 'slot', outcome: 'win', reels: ['A', 'A', 'A'] }), false);
-  assert.equal(isNearMiss({ kind: 'slot', outcome: 'loss', reels: ['A', 'B', 'C'] }), false);
-  assert.equal(isNearMiss({ kind: 'dice', outcome: 'loss', moves: [{ face: 2 }] }), false);
+  assert.equal(isNearMiss({ kind: 'dice', outcome: 'loss', moves: [{ face: 3 }] }), true);
   assert.equal(isNearMiss({ kind: 'rps', outcome: 'loss' }), false);
-});
-test('waiting skeleton is explicitly busy and labels generation', () => {
-  const tree = GenerationSkeleton();
-  assert.equal(tree.props['aria-busy'], 'true'); assert.equal(tree.props.role, 'status');
-  assert.ok(find(tree, n => n.props?.className === 'skeleton-paper'));
-});
-for (const [kind, Player] of Object.entries(testPlayers)) test(`${kind}: native playback and one-click skip finish with saved props and no API action`, () => {
-  for (const outcome of ['win', 'loss']) for (const skip of [false, true]) {
-    const card = Object.freeze({ rank: 'K', suit: '♠' });
-    const cards = Object.freeze([card, card]);
-    const gamble = Object.freeze({ kind, outcome, strength: 1, reels: Object.freeze(['ベル', 'ベル', 'BIG']),
-      rounds: Object.freeze([Object.freeze({ player: cards, banker: cards, player_total: 0, banker_total: 1, difference: 1, outcome })]) });
-    let calls = 0;
-    const props = { gamble, prepared: true, busy: false, onFinish() { calls++; }, onMove() { calls++; } };
-    const snapshot = JSON.stringify(gamble);
-    values = []; reduced = false;
-    function draw() {
-      cursor = 0; effects = []; timers = [];
-      const tree = Player(props);
-      effects.forEach(effect => effect());
-      return tree;
-    }
-    // Configure the same deterministic browser clock used by the motion component.
-    render(gamble, null);
-    values = [];
-    let tree = draw();
-    if (skip) find(tree, n => n.type === 'button' && n.props.children === '演出をスキップ').props.onClick();
-    for (let i = 0; i < 5 && !find(tree, n => n.type?.name === 'Finish'); i++) {
-      if (!skip) timers.forEach(fn => fn());
-      tree = draw();
-    }
-    const finish = find(tree, n => n.type?.name === 'Finish');
-    assert.ok(finish, 'playback must reach the real Finish component');
-    assert.equal(finish.props.gamble, gamble);
-    assert.equal(finish.props.onFinish, props.onFinish);
-    assert.equal(JSON.stringify(gamble), snapshot);
-    assert.equal(calls, 0, 'presentation must not submit moves or finish requests');
-  }
+  const { ui, props } = play(fixture('slot')); ui.click('演出をスキップ'); ui.draw({ ...props, prepared: false });
+  assert.ok(ui.find(n => n.props?.className === 'generation-skeleton' && n.props['aria-busy'] === 'true'));
+  assert.ok(ui.find(n => n.type === 'button' && n.props.disabled && text(n).includes('物語を準備中')));
+  assert.equal(GenerationSkeleton().props.role, 'status');
 });

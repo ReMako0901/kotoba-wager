@@ -7,10 +7,6 @@ export const changeShapes: Record<GameKind, string> = {
   blackjack: '変化の形：小さく着実に', baccarat: '変化の形：点差によって大きく揺れる',
 };
 
-export const revealDuration = 1800;
-export function revealStep(elapsed: number, skip = false, reduced = false) {
-  return skip || reduced ? 3 : Math.min(3, Math.floor(Math.max(0, elapsed) / 600));
-}
 export function isNearMiss(gamble: Gamble) {
   if (gamble.outcome !== 'loss') return false;
   if (gamble.kind === 'slot') return new Set(gamble.reels).size === 2;

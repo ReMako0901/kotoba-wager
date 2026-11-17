@@ -42,7 +42,7 @@
 .hand-count { animation: hand-beat 600ms ease-in-out infinite; }
 .motion-result, .result-banner { animation: result-spring var(--motion-spring) both; }
 .near-pulse .saved-reveal { animation: near-pulse 600ms ease-in-out; }
-.near-pulse .slot-machine, .near-pulse .card-table { animation: near-pulse 600ms ease-in-out; }
+.near-pulse .slot-machine, .near-pulse .card-table, .near-pulse .dice-game { animation: near-pulse 600ms ease-in-out; }
 .playing-card.face-up { animation: ink-fade 250ms ease-out; }
 .story-board > :not(.generation-skeleton) { animation: ink-fade var(--motion-fade) ease-out; }
 .ink-cell.marked { animation: ink-fade var(--motion-fade) ease-out; }
@@ -56,7 +56,6 @@
 .skeleton-paper::after { content: ''; position: absolute; inset: 0; background: linear-gradient(100deg, transparent 20%, #fff 50%, transparent 80%); animation: paper-shimmer 1600ms linear infinite; }
 @keyframes paper-shimmer { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
 .result-story { position: relative; display: flex; flex: 1; min-height: 0; isolation: isolate; }
-.result-story .story-comparison { animation: ink-fade 500ms 400ms both; padding-bottom: var(--space-4); }
 .result-story > .paper-dust { pointer-events: none; z-index: 2; }
 .loss-ink { position: absolute; inset: 15% var(--space-4) auto; text-align: center; z-index: 3; font: 24px/1.8 var(--serif); animation: lost-words 800ms ease-in both; pointer-events: none; }
 @keyframes lost-words { 0%, 20% { opacity: 1; filter: blur(0); } 100% { opacity: 0; filter: blur(5px); transform: translateY(36px); } }
