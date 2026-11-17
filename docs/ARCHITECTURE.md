@@ -93,3 +93,14 @@ AIの本文案は最大140文字。定型文による勝利の補完は、元の
 JSONファイルの原子的置換＋単一プロセスのセッションロック。多worker・複数インスタンスへそのまま拡張しない。ブラウザ保存はセッション復帰の手掛かりや選択であり、物語の永続DBではない。
 
 辞書変更で既存セッションの `analysis` は自動再計算されない。新規開始・次の本文版で新規則が使われる。編集中・確定済み取引のUnit IDや選択範囲を勝手に変えない。分析規則の版管理・安全な移行は今後の課題。
+
+
+## ストーリー進行 S2＋S3（2026-11-18、ローカル実装）
+
+`backend/app/story_progress.py` がcommitted取引の集計と進行遷移を担当する。新規開始・旧セッションの初回GETで規定回数を保存し、`engine.commit_transaction` が到達スナップショットを確定する。保存層は既存JSONとセッションロックを維持する。
+
+`story_progress` の保存項目はrequired_rounds、phase、reached、extension_start、choices。公開時にtotalsとextension_roundsを導出し、forced中はrequired_roundsを伏せる。フェーズはforced→escapable→extension→ended（escapableから直接endedも可能）。
+
+`POST /api/sessions/{sid}/story-choice` は `{request_id, version, choice: "escape" | "continue"}` を受け取りセッションを返す。同一request_idは同じchoiceとversionなら再送可能。新規選択は最新のreadyな結果画面に限定。終了後・到達時選択前の新規取引およびcontinueを拒否する。
+
+`frontend/src/StoryProgress.tsx` が集計・到達選択・延長戦入口・エンディングを描画。確定台詞はscenario.tsに集約。両モードの共通結果経路に適用し、終了後は復帰IDを削除して再開対象から外す。

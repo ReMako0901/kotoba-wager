@@ -75,3 +75,5 @@ GitHub Repository variable `API_BASE_URL` がworkflowで `VITE_API_BASE_URL` に
 ## 外部サービスと素材
 
 既にGeminiキーとRender設定はある。引き継ぎ時にキーを再発行・再登録させる必要はない。新環境にキーがない場合だけ安全な環境変数を設定する。一般辞書のSudachiに加え、Wiktionaryの既存データから抽出した索引をバックエンドに同梱している。元の巨大なgzipや説明文は配信しない。再生成手順は [WORD_DICTIONARY.md](WORD_DICTIONARY.md)。
+
+S2＋S3追加設定：`STORY_ROUNDS_MIN`（既定5）、`STORY_ROUNDS_MAX`（既定8）。正の整数でMIN≦MAX。新規・旧未付与セッションの規定回数抽選に使用し、保存済み回数は変更しない。
