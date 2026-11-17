@@ -1,6 +1,7 @@
 :root {
   background: #fff;
   color: #241d1c;
+  --cell-size: 32px;
   --ink: #241d1c;
   --stamp: #9c2e32;
   --rule: #dec2c0;
@@ -40,8 +41,7 @@ body, .app-shell, .story-board, .modal { background: #fff; }
 .story-board {
   flex: 1 1 0;
   min-height: 0;
-  container-type: size;
-  overflow: hidden;
+  overflow: auto;
   border: 0;
   border-radius: 0;
   padding: 6px 0 10px;
@@ -52,13 +52,13 @@ body, .app-shell, .story-board, .modal { background: #fff; }
 .paper-scroll {
   direction: rtl;
   overflow-x: auto;
-  overflow-y: hidden;
+  overflow-y: auto;
+  max-height: 100%;
   scrollbar-width: thin;
 }
 .vertical-paper {
   position: relative;
-  --paper-rule: #9eb49f;
-  --cell-size: max(0px, min(clamp(29px, 8.2vw, 39px), calc((100cqh - 12px) / var(--paper-rows))));
+  --paper-rule: var(--rule);
   display: grid;
   grid-template-rows: repeat(var(--paper-rows), var(--cell-size));
   grid-auto-columns: var(--cell-size);

@@ -60,19 +60,7 @@ function Paper({text, units, selected, disabled, onToggle, marked, changes, dust
   changes?: ReturnType<typeof manuscriptChanges>;
 } & DustProps) {
   const paper = useRef<HTMLDivElement>(null);
-  const [rows, setRows] = useState(MAX_ROWS);
-  useLayoutEffect(() => {
-    const board = paper.current?.closest('.story-board');
-    if (!board) return;
-    function fit(height: number) {
-      setRows(Math.max(1, Math.min(MAX_ROWS, Math.floor((height - 12) / 22))));
-    }
-    const style = getComputedStyle(board);
-    fit(board.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom));
-    const observer = new ResizeObserver(([entry]) => fit(entry.contentRect.height));
-    observer.observe(board);
-    return () => observer.disconnect();
-  }, []);
+  const rows = MAX_ROWS;
   useLayoutEffect(() => {
     if (!changes?.size) return;
     const scroll = paper.current?.parentElement;

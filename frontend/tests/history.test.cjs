@@ -6,7 +6,18 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { mount, text } = require('./component-harness.cjs');
 const { storyVersions, changedCharacters } = require('../src/storyVersions.ts');
-const { StoryPaperStack, StoryHistory } = require('../src/StoryHistory.tsx');
+const { StoryPaperStack, StoryHistory, completesPaperTurn } = require('../src/StoryHistory.tsx');
+function swipe(ui, direction, x = -direction * 100, y = -direction * 80, cancel = false) {
+  const corner = ui.find(n => n.props?.className === `paper-corner corner-${direction === -1 ? 'older' : 'newer'}`);
+  assert.ok(corner);
+  const event = { isPrimary: true, button: 0, pointerId: 1, clientX: 0, clientY: 0,
+    currentTarget: { setPointerCapture() {} } };
+  corner.props.onPointerDown(event); ui.draw();
+  corner.props.onPointerMove({ ...event, clientX: x, clientY: y }); ui.draw();
+  const active = ui.find(n => n.props?.className === corner.props.className);
+  active.props[cancel ? 'onPointerCancel' : 'onPointerUp']({ ...event, clientX: x, clientY: y });
+  ui.draw(); ui.tick();
+}
 const tx = (source, before, after, outcome = 'win') => ({ id: `tx-${source}`, source_version: source,
   before, after, outcome, status: 'committed', stakes: ['鍵'], offer: { title: '新しい出会い' } });
 const session = transactions => ({ version: 3, text: '最新の本文。', transactions,
@@ -46,17 +57,15 @@ for (const outcome of ['win', 'loss']) test(`${outcome}: latest manuscript is on
   assert.equal(manuscript(), '最新の本文。');
   assert.equal(ui.find(n => n.props?.['data-paper-count']).props['data-paper-count'], 3);
   assert.equal(ui.all(n => n.props?.className === 'paper-underlay').length, 2);
-  assert.ok(ui.find(n => n.type === 'button' && text(n) === '次の原稿へ').props.disabled);
+  assert.equal(ui.all(n => n.props?.className === 'paper-corner corner-newer').length, 0);
   assert.equal(ui.all(n => n.props?.className === 'vertical-paper').length, 1);
   assert.ok(ui.find(n => n.props?.className?.includes('result-change')));
-  ui.click('前の原稿へ'); assert.equal(manuscript(), '中間。');
-  assert.match(ui.find(n => n.type === 'article').props.className, /page-back/);
+  swipe(ui, -1); assert.equal(manuscript(), '中間。');
   assert.equal(ui.all(n => n.props?.className?.includes('result-change')).length, 0);
-  ui.click('前の原稿へ'); assert.equal(manuscript(), '最初。');
-  assert.ok(ui.find(n => n.type === 'button' && text(n) === '前の原稿へ').props.disabled);
-  ui.click('次の原稿へ'); assert.equal(manuscript(), '中間。');
-  assert.match(ui.find(n => n.type === 'article').props.className, /page-forward/);
-  ui.click('次の原稿へ'); assert.equal(manuscript(), '最新の本文。');
+  swipe(ui, -1); assert.equal(manuscript(), '最初。');
+  assert.equal(ui.all(n => n.props?.className === 'paper-corner corner-older').length, 0);
+  swipe(ui, 1); assert.equal(manuscript(), '中間。');
+  swipe(ui, 1); assert.equal(manuscript(), '最新の本文。');
   assert.ok(text(ui.tree).includes('賭けた言葉：鍵')); assert.ok(text(ui.tree).includes('報酬：新しい出会い'));
   assert.ok(text(ui.tree).includes(outcome === 'win' ? '勝利' : '敗北'));
   assert.equal(JSON.stringify(s), snapshot);
@@ -65,10 +74,10 @@ test('history retains losses and generation stats, initial and legacy pages rema
   const s = { ...session([tx(1, '最初。', '中間。')]), lost_concepts: [{ label: '鍵の意味' }], api_calls: 3 };
   const ui = mount(StoryHistory, { session: s });
   assert.match(text(ui.tree), /鍵の意味/); assert.match(text(ui.tree), /生成 3回/);
-  ui.click('前の原稿へ'); assert.match(text(ui.tree), /最初。/);
+  swipe(ui, -1); assert.match(text(ui.tree), /最初。/);
   const initial = mount(StoryPaperStack, paperProps({ ...session([]), version: 1 }));
   assert.equal(initial.all(n => n.props?.className === 'paper-underlay').length, 0);
-  assert.equal(initial.all(n => n.type === 'button' && n.props.disabled).length, 2);
+  assert.equal(initial.all(n => n.props?.role === 'slider').length, 0);
 });
 test('result and history share manuscript stack and contain no comparison view', () => {
   const app = fs.readFileSync(path.resolve(__dirname, '../src/App.tsx'), 'utf8');
@@ -77,8 +86,41 @@ test('result and history share manuscript stack and contain no comparison view',
   assert.match(source, /<StoryPaperStack key=/);
   for (const value of [app, source]) assert.doesNotMatch(value, /StoryComparison|comparison-pair|変化前|変化後|最初と最新を比べる|dangerouslySetInnerHTML/);
   const ui = mount(StoryPaperStack, paperProps(session([tx(1, '<script>危険</script>', '自分の本文。')])));
-  assert.ok(!text(ui.tree).includes('危険')); ui.click('前の原稿へ');
+  assert.ok(!text(ui.tree).includes('危険')); swipe(ui, -1);
   assert.ok(text(ui.tree).includes('<script>危険</script>'));
   assert.equal(ui.all(n => n.type === 'script').length, 0);
   assert.equal(ui.all(n => n.props?.dangerouslySetInnerHTML).length, 0);
+});
+
+test('diagonal release threshold, wrong direction, cancellation and reduced motion', () => {
+  assert.equal(completesPaperTurn(-1, 64, 48), true);
+  for (const [x, y] of [[63, 48], [64, 47], [100, 0], [-100, -80]])
+    assert.equal(completesPaperTurn(-1, x, y), false);
+  assert.equal(completesPaperTurn(1, -64, -48), true);
+  for (const reduced of [false, true]) {
+    const ui = mount(StoryPaperStack, paperProps(session([tx(1, '最初。', '最新。')])), reduced);
+    swipe(ui, -1, 63, 80);
+    assert.match(text(ui.tree), /第2版/);
+    swipe(ui, -1, 100, 80, true);
+    assert.match(text(ui.tree), /第2版/);
+    const corner = ui.find(n => n.props?.className === 'paper-corner corner-older');
+    const e = { isPrimary: true, button: 0, pointerId: 4, clientX: 0, clientY: 0, currentTarget: { setPointerCapture() {} } };
+    corner.props.onPointerDown(e); ui.draw();
+    corner.props.onPointerMove({ ...e, clientX: 90, clientY: 70 }); ui.draw();
+    assert.ok(ui.find(n => n.props?.className === 'paper-preview'));
+    const article = ui.find(n => n.type === 'article');
+    assert.equal(Boolean(article.props.style?.transform), !reduced);
+    corner.props.onPointerUp({ ...e, clientX: 90, clientY: 70 }); ui.draw(); ui.tick();
+    assert.match(text(ui.tree), /第1版/);
+    assert.equal(ui.all(n => n.type === 'button' && /原稿へ/.test(text(n))).length, 0);
+  }
+});
+test('one fixed cell definition serves every manuscript state and skeleton', () => {
+  const dir = path.resolve(__dirname, '../src');
+  const css = fs.readdirSync(dir).filter(f => f.endsWith('.css')).map(f => fs.readFileSync(path.join(dir, f), 'utf8')).join('\n');
+  assert.deepEqual(css.match(/--cell-size\s*:[^;]+/g), ['--cell-size: 32px']);
+  assert.match(css, /grid-template-rows: repeat\(var\(--paper-rows\), var\(--cell-size\)\)/);
+  assert.doesNotMatch(css, /100cqh|transparent 0 23px/);
+  const paper = fs.readFileSync(path.join(dir, 'Manuscript.tsx'), 'utf8');
+  assert.doesNotMatch(paper, /setRows|ResizeObserver/);
 });

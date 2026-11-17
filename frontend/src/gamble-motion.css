@@ -52,7 +52,7 @@
 @keyframes near-pulse { 50% { transform: scale(1.045); opacity: .5; } }
 @keyframes result-spring { 0% { opacity: 0; transform: translateY(16px) scale(.96); } 65% { opacity: 1; transform: translateY(-3px) scale(1.015); } 100% { transform: none; } }
 .generation-skeleton { position: relative; display: flex; flex-direction: column; gap: var(--space-3); min-height: 120px; flex: 1; overflow: hidden; font: var(--type-caption)/1.8 var(--serif); }
-.skeleton-paper { flex: 1; min-height: 96px; border: 1px solid var(--motion-rule); background: repeating-linear-gradient(0deg, transparent 0 23px, var(--motion-rule) 23px 24px), repeating-linear-gradient(90deg, transparent 0 23px, var(--motion-rule) 23px 24px); opacity: .5; position: relative; overflow: hidden; }
+.skeleton-paper { flex: 1; min-height: 96px; border: 1px solid var(--motion-rule); background: repeating-linear-gradient(0deg, transparent 0 calc(var(--cell-size) - 1px), var(--motion-rule) calc(var(--cell-size) - 1px) var(--cell-size)), repeating-linear-gradient(90deg, transparent 0 calc(var(--cell-size) - 1px), var(--motion-rule) calc(var(--cell-size) - 1px) var(--cell-size)); opacity: .5; position: relative; overflow: hidden; }
 .skeleton-paper::after { content: ''; position: absolute; inset: 0; background: linear-gradient(100deg, transparent 20%, #fff 50%, transparent 80%); animation: paper-shimmer 1600ms linear infinite; }
 @keyframes paper-shimmer { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
 .result-story { position: relative; display: flex; flex: 1; min-height: 0; isolation: isolate; }
