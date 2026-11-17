@@ -41,23 +41,16 @@ type PlayProps = {
   gamble: Gamble; busy: boolean; error?: string; prepared: boolean; onFinish: () => void; onMove: (attempt: number, choice?: number) => void;
 };
 
-function Status({ error, prepared }: Pick<PlayProps, 'error' | 'prepared'>) {
-  return <p className="quiet" role="status">{error ? '文章を表示できませんでした。'
-    : prepared ? '物語の準備ができた。' : '物語も準備中…'}</p>;
-}
-
 function Finish({ gamble, busy, error, prepared, onFinish }: PlayProps) {
   return <>
-    {gamble.outcome === 'loss' && <p className="reading-hint">報酬は得られず、賭けた言葉の意味が消えます。</p>}
-    {gamble.kind === 'slot' && <p className="reading-hint">REGは大きく、BIGはさらに大きく物語が変わる当たりです。</p>}
     {gamble.kind === 'slot' && <div className="gamble-outcome"><b>{gamble.label}</b></div>}
     {!error && <GenerationSkeleton complete={prepared} />}
     <div className="gamble-actions">
       <button className={`primary${!prepared && !error ? ' loading-bet' : ''}`} aria-busy={!prepared && !error} disabled={busy || (!prepared && !error)} onClick={onFinish}>
         {!prepared && !error && <span className="spinner" aria-hidden="true" />}
-        {prepared || error ? '準備完了・この結果を物語へ' : '賭ける・物語を準備中…'} <span>→</span>
+        この結果を物語へ <span>→</span>
       </button>
-      <Status error={error} prepared={prepared} />
+
     </div>
   </>;
 }
@@ -91,7 +84,7 @@ function SlotPlay(props: PlayProps) {
         <button key={i} disabled={stop || props.busy}
           onClick={() => setStopped(current => current.map((value, index) => value || index === i))}>STOP {i + 1}</button>)}</div>
     </div>
-    {complete ? <Finish {...props} /> : <div className="gamble-actions"><button className="text-button" onClick={() => setStopped([true, true, true])}>演出をスキップ</button><Status {...props} /></div>}
+    {complete ? <Finish {...props} /> : <div className="gamble-actions"><button className="text-button" onClick={() => setStopped([true, true, true])}>演出をスキップ</button></div>}
   </section>;
 }
 
@@ -114,7 +107,7 @@ function BlackjackPlay(props: PlayProps) {
     {complete && <h1>{won ? '勝利' : '敗北'}</h1>}
     {!complete && <button className="text-button" onClick={() => { setHits(round.player.length - 2); setStood(true); setSkipped(true); }}>演出をスキップ</button>}
     <div className="card-table">
-      <CardHand cards={ended || skipped ? dealer : dealer.slice(0, 2)} label="ディーラー" isOpen={index => index === 0 || ended} blackjack />
+      <CardHand cards={ended || skipped ? dealer : dealer.slice(0, 2)} label="アノマ" isOpen={index => index === 0 || ended} blackjack />
       <CardHand cards={player} label="あなた / プレイヤー" isOpen={() => true} blackjack />
     </div>
     {complete ? <Finish {...props} /> : <div className="gamble-actions">
@@ -124,7 +117,7 @@ function BlackjackPlay(props: PlayProps) {
           {canHit ? 'STAND' : '結果を見る'}
         </button>}
       </div>}
-      <Status {...props} />
+
     </div>}
   </section>;
 }
@@ -164,8 +157,7 @@ function BaccaratRound({ round, nextRound, ...props }: PlayProps & { round: Card
     {complete && !tied && <Finish {...props} />}
     <div className="gamble-actions">
       {tied && <button className="primary" disabled={props.busy} onClick={nextRound}>同じことばでもう一度 <span>→</span></button>}
-      {!complete && !selected && <p className="reading-hint">裏向きのカードを選ぶ。</p>}
-      <Status {...props} />
+
     </div>
   </section>;
 }
@@ -191,6 +183,9 @@ function GameContent(props: PlayProps) {
 
 export function GamblePlay(props: PlayProps) {
   // Beginner games still require a real move. Never submit a choice while skipping.
-  if (!props.gamble.moves || !props.gamble.outcome) return <GameContent {...props} />;
-  return <GambleMotion gamble={props.gamble}><GameContent {...props} /></GambleMotion>;
+  return <>
+    {props.error && <p className="api-error" role="alert">{props.error}</p>}
+    {!props.gamble.moves || !props.gamble.outcome ? <GameContent {...props} />
+      : <GambleMotion gamble={props.gamble}><GameContent {...props} /></GambleMotion>}
+  </>;
 }

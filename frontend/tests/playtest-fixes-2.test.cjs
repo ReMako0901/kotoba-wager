@@ -32,7 +32,8 @@ test('title always contains subtitle and help; resume only after a session is av
   assert.ok(ui.find(n => n.props.className === 'story-title'));
   assert.equal(requests.filter(url => url.endsWith('/sessions/saved')).length, 2);
   ui.click('タイトルへ');
-  assert.match(text(ui.tree), /進行は残っています/);
+  assert.match(text(ui.tree), /つづきから/);
+  assert.doesNotMatch(text(ui.tree), /進行は残っています/);
   assert.match(text(ui.tree), /遊び方/);
 });
 test('long manuscripts use fixed rows, fixed cells, and place every glyph inside the grid', () => {
@@ -77,20 +78,23 @@ test('history uses plays and shares controlled page index; changes stay highligh
   assert.match(text(history.tree), /第2版/); assert.match(text(history.tree), /プレイ 1回/);
   assert.doesNotMatch(text(history.tree), /PRIVATE_MODEL|tokens|999|生成 \d回/);
 });
-test('generation uses the same paper while waiting and ready, with elapsed clue and completion', () => {
+test('generation uses the same paper and busy spinner while waiting and ready', () => {
   const ui = mount(GenerationSkeleton, {});
-  assert.match(text(ui.tree), /秒経過/);
+  assert.ok(ui.find(n => n.props.className === 'spinner'));
+  assert.equal(ui.find(n => n.props.className === 'generation-skeleton').props['aria-busy'], true);
   assert.ok(ui.find(n => n.props.className === 'skeleton-paper'));
   ui.draw({ complete: true });
-  assert.match(text(ui.tree), /準備完了/);
+  assert.equal(ui.all(n => n.props.className === 'spinner').length, 0);
   assert.equal(ui.find(n => n.props.className === 'generation-skeleton').props['aria-busy'], false);
   assert.ok(ui.find(n => n.props.className === 'skeleton-paper'));
 });
 test('round reset, help copy, history availability and fixed cell definition remain explicit', () => {
   const app = source('App.tsx');
   assert.match(app, /setGameTier\('beginner'\)/);
-  assert.match(app, /赤線の言葉をタップ/);
-  assert.match(app, /あと\{MIN_STORY - customCount\}文字/);
+  assert.doesNotMatch(app, /赤線の言葉をタップ/);
+  assert.match(app, /赤線の言葉を賭けてギャンブルへ/);
+  assert.doesNotMatch(app, /あと\{MIN_STORY - customCount\}文字/);
+  assert.match(app, /customCount < MIN_STORY \|\| customCount > MAX_STORY/);
   assert.doesNotMatch(app, /disabled=\{gambleMode\}|33％|％〜/);
   assert.match(app, /setPaperIndex\(session.transactions/);
   assert.match(source('manuscript.css'), /--cell-size: 32px/);
@@ -114,6 +118,7 @@ test('gamble tier resets to beginner after a new version and history opens durin
   ui.click('閉じる'); ui.click('タイトルへ');
   response = { ...response, version: 5, status: 'playing', transactions: [{ ...tx, status: 'playing', presentation_completed: false, gamble: { kind: 'rps', moves: [] } }] };
   ui.click('つづきから'); await flush(); ui.draw(); ui.draw();
-  assert.match(text(ui.tree), /賭けた言葉：猫/);
+  assert.doesNotMatch(text(ui.tree), /賭けた言葉：猫/);
+  assert.match(text(ui.tree), /じゃんけん/);
   ui.click('取引履歴'); assert.match(text(ui.tree), /物語の変遷/);
 });

@@ -18,7 +18,8 @@ test('reach has totals and explicit choices; busy prevents double actions', () =
   const choices = [];
   const props = { progress: progress('escapable'), busy: false, onChoice: c => choices.push(c) };
   const ui = stageMount(StoryDecision, props);
-  assert.ok(text(ui.tree).includes('規定回数に到達しました'));
+  assert.ok(ui.find(n => n.props?.className === 'story-counts'));
+  assert.equal(ui.all(n => n.type === 'h2').length, 0);
   for (const label of ['獲得数', '喪失数', '差分', '+1個']) assert.ok(text(ui.tree).includes(label));
   ui.click('さらに賭ける'); ui.click('脱出する');
   assert.deepEqual(choices, ['continue', 'escape']);
@@ -65,7 +66,7 @@ test('App resumes reach for both modes, records choice, then excludes the ending
     };
     const ui = mount(App, {}); await flush(); ui.draw(); ui.draw();
     ui.click('つづきから'); await flush(); ui.draw();
-    assert.ok(text(ui.tree).includes('規定回数に到達しました'), kind);
+    assert.ok(text(ui.tree).includes('さらに賭ける'), kind);
     assert.ok(!text(ui.tree).includes('次は何をねらう？'));
     ui.click('脱出する'); await flush(); ui.draw();
     assert.equal(choices[0].choice, 'escape');

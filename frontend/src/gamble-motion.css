@@ -20,12 +20,12 @@
 .modal { padding: var(--space-6) var(--space-4); }
 .modal h2 { font: 600 var(--type-heading)/1.5 var(--serif); }
 .game-option { font-size: var(--type-body); }
-.bet-label { display: flex; align-items: center; gap: var(--space-2); }
+
 .reward-options { gap: var(--space-3); }
 .reward-option { padding: var(--space-4) var(--space-3); }
 .reward-option small, .reading-hint, .gamble-actions .quiet { font-size: var(--type-caption); }
 .text-button, .changes summary, .banker-open { min-height: var(--tap-size); }
-.change-shape { border-left: 2px solid var(--stamp); padding-left: var(--space-2); }
+
 .reward-option { animation: reward-arrive 250ms ease-out both; }
 .reward-option:nth-child(2) { animation-delay: 60ms; }
 .reward-option:nth-child(3) { animation-delay: 120ms; }

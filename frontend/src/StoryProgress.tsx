@@ -18,7 +18,6 @@ export function StoryDecision({ progress, busy, onChoice }: {
   const lines = welcome ? extensionWelcome : normalEnding(progress.totals.difference);
   const expression = reached ? storyExpressions.escapable : welcome ? storyExpressions.extensionWelcome : expressionForEnding(progress.totals.difference);
   return <section className="story-decision" aria-label="脱出と継続">
-    <h2>{reached ? '規定回数に到達しました' : '延長戦'}</h2>
     <StoryCounts totals={progress.totals} />
     <StagePublisher lines={lines} expression={expression} />
     <button className="secondary" disabled={busy} onClick={() => onChoice('escape')}>脱出する</button>

@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const { mount, text } = require('./component-harness.cjs');
 const { GamblePlay } = require('../src/GamblePlay.tsx');
 const { GenerationSkeleton } = require('../src/GambleMotion.tsx');
-const { isNearMiss, changeShapes } = require('../src/gamblePresentation.ts');
+const { isNearMiss } = require('../src/gamblePresentation.ts');
 const card = rank => ({ rank, suit: '♠' });
 const round = outcome => ({ player: [card('4'), card('5'), card('2')], banker: [card('3'), card('6'), card('A')],
   dealer_hands: [[card('K'), card('8')], [card('K'), card('7')]], outcome, player_total: 1, banker_total: 0, difference: 1 });
@@ -19,7 +19,7 @@ function play(gamble, reduced = false) {
   return { ui: mount(GamblePlay, props, reduced), props, calls };
 }
 const hasFinish = ui => !!ui.find(n => n.type === 'button' && text(n).includes('この結果を物語へ'));
-for (const kind of Object.keys(changeShapes)) for (const reduced of [false, true]) test(`${kind}: no input never completes (reduced=${reduced})`, () => {
+for (const kind of ['rps', 'card_guess', 'dice', 'slot', 'blackjack', 'baccarat']) for (const reduced of [false, true]) test(`${kind}: no input never completes (reduced=${reduced})`, () => {
   const { ui, calls } = play(fixture(kind), reduced);
   for (let i = 0; i < 12; i++) ui.tick();
   assert.equal(hasFinish(ui), false);
@@ -104,6 +104,6 @@ test('factual near misses and busy generation remain', () => {
   assert.equal(isNearMiss({ kind: 'rps', outcome: 'loss' }), false);
   const { ui, props } = play(fixture('slot')); ui.click('演出をスキップ'); ui.draw({ ...props, prepared: false });
   assert.ok(ui.find(n => n.props?.className === 'generation-skeleton' && n.props['aria-busy'] === true));
-  assert.ok(ui.find(n => n.type === 'button' && n.props.disabled && text(n).includes('物語を準備中')));
+  assert.ok(ui.find(n => n.type === 'button' && n.props.disabled && text(n).includes('この結果を物語へ') && n.props['aria-busy']));
   assert.equal(mount(GenerationSkeleton, {}).find(n => n.props.className === 'generation-skeleton').props.role, 'status');
 });

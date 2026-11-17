@@ -1,11 +1,4 @@
-import type { Gamble, GameKind } from './types';
-
-// Display metadata only. Never use these values to resolve a transaction.
-export const changeShapes: Record<GameKind, string> = {
-  rps: '変化の形：ほどよい揺らぎ', card_guess: '変化の形：当たれば小さく、外れれば大きく',
-  dice: '変化の形：端の目で大きく揺れる', slot: '変化の形：図柄によって波がある',
-  blackjack: '変化の形：小さく着実に', baccarat: '変化の形：点差によって大きく揺れる',
-};
+import type { Gamble } from './types';
 
 export function isNearMiss(gamble: Gamble) {
   if (gamble.outcome !== 'loss') return false;

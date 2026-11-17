@@ -22,7 +22,7 @@ function RockPaperScissors({ gamble, busy, onMove }: Props) {
   return <>
     {latest && <div className="rps-result" aria-live="polite">
       <div><span>あなた</span><b aria-hidden="true">{handSymbols[latest.choice]}</b><span>{hands[latest.choice]}</span></div>
-      <div><span>相手</span><b aria-hidden="true">{handSymbols[latest.opponent]}</b><span>{hands[latest.opponent]}</span></div>
+      <div><span>アノマ</span><b aria-hidden="true">{handSymbols[latest.opponent]}</b><span>{hands[latest.opponent]}</span></div>
     </div>}
     {!gamble.outcome && <div className="rps-buttons">
       {hands.map((hand, index) => <button className="secondary" key={hand} type="button"
@@ -39,7 +39,6 @@ function Dice({ gamble, busy, onMove }: Props) {
     {move
       ? <output className="dice-face" aria-label={`${move.face}の目`}>{diceSymbols[move.face - 1]}</output>
       : <><span className="dice-face" aria-hidden="true">⚄</span>
-          <p className="reading-hint">4〜6で勝ち。</p>
           <button type="button" className="primary" disabled={busy} onClick={() => onMove(0)}>サイコロを振る</button></>}
   </div>;
 }
@@ -110,8 +109,6 @@ function CardGuess({ gamble, busy, onMove }: Props) {
   }, [...startingOrder]) : order;
 
   return <div className="card-guess">
-    <p className="reading-hint" aria-live="polite">{move ? (move.outcome === 'win' ? '当たり！' : '表になったカードが当たり。')
-      : phase === 'show' ? '表のカードを覚えてね。' : phase === 'shuffle' ? 'シャッフル中…' : '当たりのカードを選ぶ。'}</p>
     <div className="guess-board" ref={board}>
       {finalOrder.map((index, slot) => {
         const card = cards[index];
@@ -146,7 +143,6 @@ export function BeginnerPlay(props: Props) {
     : tied ? 'あいこ。もう一回！' : title;
   return <section className="gamble-screen beginner-game" aria-label={`${title}の進行`}>
     <h1 aria-live="polite">{heading}</h1>
-    {gamble.kind === 'rps' && <p className="reading-hint">あいこは同じ言葉と報酬で再戦します。</p>}
     {gamble.kind === 'rps' ? <RockPaperScissors {...props} /> : gamble.kind === 'dice' ? <Dice {...props} /> : <CardGuess {...props} />}
     {children}
   </section>;

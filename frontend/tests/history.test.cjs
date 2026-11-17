@@ -55,18 +55,20 @@ for (const outcome of ['win', 'loss']) test(`${outcome}: latest manuscript is on
   const ui = mount(StoryPaperStack, paperProps(s), true);
   const manuscript = () => text(ui.find(n => n.props?.className === 'sr-only'));
   assert.equal(manuscript(), '最新の本文。');
+  assert.equal(text(ui.find(n => n.props?.className === 'paper-turn-arrow')), '↖');
   assert.equal(ui.find(n => n.props?.['data-paper-count']).props['data-paper-count'], 3);
   assert.equal(ui.all(n => n.props?.className === 'paper-underlay').length, 2);
   assert.equal(ui.all(n => n.props?.className === 'paper-corner corner-newer').length, 0);
   assert.equal(ui.all(n => n.props?.className === 'vertical-paper').length, 1);
   assert.ok(ui.find(n => n.props?.className?.includes('result-change')));
   swipe(ui, -1); assert.equal(manuscript(), '中間。');
+  assert.deepEqual(ui.all(n => n.props?.className === 'paper-turn-arrow').map(text), ['↖', '↘']);
   assert.equal(ui.all(n => n.props?.className?.includes('result-change')).length, 0);
   swipe(ui, -1); assert.equal(manuscript(), '最初。');
   assert.equal(ui.all(n => n.props?.className === 'paper-corner corner-older').length, 0);
   swipe(ui, 1); assert.equal(manuscript(), '中間。');
   swipe(ui, 1); assert.equal(manuscript(), '最新の本文。');
-  assert.ok(text(ui.tree).includes('賭けた言葉：鍵')); assert.ok(text(ui.tree).includes('報酬：新しい出会い'));
+  assert.doesNotMatch(text(ui.tree), /賭けた言葉：|報酬：/);
   assert.ok(text(ui.tree).includes(outcome === 'win' ? '勝利' : '敗北'));
   assert.equal(JSON.stringify(s), snapshot);
 });
@@ -78,6 +80,7 @@ test('history retains losses and counts plays instead of generation stats, initi
   const initial = mount(StoryPaperStack, paperProps({ ...session([]), version: 1 }));
   assert.equal(initial.all(n => n.props?.className === 'paper-underlay').length, 0);
   assert.equal(initial.all(n => n.props?.role === 'slider').length, 0);
+  assert.equal(initial.all(n => n.props?.className === 'paper-turn-arrow').length, 0);
 });
 test('result and history share manuscript stack and contain no comparison view', () => {
   const app = fs.readFileSync(path.resolve(__dirname, '../src/App.tsx'), 'utf8');

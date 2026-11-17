@@ -5,7 +5,7 @@
 .manuscript-sheet{display:flex;flex-direction:column;flex:1;min-height:0;background:#fff;border:1px solid var(--rule);transform-origin:right center;animation:paper-arrive 400ms ease-out both}
 .paper-caption{padding:8px 12px;font-family:var(--serif);font-size:13px;border-bottom:1px solid var(--rule);flex-shrink:0}
 .paper-result{animation:result-spring var(--motion-spring) both}
-.version-metadata{font-family:inherit;font-size:10px;overflow-wrap:anywhere}
+
 .manuscript-sheet>.story-board{margin:4px 8px}
 .history-body .story-paper-stack{height:auto;min-height:0;margin-top:12px}
 .wager-paper-stack>.paper-stack{height:auto}
@@ -30,3 +30,9 @@
 
 /* Keep the fixed-height manuscript inside its sheet, including on short screens. */
 .story-paper-stack, .paper-stack, .manuscript-sheet { min-height: min-content; flex-shrink: 0; min-width: 0; }
+
+/* The older corner is rotated; counter-rotate the glyph to keep its direction. */
+.paper-turn-arrow{position:absolute;top:2px;left:3px;font-size:20px;line-height:1;pointer-events:none;color:var(--stamp);animation:paper-turn-hint 1.6s ease-in-out infinite}
+.corner-older .paper-turn-arrow{rotate:180deg;--hint-step:-3px}
+@keyframes paper-turn-hint{0%,100%{transform:translate(0,0)}50%{transform:translate(var(--hint-step,3px),var(--hint-step,3px))}}
+@media(prefers-reduced-motion:reduce){.paper-turn-arrow{animation:none}}
