@@ -1,3 +1,5 @@
+import { ScenePublisher } from './ScenePublisher';
+import { gameScene } from './sceneDialogue';
 import { AnomaStageProvider, AnomaStage, StagePublisher, resultReaction, Opening } from './Anoma';
 import { NormalEnding, StoryDecision } from './StoryProgress';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
@@ -173,6 +175,16 @@ function AppContent(){
       </>}
     </header>
     <AnomaStage />
+    {screen === 'title' && <ScenePublisher scene="title" />}
+    {screen === 'choose' && <ScenePublisher scene="storySelect" />}
+    {screen === 'game' && session && !ended && (!resultMode || !reaction) &&
+      !(resultMode && session.story_progress && ['escapable', 'extension'].includes(session.story_progress.phase)) &&
+      <ScenePublisher scene={gameScene({
+        rewardModal: !gambleMode && Boolean(ready && !resultMode && (choosingReward || !offer)),
+        gambleModal: !gambleMode && Boolean(ready && !resultMode && !choosingReward && stakesReady && choosingGame),
+        gambling: gambleMode, game: last?.gamble?.kind,
+        processing: Boolean(processing || busy || session.view === 'result'), selectedCount, stakesReady,
+      })} /> }
     {error && !customOpen && !choosingGame && <div className="alert" role="alert">{error}{screen === 'game' && session &&
       <button onClick={() => act(async () => accept(await api<Session>(`/sessions/${session.id}`)))}>状態を確認</button>}</div>}
     {screen === 'title' && <main className="title-screen">
@@ -212,7 +224,7 @@ function AppContent(){
     </main>}
     {screen === 'game' && session?.story_progress && ended && <NormalEnding progress={session.story_progress} onTitle={() => { setScreen('title'); setHistoryOpen(false); }} />}
     {screen==='game'&&session&&!ended&&<main key={`${session.id}-${session.version}-${session.view}`} className={`game-screen${session.version > 1 && session.view !== 'result' ? ' round-reveal' : ''}`}>
-      {gambleMode && last?.gamble ? <><StagePublisher expression="taunt" /><GamblePlay key={last.id} gamble={last.gamble} busy={busy} error={session.error} prepared={session.status === 'awaiting_reveal'}
+      {gambleMode && last?.gamble ? <><GamblePlay key={last.id} gamble={last.gamble} busy={busy} error={session.error} prepared={session.status === 'awaiting_reveal'}
         onMove={(attempt, choice) => act(async () => accept(await api<Session>(`/sessions/${session.id}/transactions/${last.id}/play`, { attempt, choice })))}
         onFinish={() => act(async () => accept(await api<Session>(`/sessions/${session.id}/transactions/${last.id}/finish`, {})))} /></> : <>
       <div className="game-heading"><div className="chapter-line"><span>第{round}章</span></div>
@@ -220,7 +232,7 @@ function AppContent(){
       {resultMode?<>
         {session.story_progress && ['escapable', 'extension'].includes(session.story_progress.phase)
           ? <StoryDecision progress={session.story_progress} busy={busy} onChoice={choice => void chooseStory(choice)} />
-          : <StagePublisher lines={reaction ? [reaction.line] : undefined} expression={reaction?.expression ?? 'normal'} reaction={reaction?.reaction} />}
+          : reaction ? <StagePublisher lines={[reaction.line]} expression={reaction.expression} reaction={reaction.reaction} /> : null}
         <StoryPaperStack key={highlight ? 'changes' : 'reading'} session={session} dust={dust} losses={losses} result pageIndex={paperIndex} onPageChange={setPaperIndex} highlight={highlight} />
         <details className="changes" onToggle={event => { if(event.currentTarget.open) { setPaperIndex(session.transactions.filter(t => t.status === 'committed').length); setHighlight(true); } else setHighlight(false); }}><summary>どこが変わった？</summary><p>{last.summary}</p><p className="quiet">ベット：{last.stakes.join(' / ')}{last.outcome==='loss'&&<> / 失った意味：{last.lost.map(c=>c.label).join('・')}</>}</p>{last.changes?.map((change,i)=><p key={i}>{change}</p>)}</details>
         {session.story_progress?.phase !== 'escapable' && <div className="bottom-actions"><button className="primary" disabled={busy} onClick={()=>act(async()=>{setSelected([]);setOfferId('');setChoosingReward(true);accept(await api<Session>(`/sessions/${session.id}/continue`,{}))})}>次は何をねらう？ <span>→</span></button></div>}
