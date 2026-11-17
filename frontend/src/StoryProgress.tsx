@@ -1,5 +1,5 @@
 import { AnomaFrame } from './Anoma';
-import { extensionWelcome, normalEnding } from './scenario';
+import { extensionWelcome, normalEnding, expressionForEnding, storyExpressions } from './scenario';
 import type { StoryProgress, StoryTotals } from './types';
 
 export function StoryCounts({ totals }: { totals: StoryTotals }) {
@@ -16,10 +16,11 @@ export function StoryDecision({ progress, busy, onChoice }: {
   const reached = progress.phase === 'escapable';
   const welcome = progress.phase === 'extension' && progress.totals.rounds === progress.extension_start;
   const lines = welcome ? extensionWelcome : normalEnding(progress.totals.difference);
+  const expression = reached ? storyExpressions.escapable : welcome ? storyExpressions.extensionWelcome : expressionForEnding(progress.totals.difference);
   return <section className="story-decision" aria-label="脱出と継続">
     <h2>{reached ? '規定回数に到達しました' : '延長戦'}</h2>
     <StoryCounts totals={progress.totals} />
-    {lines.map(line => <AnomaFrame key={line} line={line} />)}
+    {lines.map(line => <AnomaFrame key={line} line={line} expression={expression} />)}
     <button className="secondary" disabled={busy} onClick={() => onChoice('escape')}>脱出する</button>
     {reached && <button className="primary" disabled={busy} onClick={() => onChoice('continue')}>さらに賭ける</button>}
   </section>;
@@ -28,7 +29,7 @@ export function NormalEnding({ progress, onTitle }: { progress: StoryProgress; o
   return <main className="ending-screen">
     <h1>ノーマルエンディング</h1>
     <StoryCounts totals={progress.totals} />
-    {normalEnding(progress.totals.difference).map(line => <AnomaFrame key={line} line={line} />)}
+    {normalEnding(progress.totals.difference).map(line => <AnomaFrame key={line} line={line} expression={expressionForEnding(progress.totals.difference)} />)}
     <button className="primary" onClick={onTitle}>タイトルへ戻る</button>
   </main>;
 }

@@ -23,6 +23,14 @@ export const scenario = {
 };
 export type ReactionTrigger = Exclude<keyof typeof scenario, 'opening'>;
 export type ReactionKind = 'normal' | 'gain' | 'loss' | 'change';
+export type AnomaExpression = 'normal' | 'smile' | 'laugh' | 'taunt' | 'surprise' | 'perplexed' | 'displeased' | 'uncanny';
+export const expressionForTrigger: Record<ReactionTrigger, AnomaExpression> = {
+  gain: 'smile', winStreak: 'laugh', loss: 'taunt', lossStreak: 'perplexed', change: 'uncanny',
+};
+export const storyExpressions = { opening: 'normal', escapable: 'surprise', extensionWelcome: 'taunt' } as const;
+export function expressionForEnding(difference: number): AnomaExpression {
+  return difference > 0 ? 'smile' : difference < 0 ? 'displeased' : 'normal';
+}
 export const reactionKinds: Record<ReactionTrigger, ReactionKind> = {
   gain: 'gain', loss: 'loss', change: 'change', winStreak: 'gain', lossStreak: 'loss',
 };
