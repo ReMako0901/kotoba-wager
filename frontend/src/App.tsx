@@ -1,4 +1,5 @@
 import { AnomaResult, Opening } from './Anoma';
+import { NormalEnding, StoryDecision } from './StoryProgress';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { api } from './api';
 import type { Story, Session, GameKind, GameOption } from './types';
@@ -39,7 +40,8 @@ export default function App(){
     const id = localStorage.getItem(RESUME_KEY);
     if (!id) return;
     api<Session>(`/sessions/${encodeURIComponent(id)}`).then(s => {
-      if (s.betting_mode === 'count-v1') setSession(current => current ?? s);
+      if (s.betting_mode === 'count-v1' && s.story_progress?.phase !== 'ended') setSession(current => current ?? s);
+      else if (s.story_progress?.phase === 'ended') localStorage.removeItem(RESUME_KEY);
     }).catch(() => setError('つづきを確認できませんでした。再読み込みして再試行してください。'));
   }, []);
   const dust = usePaperDust(session?.id);
@@ -60,7 +62,7 @@ export default function App(){
   const [busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState('');
   const inFlight=useRef(false),action=useRef<{id: string; game: GameKind} | undefined>(undefined);
   useEffect(() => {api<{games: GameOption[]}>('/games').then(data => setGames(data.games)).catch(() => setError('ゲームの一覧を取得できません。再読み込みしてください。'))}, []);
-  function accept(s:Session){if(s.betting_mode!=='count-v1')throw new Error('個数方式へ更新中です。少し待ってからページを再読み込みしてください。');localStorage.setItem(RESUME_KEY,s.id);setSession(s);setScreen('game')}
+  function accept(s:Session){if(s.betting_mode!=='count-v1')throw new Error('個数方式へ更新中です。少し待ってからページを再読み込みしてください。');if(s.story_progress?.phase === 'ended')localStorage.removeItem(RESUME_KEY);else localStorage.setItem(RESUME_KEY,s.id);setSession(s);setScreen('game')}
   useEffect(()=>{
     if(!session)return;
     const saved=savedChoice(session);
@@ -127,6 +129,18 @@ export default function App(){
     });
   }
 
+  const storyChoice = useRef<{ id: string; sid: string; choice: 'escape' | 'continue'; version: number } | undefined>(undefined);
+  async function chooseStory(choice: 'escape' | 'continue') {
+    if (!session) return;
+    await act(async () => {
+      if (storyChoice.current?.sid !== session.id || storyChoice.current.choice !== choice || storyChoice.current.version !== session.version)
+        storyChoice.current = { id: requestId(), sid: session.id, choice, version: session.version };
+      accept(await api<Session>(`/sessions/${session.id}/story-choice`, {
+        request_id: storyChoice.current.id, choice, version: session.version,
+      }));
+    });
+  }
+  const ended = session?.story_progress?.phase === 'ended';
   function startCustom() {
     if (customCount < MIN_STORY || customCount > MAX_STORY) return;
     void act(async () => {
@@ -150,7 +164,7 @@ export default function App(){
       <h1><span>ギャンブル</span><span>ライティングメーカー</span><small>(仮称)</small></h1>
       <p className="intro">言葉を賭けて、物語を書き換える</p>
       <button className="secondary" onClick={() => setHelpOpen(true)}>遊び方</button>
-      {session && <><p className="quiet">進行は残っています。「つづきから」で再開できます。</p><button className="secondary" disabled={busy} onClick={() => act(async () => accept(await api<Session>(`/sessions/${session.id}`)))}>つづきから</button></>}
+      {session && !ended && <><p className="quiet">進行は残っています。「つづきから」で再開できます。</p><button className="secondary" disabled={busy} onClick={() => act(async () => accept(await api<Session>(`/sessions/${session.id}`)))}>つづきから</button></>}
       <button className="primary" disabled={busy} onClick={() => setScreen('opening')}>はじめる <span>→</span></button>
     </main>}
     {screen === 'opening' && <Opening busy={busy} onComplete={() => void reroll(true)} />}
@@ -184,7 +198,8 @@ export default function App(){
         </form>
       </Modal>}
     </main>}
-    {screen==='game'&&session&&<main key={`${session.id}-${session.version}-${session.view}`} className={`game-screen${session.version > 1 && session.view !== 'result' ? ' round-reveal' : ''}`}>
+    {screen === 'game' && session?.story_progress && ended && <NormalEnding progress={session.story_progress} onTitle={() => { setScreen('title'); setHistoryOpen(false); }} />}
+    {screen==='game'&&session&&!ended&&<main key={`${session.id}-${session.version}-${session.view}`} className={`game-screen${session.version > 1 && session.view !== 'result' ? ' round-reveal' : ''}`}>
       {gambleMode && last?.gamble ? <><p className="wager-context">賭けた言葉：{last.stakes.join(' / ')}<br />報酬：{last.offer.title}</p><GamblePlay key={last.id} gamble={last.gamble} busy={busy} error={session.error} prepared={session.status === 'awaiting_reveal'}
         onMove={(attempt, choice) => act(async () => accept(await api<Session>(`/sessions/${session.id}/transactions/${last.id}/play`, { attempt, choice })))}
         onFinish={() => act(async () => accept(await api<Session>(`/sessions/${session.id}/transactions/${last.id}/finish`, {})))} /></> : <>
@@ -192,10 +207,12 @@ export default function App(){
       <h1 className="story-title">{session.title}</h1>
       {session.intro && <p className="story-intro" aria-label="物語の導入">{session.intro}</p>}
       {resultMode?<>
-        <AnomaResult key={`${session.id}-${last.id}`} transactions={session.transactions} />
+        {session.story_progress && ['escapable', 'extension'].includes(session.story_progress.phase)
+          ? <StoryDecision progress={session.story_progress} busy={busy} onChoice={choice => void chooseStory(choice)} />
+          : <AnomaResult key={`${session.id}-${last.id}`} transactions={session.transactions} />}
         <StoryPaperStack key={highlight ? 'changes' : 'reading'} session={session} dust={dust} losses={losses} result pageIndex={paperIndex} onPageChange={setPaperIndex} highlight={highlight} />
         <details className="changes" onToggle={event => { if(event.currentTarget.open) { setPaperIndex(session.transactions.filter(t => t.status === 'committed').length); setHighlight(true); } else setHighlight(false); }}><summary>どこが変わった？</summary><p>{last.summary}</p><p className="quiet">ベット：{last.stakes.join(' / ')}{last.outcome==='loss'&&<> / 失った意味：{last.lost.map(c=>c.label).join('・')}</>}</p>{last.changes?.map((change,i)=><p key={i}>{change}</p>)}</details>
-        <div className="bottom-actions"><button className="primary" disabled={busy} onClick={()=>act(async()=>{setSelected([]);setOfferId('');setChoosingReward(true);accept(await api<Session>(`/sessions/${session.id}/continue`,{}))})}>次は何をねらう？ <span>→</span></button></div>
+        {session.story_progress?.phase !== 'escapable' && <div className="bottom-actions"><button className="primary" disabled={busy} onClick={()=>act(async()=>{setSelected([]);setOfferId('');setChoosingReward(true);accept(await api<Session>(`/sessions/${session.id}/continue`,{}))})}>次は何をねらう？ <span>→</span></button></div>}
       </>:<>
         <button className="reward-summary" disabled={!ready||busy} onClick={()=>{setChoosingGame(false);setChoosingReward(true)}}><span><small>今回ねらうもの</small><b>{offer?.title||'報酬を選ぼう'}</b></span><span>{offer?`${offer.required_count}個`:`${session.offers.length}つから`} <small>変更 ↗</small></span></button>
         {ready && <p className="reading-hint">赤線の言葉をタップして賭ける。</p>}

@@ -42,3 +42,17 @@ export function reactionTrigger(transactions: readonly Transaction[]): ReactionT
   if (committed.at(-2)?.outcome === current.outcome) return current.outcome === 'win' ? 'winStreak' : 'lossStreak';
   return current.outcome === 'win' ? 'gain' : 'loss';
 }
+
+
+export const extensionWelcome = [
+  '帰れるのに、まだ遊ぶの？',
+  'ふふっ。いいわよ。私はいつまでも付き合ってあげる。',
+];
+export const normalEndings = {
+  positive: ['今回は言葉がたくさん増えたじゃない。', 'よかったわね。', 'また遊びにいらっしゃい。'],
+  negative: ['今回は少し減っちゃったわね。', 'でも、これしか減らなかったんだからよかったじゃない。', 'また次に増やせばいいのよ。'],
+  zero: ['増えた数と減った数が同じね。', 'つまり、何も変わらなかったってことじゃない。', 'ふふっ。次はもう少し頑張ってみたら？'],
+};
+export function normalEnding(difference: number): readonly string[] {
+  return normalEndings[difference > 0 ? 'positive' : difference < 0 ? 'negative' : 'zero'];
+}
