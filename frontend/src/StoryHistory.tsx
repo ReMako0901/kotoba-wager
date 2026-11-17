@@ -18,16 +18,18 @@ export function PaperLayers({ count, children }: { count: number; children: Reac
   </div>;
 }
 
-export function StoryPaperStack({ session, dust, losses, result = false }: { session: Session; result?: boolean } & DustProps) {
+export function StoryPaperStack({ session, dust, losses, result = false, pageIndex, onPageChange, highlight = false }: { session: Session; result?: boolean; pageIndex?: number; onPageChange?: (index: number) => void; highlight?: boolean } & DustProps) {
   const versions = storyVersions(session);
-  const [index, setIndex] = useState(versions.length - 1);
+  const [localIndex, setLocalIndex] = useState(versions.length - 1);
+  const index = Math.min(pageIndex ?? localIndex, versions.length - 1);
+  function setIndex(next: number) { setLocalIndex(next); onPageChange?.(next); }
   const [drag, setDrag] = useState<{ direction: number; x: number; y: number; phase: 'drag' | 'finish' | 'return' } | null>(null);
   const pointer = useRef<{ id: number; x: number; y: number; direction: number } | null>(null);
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   useEffect(() => {
     if (!drag || drag.phase === 'drag') return;
     const timer = window.setTimeout(() => {
-      if (drag.phase === 'finish') setIndex(i => i + drag.direction);
+      if (drag.phase === 'finish') setIndex(index + drag.direction);
       setDrag(null);
     }, reduced ? 150 : 240);
     return () => window.clearTimeout(timer);
@@ -74,7 +76,7 @@ export function StoryPaperStack({ session, dust, losses, result = false }: { ses
         <div className="story-board"><Manuscript text={preview.text} dust={{ grains: new Map() }} losses={[]} /></div>
       </div>}
       <article key={current.version} style={movingStyle}
-        className={`manuscript-sheet${drag ? ` paper-${drag.phase}` : ''}${reduced && drag?.phase === 'finish' ? ' paper-fade' : ''}`}
+        className={`manuscript-sheet${highlight && latest ? ' show-changes' : ''}${drag ? ` paper-${drag.phase}` : ''}${reduced && drag?.phase === 'finish' ? ' paper-fade' : ''}`}
         aria-label={`第${current.version}版の原稿`}>
         {[-1, 1].filter(direction => index + direction >= 0 && index + direction < versions.length).map(direction =>
           <div key={direction} className={`paper-corner corner-${direction === -1 ? 'older' : 'newer'}`}
@@ -94,7 +96,7 @@ export function StoryPaperStack({ session, dust, losses, result = false }: { ses
           {transaction && <p className="version-metadata">賭けた言葉：{transaction.stakes.join(' / ')}<br />報酬：{transaction.offer.title}</p>}
         </header>
         <div className="story-board">
-          {result && latest && transaction?.outcome === 'loss'
+          {result && latest && !highlight && transaction?.outcome === 'loss'
             ? <LossManuscript transaction={transaction} text={current.text} dust={dust} losses={pageLosses} />
             : <Manuscript text={current.text} before={latest ? transaction?.before : undefined} dust={dust} losses={pageLosses} />}
         </div>
@@ -103,13 +105,13 @@ export function StoryPaperStack({ session, dust, losses, result = false }: { ses
   </section>;
 }
 
-export function StoryHistory({ session }: { session: Session }) {
+export function StoryHistory({ session, pageIndex, onPageChange }: { session: Session; pageIndex?: number; onPageChange?: (index: number) => void }) {
   const [dust] = useState(() => ({ grains: new Map() }));
   return <div className="history-body">
-    <StoryPaperStack key={`${session.id}-${session.version}`} session={session} dust={dust}
+    <StoryPaperStack key={`${session.id}-${session.version}`} session={session} dust={dust} pageIndex={pageIndex} onPageChange={onPageChange}
       losses={session.transactions.filter(tx => tx.status === 'committed' && tx.outcome === 'loss')} />
     {session.transactions.some(tx => tx.status !== 'committed') && <p className="quiet">反映待ちの取引は、本文の確定後に原稿の束へ追加されます。</p>}
     <h3>失われた設定</h3><p>{session.lost_concepts.map(c => c.label).join('・') || 'まだなし'}</p>
-    <p className="quiet">生成 {session.api_calls}回 / {session.model}<br />入力 {session.usage.input}・出力 {session.usage.output} tokens</p>
+    <p className="quiet">プレイ {session.transactions.filter(tx => tx.status === 'committed').length}回</p>
   </div>;
 }

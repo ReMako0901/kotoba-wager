@@ -30,7 +30,7 @@ Module._load = function(name, parent, main) {
 };
 require.extensions['.css'] = () => {};
 for (const ext of ['.ts', '.tsx']) require.extensions[ext] = (module, filename) => {
-  const source = fs.readFileSync(filename, 'utf8').replaceAll('import.meta.env.BASE_URL', '"/"');
+  const source = fs.readFileSync(filename, 'utf8').replaceAll('import.meta.env.BASE_URL', '"/"').replaceAll('import.meta.env.VITE_API_BASE_URL', '""');
   module._compile(ts.transpileModule(source, { compilerOptions: {
     module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, target: ts.ScriptTarget.ES2022,
   }, fileName: filename }).outputText, filename);
@@ -47,6 +47,9 @@ function text(node) {
 function mount(Component, initialProps, reduced = false) {
   const instances = new Map(), timers = new Map(); let serial = 0, props = initialProps, tree;
   global.window = { matchMedia: () => ({ matches: reduced, addEventListener() {}, removeEventListener() {} }),
+    scrollTo() {},
+    setInterval(fn) { const id = ++serial; const repeat = () => { fn(); timers.set(id, repeat); }; timers.set(id, repeat); return id; },
+    clearInterval(id) { timers.delete(id); },
     setTimeout(fn) { timers.set(++serial, fn); return serial; }, clearTimeout(id) { timers.delete(id); } };
   global.requestAnimationFrame = fn => window.setTimeout(fn, 16);
   global.cancelAnimationFrame = id => window.clearTimeout(id);
@@ -58,6 +61,7 @@ function mount(Component, initialProps, reduced = false) {
       active = { state: instances.get(identity), cursor: 0, effects };
       return expand(node.type(node.props), identity, effects);
     }
+    if (node.type === 'dialog' && node.props.ref) node.props.ref.current = { showModal() {}, close() {} };
     // Only the shuffle needs a measured board. Leave canvas/layout refs unmounted.
     if (node.props?.className === 'guess-board' && node.props.ref) node.props.ref.current = { clientWidth: 300 };
     return { ...node, props: { ...node.props, children: [node.props?.children].flat(Infinity).map((child, i) => expand(child, `${key}/${i}`, effects)) } };

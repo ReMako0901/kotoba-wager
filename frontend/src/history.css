@@ -25,3 +25,5 @@
 .paper-corner:focus-visible{outline:2px solid var(--stamp)}
 .paper-fade{opacity:0;transition:opacity 150ms}
 @media(prefers-reduced-motion:reduce){.paper-drag,.paper-finish,.paper-return{transform:none!important;transition:opacity 150ms}.manuscript-sheet{animation:ink-fade 150ms}}
+.paper-corner { width: 56px; height: 56px; background: linear-gradient(135deg,#dec2c0 0 28%,#9c2e3277 29% 32%,transparent 33%); filter: drop-shadow(2px 2px 2px #241d1c44); }
+.paper-navigation { font-size: 13px; line-height: 1.6; }

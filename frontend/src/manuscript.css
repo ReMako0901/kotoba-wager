@@ -88,15 +88,15 @@ body, .app-shell, .story-board, .modal { background: #fff; }
 .result-change.cut-before { animation-name: result-cut-before; }
 .result-change.cut-after { animation-name: result-cut-after; }
 @keyframes result-rewrite {
-  0%, 28% { background-color: #f4e3a4; }
+  0%, 28% { background-color: #fff; box-shadow: inset -2px 0 var(--stamp); }
   100% { background-color: transparent; }
 }
 @keyframes result-cut-before {
-  0%, 28% { box-shadow: 0 -2px #9e762d; }
+  0%, 28% { box-shadow: 0 -2px var(--stamp); }
   100% { box-shadow: 0 -2px transparent; }
 }
 @keyframes result-cut-after {
-  0%, 28% { box-shadow: 0 2px #9e762d; }
+  0%, 28% { box-shadow: 0 2px var(--stamp); }
   100% { box-shadow: 0 2px transparent; }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -169,3 +169,17 @@ body, .app-shell, .story-board, .modal { background: #fff; }
   .result-banner:not(.result-win) strong { font-size: 18px; }
   .changes { max-height: 58px; }
 }
+
+/* Fixed cells; the manuscript height follows its text and scrolls inside the sheet. */
+.paper-scroll { flex-shrink: 0; }
+.vertical-paper { box-sizing: content-box; }
+.vertical-word::after { width: 2px; background: var(--stamp); }
+.vertical-word[aria-pressed=true] .ink-cell { color: #fff; background: var(--ink); }
+.vertical-word[aria-pressed=true]::after { width: 3px; background: var(--stamp); }
+.navigation-bar .icon-button { width: auto; font-size: 14px; }
+.wager-context { flex-shrink: 0; padding: 8px 0; border-bottom: 1px solid var(--stamp); font: 14px/1.7 var(--serif); }
+.story-card .story-intro, .story-card p { display: block; max-height: none; overflow: visible; }
+.show-changes .result-change.rewritten { animation: none; background: #fff; color: var(--ink); font-weight: 800; box-shadow: inset -2px 0 var(--stamp); }
+.show-changes .result-change.cut-before { animation: none; box-shadow: 0 -2px var(--stamp); }
+.show-changes .result-change.cut-after { animation: none; box-shadow: 0 2px var(--stamp); }
+.trade-dock .selection-incomplete { padding: 12px; min-height: 52px; text-align: center; font-size: 14px; }

@@ -48,12 +48,14 @@ function Status({ error, prepared }: Pick<PlayProps, 'error' | 'prepared'>) {
 
 function Finish({ gamble, busy, error, prepared, onFinish }: PlayProps) {
   return <>
+    {gamble.outcome === 'loss' && <p className="reading-hint">報酬は得られず、賭けた言葉の意味が消えます。</p>}
+    {gamble.kind === 'slot' && <p className="reading-hint">REGは大きく、BIGはさらに大きく物語が変わる当たりです。</p>}
     {gamble.kind === 'slot' && <div className="gamble-outcome"><b>{gamble.label}</b></div>}
-    {!prepared && !error && <GenerationSkeleton />}
+    {!error && <GenerationSkeleton complete={prepared} />}
     <div className="gamble-actions">
       <button className={`primary${!prepared && !error ? ' loading-bet' : ''}`} aria-busy={!prepared && !error} disabled={busy || (!prepared && !error)} onClick={onFinish}>
         {!prepared && !error && <span className="spinner" aria-hidden="true" />}
-        {prepared || error ? 'この結果を物語へ' : '賭ける・物語を準備中…'} <span>→</span>
+        {prepared || error ? '準備完了・この結果を物語へ' : '賭ける・物語を準備中…'} <span>→</span>
       </button>
       <Status error={error} prepared={prepared} />
     </div>

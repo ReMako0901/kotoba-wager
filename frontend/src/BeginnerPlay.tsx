@@ -146,6 +146,7 @@ export function BeginnerPlay(props: Props) {
     : tied ? 'あいこ。もう一回！' : title;
   return <section className="gamble-screen beginner-game" aria-label={`${title}の進行`}>
     <h1 aria-live="polite">{heading}</h1>
+    {gamble.kind === 'rps' && <p className="reading-hint">あいこは同じ言葉と報酬で再戦します。</p>}
     {gamble.kind === 'rps' ? <RockPaperScissors {...props} /> : gamble.kind === 'dice' ? <Dice {...props} /> : <CardGuess {...props} />}
     {children}
   </section>;

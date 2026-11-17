@@ -5,7 +5,10 @@ import { addPaperDust, PaperDust, sampleDustSize } from './PaperDust';
 import type { Dust, DustProps } from './PaperDust';
 import { manuscriptChanges } from './manuscriptChanges';
 
-const MAX_ROWS = 9;
+export function manuscriptRows(text: string, units: Unit[] = []) {
+  return Math.max(2, Math.ceil(Array.from(text).length / 8) + text.split('\n').length,
+    ...units.filter(unit => unit.stakeable).map(unit => Array.from(unit.text).length + 1));
+}
 const noColumnStart = /^[、。，．！？!?：；・…‥ー〜～々〻ゝゞヽヾぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮヵヶ」』）〕］｝〉》】〗〙〛’”)]/u;
 const punctuation = /^[、。，．]$/u;
 const closingQuote = /^[」』]$/u;
@@ -13,7 +16,7 @@ const smallKana = /^[ぁぃぅぇぉっゃゅょゎァィゥェォッャュョ�
 const noColumnEnd = /^[「『（〔［｛〈《【〖〘〚‘“(]/u;
 const dialogueStart = /^[「『]/u;
 
-function paperPositions(text: string, rows: number, runStarts: Set<number>) {
+function paperPositions(text: string, rows: number, runStarts: Set<number>, atomic: Map<number, number>) {
   const positions = new Map<number, number>();
   let offset = 0;
   let column = 0;
@@ -24,11 +27,19 @@ function paperPositions(text: string, rows: number, runStarts: Set<number>) {
       let start = first;
       let row = dialogueStart.test(glyphs[first]) ? 0 : 1;
       while (start < glyphs.length) {
-        const full = Math.min(start + rows - row, glyphs.length);
+        let full = Math.min(start + rows - row, glyphs.length);
+        for (const [from, to] of atomic) {
+          const localFrom = from - offset, localTo = to - offset;
+          if (localFrom >= start && localFrom < full && localTo > full) {
+            full = localFrom;
+            break;
+          }
+        }
+        if (full === start) { column++; row = 0; continue; }
         const next = glyphs[full] ?? '';
-        const canTuck = punctuation.test(next) || (smallKana.test(next) && !runStarts.has(offset + full));
+        const canTuck = !atomic.has(offset + full) && (punctuation.test(next) || (smallKana.test(next) && !runStarts.has(offset + full)));
         const tuckedMarks = punctuation.test(next) && closingQuote.test(glyphs[full + 1] ?? '') ? 2 : 1;
-        const tucked = full > start && canTuck && !noColumnEnd.test(glyphs[full - 1]) &&
+        let tucked = full > start && canTuck && !noColumnEnd.test(glyphs[full - 1]) &&
           !noColumnStart.test(glyphs[full + tuckedMarks] ?? '') ? tuckedMarks : 0;
         let end = full;
         if (!tucked) {
@@ -36,6 +47,10 @@ function paperPositions(text: string, rows: number, runStarts: Set<number>) {
             (noColumnStart.test(glyphs[end]) || noColumnEnd.test(glyphs[end - 1]))) end--;
           if (end === start) end = full;
         }
+        for (const [from, to] of atomic) {
+          if (from - offset >= start && from - offset < end && to - offset > end) { end = from - offset; tucked = 0; }
+        }
+        if (end === start) { column++; row = 0; continue; }
         for (let i = start; i < end; i++) positions.set(offset + i, column * rows + row + i - start);
         for (let i = 0; i < tucked; i++) positions.set(offset + end + i, column * rows + rows - 1);
         start = end + tucked;
@@ -60,7 +75,7 @@ function Paper({text, units, selected, disabled, onToggle, marked, changes, dust
   changes?: ReturnType<typeof manuscriptChanges>;
 } & DustProps) {
   const paper = useRef<HTMLDivElement>(null);
-  const rows = MAX_ROWS;
+  const rows = manuscriptRows(text, units);
   useLayoutEffect(() => {
     if (!changes?.size) return;
     const scroll = paper.current?.parentElement;
@@ -81,11 +96,13 @@ function Paper({text, units, selected, disabled, onToggle, marked, changes, dust
   const allGlyphs = Array.from(text);
   const runStarts = new Set<number>();
   let runOffset = 0;
+  const atomic = new Map<number, number>();
   for (const run of runs) {
     runStarts.add(runOffset);
+    if (run.stakeable) atomic.set(runOffset, runOffset + Array.from(run.text).length);
     runOffset += Array.from(run.text).length;
   }
-  const { positions, columns } = paperPositions(text, rows, runStarts);
+  const { positions, columns } = paperPositions(text, rows, runStarts, atomic);
   const occupied = new Set<number>();
   let offset = 0;
   for (const run of runs) {

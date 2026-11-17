@@ -103,7 +103,7 @@ test('factual near misses and busy generation remain', () => {
   assert.equal(isNearMiss({ kind: 'dice', outcome: 'loss', moves: [{ face: 3 }] }), true);
   assert.equal(isNearMiss({ kind: 'rps', outcome: 'loss' }), false);
   const { ui, props } = play(fixture('slot')); ui.click('演出をスキップ'); ui.draw({ ...props, prepared: false });
-  assert.ok(ui.find(n => n.props?.className === 'generation-skeleton' && n.props['aria-busy'] === 'true'));
+  assert.ok(ui.find(n => n.props?.className === 'generation-skeleton' && n.props['aria-busy'] === true));
   assert.ok(ui.find(n => n.type === 'button' && n.props.disabled && text(n).includes('物語を準備中')));
-  assert.equal(GenerationSkeleton().props.role, 'status');
+  assert.equal(mount(GenerationSkeleton, {}).find(n => n.props.className === 'generation-skeleton').props.role, 'status');
 });

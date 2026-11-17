@@ -73,3 +73,10 @@
   .round-reveal::after, .loss-to-paper::after, .skeleton-paper::after { display: none; }
   .loss-ink { display: none; }
 }
+@keyframes ink-fade { from { opacity: .85; } to { opacity: 1; } }
+@keyframes result-spring { from { opacity: .85; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+.story-board > :not(.generation-skeleton) { animation-duration: 150ms; }
+.slot-stops button { min-height: 56px; font-size: 16px; border: 1px solid var(--stamp); }
+.slot-machine + .gamble-actions { flex: 0 0 auto; margin-top: 0; }
+.generation-skeleton[aria-busy=false] .skeleton-paper::after { animation: none; display: none; }
+.generation-skeleton[aria-busy=false] { color: var(--stamp); font-weight: 700; }

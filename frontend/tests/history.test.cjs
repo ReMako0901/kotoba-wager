@@ -70,10 +70,10 @@ for (const outcome of ['win', 'loss']) test(`${outcome}: latest manuscript is on
   assert.ok(text(ui.tree).includes(outcome === 'win' ? '勝利' : '敗北'));
   assert.equal(JSON.stringify(s), snapshot);
 });
-test('history retains losses and generation stats, initial and legacy pages remain readable', () => {
+test('history retains losses and counts plays instead of generation stats, initial and legacy pages remain readable', () => {
   const s = { ...session([tx(1, '最初。', '中間。')]), lost_concepts: [{ label: '鍵の意味' }], api_calls: 3 };
   const ui = mount(StoryHistory, { session: s });
-  assert.match(text(ui.tree), /鍵の意味/); assert.match(text(ui.tree), /生成 3回/);
+  assert.match(text(ui.tree), /鍵の意味/); assert.match(text(ui.tree), /プレイ 1回/);
   swipe(ui, -1); assert.match(text(ui.tree), /最初。/);
   const initial = mount(StoryPaperStack, paperProps({ ...session([]), version: 1 }));
   assert.equal(initial.all(n => n.props?.className === 'paper-underlay').length, 0);
@@ -82,7 +82,7 @@ test('history retains losses and generation stats, initial and legacy pages rema
 test('result and history share manuscript stack and contain no comparison view', () => {
   const app = fs.readFileSync(path.resolve(__dirname, '../src/App.tsx'), 'utf8');
   const source = fs.readFileSync(path.resolve(__dirname, '../src/StoryHistory.tsx'), 'utf8');
-  assert.match(app, /<StoryPaperStack session=\{session\} dust=\{dust\} losses=\{losses\} result/);
+  assert.match(app, /<StoryPaperStack key=\{highlight[^\n]+session=\{session\} dust=\{dust\} losses=\{losses\} result/);
   assert.match(source, /<StoryPaperStack key=/);
   for (const value of [app, source]) assert.doesNotMatch(value, /StoryComparison|comparison-pair|変化前|変化後|最初と最新を比べる|dangerouslySetInnerHTML/);
   const ui = mount(StoryPaperStack, paperProps(session([tx(1, '<script>危険</script>', '自分の本文。')])));
