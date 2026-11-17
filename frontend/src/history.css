@@ -20,8 +20,8 @@
 .paper-drag{transition:none;will-change:transform;box-shadow:0 8px 24px #241d1c22}
 .paper-finish,.paper-return{transition:transform 240ms ease-out}
 .paper-corner{position:absolute;width:48px;height:48px;z-index:3;touch-action:none;cursor:grab;background:linear-gradient(135deg,#f4e5e4 0 30%,transparent 31%);}
-.corner-older{top:0;left:0}
-.corner-newer{bottom:0;right:0;rotate:180deg}
+.corner-older{bottom:0;right:0;rotate:180deg}
+.corner-newer{top:0;left:0}
 .paper-corner:focus-visible{outline:2px solid var(--stamp)}
 .paper-fade{opacity:0;transition:opacity 150ms}
 @media(prefers-reduced-motion:reduce){.paper-drag,.paper-finish,.paper-return{transform:none!important;transition:opacity 150ms}.manuscript-sheet{animation:ink-fade 150ms}}

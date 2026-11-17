@@ -6,7 +6,7 @@ import { storyVersions } from './storyVersions';
 
 // Both diagonal components must cross the threshold; horizontal reading never turns a page.
 export function completesPaperTurn(direction: number, x: number, y: number) {
-  return -direction * x >= 64 && -direction * y >= 48;
+  return direction * x >= 64 && direction * y >= 48;
 }
 
 // Blank sheets show the accumulated rounds; only the current sheet contains text.
@@ -49,8 +49,8 @@ export function StoryPaperStack({ session, dust, losses, result = false }: { ses
     const x = event.clientX - origin.x, y = event.clientY - origin.y;
     const complete = !cancelled && completesPaperTurn(origin.direction, x, y);
     pointer.current = null;
-    setDrag({ direction: origin.direction, x: complete ? -origin.direction * 400 : 0,
-      y: complete ? -origin.direction * 240 : 0, phase: complete ? 'finish' : 'return' });
+    setDrag({ direction: origin.direction, x: complete ? origin.direction * 400 : 0,
+      y: complete ? origin.direction * 240 : 0, phase: complete ? 'finish' : 'return' });
   }
   const current = versions[index];
   const latest = index === versions.length - 1;
@@ -63,7 +63,7 @@ export function StoryPaperStack({ session, dust, losses, result = false }: { ses
   return <section className="story-paper-stack" aria-label="原稿の束">
     <div className="paper-navigation">
       <span aria-live="polite">第{current.version}版 / {versions.length}枚</span>
-      <span>左上を右下へ：前の版 · 右下を左上へ：次の版</span>
+      <span>右下を左上へ：前の版 · 左上を右下へ：次の版</span>
     </div>
     <PaperLayers count={versions.length}>
       {preview && <div className="paper-preview" aria-hidden="true" inert>
@@ -78,12 +78,12 @@ export function StoryPaperStack({ session, dust, losses, result = false }: { ses
         aria-label={`第${current.version}版の原稿`}>
         {[-1, 1].filter(direction => index + direction >= 0 && index + direction < versions.length).map(direction =>
           <div key={direction} className={`paper-corner corner-${direction === -1 ? 'older' : 'newer'}`}
-            role="slider" tabIndex={0} aria-label={direction === -1 ? '左上の角を右下へドラッグして前の版へ' : '右下の角を左上へドラッグして次の版へ'}
+            role="slider" tabIndex={0} aria-label={direction === -1 ? '右下の角を左上へドラッグして前の版へ' : '左上の角を右下へドラッグして次の版へ'}
             aria-valuemin={1} aria-valuemax={versions.length} aria-valuenow={current.version}
             onKeyDown={event => {
               if (!drag && (event.key === 'Enter' || event.key === ' ')) {
                 event.preventDefault();
-                setDrag({ direction, x: -direction * 400, y: -direction * 240, phase: 'finish' });
+                setDrag({ direction, x: direction * 400, y: direction * 240, phase: 'finish' });
               }
             }}
             onPointerDown={event => start(event, direction)} onPointerMove={move}

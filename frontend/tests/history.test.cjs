@@ -7,7 +7,7 @@ const assert = require('node:assert/strict');
 const { mount, text } = require('./component-harness.cjs');
 const { storyVersions, changedCharacters } = require('../src/storyVersions.ts');
 const { StoryPaperStack, StoryHistory, completesPaperTurn } = require('../src/StoryHistory.tsx');
-function swipe(ui, direction, x = -direction * 100, y = -direction * 80, cancel = false) {
+function swipe(ui, direction, x = direction * 100, y = direction * 80, cancel = false) {
   const corner = ui.find(n => n.props?.className === `paper-corner corner-${direction === -1 ? 'older' : 'newer'}`);
   assert.ok(corner);
   const event = { isPrimary: true, button: 0, pointerId: 1, clientX: 0, clientY: 0,
@@ -93,24 +93,24 @@ test('result and history share manuscript stack and contain no comparison view',
 });
 
 test('diagonal release threshold, wrong direction, cancellation and reduced motion', () => {
-  assert.equal(completesPaperTurn(-1, 64, 48), true);
-  for (const [x, y] of [[63, 48], [64, 47], [100, 0], [-100, -80]])
+  assert.equal(completesPaperTurn(-1, -64, -48), true);
+  for (const [x, y] of [[-63, -48], [-64, -47], [-100, 0], [100, 80]])
     assert.equal(completesPaperTurn(-1, x, y), false);
-  assert.equal(completesPaperTurn(1, -64, -48), true);
+  assert.equal(completesPaperTurn(1, 64, 48), true);
   for (const reduced of [false, true]) {
     const ui = mount(StoryPaperStack, paperProps(session([tx(1, '最初。', '最新。')])), reduced);
-    swipe(ui, -1, 63, 80);
+    swipe(ui, -1, -63, -80);
     assert.match(text(ui.tree), /第2版/);
-    swipe(ui, -1, 100, 80, true);
+    swipe(ui, -1, -100, -80, true);
     assert.match(text(ui.tree), /第2版/);
     const corner = ui.find(n => n.props?.className === 'paper-corner corner-older');
     const e = { isPrimary: true, button: 0, pointerId: 4, clientX: 0, clientY: 0, currentTarget: { setPointerCapture() {} } };
     corner.props.onPointerDown(e); ui.draw();
-    corner.props.onPointerMove({ ...e, clientX: 90, clientY: 70 }); ui.draw();
+    corner.props.onPointerMove({ ...e, clientX: -90, clientY: -70 }); ui.draw();
     assert.ok(ui.find(n => n.props?.className === 'paper-preview'));
     const article = ui.find(n => n.type === 'article');
     assert.equal(Boolean(article.props.style?.transform), !reduced);
-    corner.props.onPointerUp({ ...e, clientX: 90, clientY: 70 }); ui.draw(); ui.tick();
+    corner.props.onPointerUp({ ...e, clientX: -90, clientY: -70 }); ui.draw(); ui.tick();
     assert.match(text(ui.tree), /第1版/);
     assert.equal(ui.all(n => n.type === 'button' && /原稿へ/.test(text(n))).length, 0);
   }
