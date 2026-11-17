@@ -1,3 +1,15 @@
+## アノマ画像と表情切替（2026-11-18、ローカル作業ツリー）
+
+- main、開始時 `a3111c9`、作業前差分なし。ユーザー指示でpull省略。フロントエンドのみ。バックエンド・API契約・確率・強さ・抽選・保存・台詞・ギャンブルの手動進行は無変更。配置済みWebP8枚の生成・加工なし。
+- `scenario.ts` に8表情の型、既存trigger5種の対応、オープニング・到達・延長戦入口とエンディング差分の対応を集約。`AnomaResult` は既存triggerから表情を渡し、従来の `data-reaction` を維持。
+- `AnomaFrame` のReactNode型portraitスロットをexpression指定の画像表示へ変更。名前・台詞の上に正方形（上限250px、画面高の30%でも制限）で表示。画像URLはViteのBASE_URLに対応し、Pagesのサブパスでも配置済み素材を参照する。altは空。
+- 読み込み済みの直前表情をモジュール内に保持し、画面遷移をまたいで前画像に新画像を約900msで重ねる。初回はフェードイン。新画像の読み込み後にフェード開始、完了時に旧画像を除去。どちらかの画像のonErrorでポートレート全体を隠し、台詞を維持。reduced-motionではアニメーションなし・旧画像非表示の即時切替。
+- 追加テスト `frontend/tests/anoma-phase2.test.cjs`：全triggerの表情と既存reaction、オープニング／到達／延長戦入口、エンディングの正・0・負、画像URL・空alt、画面遷移／同一フレームの表情切替・重ね表示・完了時の除去、両画像のエラー時非表示、CSSの正方形／900ms／reduced-motion。
+- 検証：`node --test frontend/tests/anoma-phase2.test.cjs frontend/tests/story-s1.test.cjs frontend/tests/story-s2.test.cjs` 成功（Nodeの出力は3ファイル成功、個別ケース数として扱わない）。`git diff --check` 成功。DOMの実レイアウトや視覚的な滑らかさの検証ではない。
+- ビルド：frontendで `npx -y pnpm@latest run build` を1回試行。無出力のまま40秒でtimeout終了（124）。再試行なし、Muse側でビルド確認が必要。
+- 未実施：全フロントテスト、ブラウザでスマートフォン縦画面・画面遷移・クロスフェード・画像失敗・reduced-motion・Pagesサブパスの目視、実Gemini、既存pytest、Firestoreエミュレータ、公開配信確認。
+- コミット未実施（.git読み取り専用）、変更は作業ツリーのみ。push・デプロイなし。公開ソース・Pages・Cloud Run・Renderは今回更新していない。
+
 ## 原稿用紙レイアウト修正（2026-11-18、ローカル作業ツリー）
 
 - main、開始時 `d64392c`、作業前差分なし。ユーザー指示でpull省略。フロントエンドのみ。バックエンド・API契約・確率・強さ・抽選・保存・手動進行は無変更。
