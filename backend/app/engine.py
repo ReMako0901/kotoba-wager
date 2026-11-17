@@ -8,6 +8,7 @@ from .store import store
 from .quota import reserve_call
 from .gambles import BEGINNER_GAMES, make_gamble, play_beginner_game
 from .story_fallback import complete_story, local_concepts
+from .story_progress import update_progress
 
 STORY_GENERATION_TIMEOUT = 24
 
@@ -57,6 +58,9 @@ class GameEngine:
                     or existing.get("gamble", {}).get("kind") != request.game):
                 raise ValueError("同じ取引IDで異なる内容を送信できません。")
             return False
+        progress = update_progress(session)
+        if progress["phase"] in ("escapable", "ended"):
+            raise ValueError("脱出・継続の選択が必要か、すでに終了しています。")
         if session["status"] != "ready" or session["view"] == "result" or session.get("pending_transaction_id"):
             raise ValueError("前の取引の処理または結果確認が終わっていません。")
         if session["version"] != request.version:
@@ -195,6 +199,7 @@ class GameEngine:
                 feedback = {"previous_review": previous_review}
 
     def commit_transaction(self, session, tx):
+        update_progress(session)
         draft=tx["draft"]
         lost=deepcopy(session["lost_concepts"])
         for c in tx["lost"]:
@@ -206,6 +211,7 @@ class GameEngine:
         tx.update(status="committed",after=draft["text"],summary=draft["summary"],changes=draft["changes"],checks=draft["checks"],error=None)
         tx.pop("draft",None)
         session.update(text=tx["after"],version=version,analysis=analysis,offers=offers,lost_concepts=lost,status="ready",view="result",error=None)
+        update_progress(session)
 
     async def finish_gamble(self, sid, transaction_id):
         async with self.store.lock(sid):

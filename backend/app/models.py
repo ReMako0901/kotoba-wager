@@ -132,3 +132,9 @@ class StoryReview(BaseModel):
     summary: str
     changes: list[str] = Field(max_length=8)
     checks: Checks
+
+
+class StoryChoiceRequest(BaseModel):
+    request_id: str = Field(pattern=r'^[a-zA-Z0-9_-]{8,80}$')
+    version: int = Field(ge=1)
+    choice: Literal['escape', 'continue']

@@ -7,7 +7,8 @@ from pydantic import BaseModel, Field
 from .config import settings
 from .engine import engine
 from .gemini import GenerationError, gemini
-from .models import CreateSession, GameMoveRequest, TradeRequest
+from .models import CreateSession, GameMoveRequest, TradeRequest, StoryChoiceRequest
+from .story_progress import update_progress, public_progress, choose_progress
 from .analysis import build_analysis, make_offers, BETTING_MODE
 from .segmentation import external_lexicon, selection_dictionary
 from .store import store
@@ -42,9 +43,22 @@ def load(sid):
         raise HTTPException(404,"保存された物語が見つかりません。新しく始めてください。") from None
 
 
+
+def load_progress(sid):
+    """Call with the session lock held; persist legacy defaults before replying."""
+    session = load(sid)
+    if "story_progress" not in session:
+        update_progress(session)
+        store.save(session)
+    return session
+
+
 def public(session):
+    if "story_progress" not in session:
+        update_progress(session)
     result={k:v for k,v in session.items() if k not in ("api_events", "custom_text")}
     result.setdefault("intro", "")
+    result["story_progress"] = public_progress(session)
     result["transactions"]=[{k:v for k,v in t.items() if k!="draft"} for t in session["transactions"]]
     for tx in result['transactions']:
         if tx.get('gamble'):
@@ -96,6 +110,8 @@ async def create_session(request:CreateSession):
                 request.custom_text is not None and (existing.get("custom_text") != request.custom_text or existing.get("intro", "") != request.intro)
             ):
                 raise HTTPException(409,"同じ開始IDで違う物語は開始できません。")
+            update_progress(existing)
+            store.save(existing)
             return public(existing)
         story = (
             {"id": story_id, "title": "自分の物語", "text": request.custom_text, "intro": request.intro}
@@ -118,19 +134,30 @@ async def create_session(request:CreateSession):
         session={"betting_mode":BETTING_MODE,"id":sid,"story_id":story["id"],"title":story["title"],"intro":story.get("intro", ""),"text":story["text"],"version":1,"status":"ready","analysis":analysis,"offers":make_offers(analysis,1,1),"win_probability":settings.win_probability,"transactions":[],"lost_concepts":[],"pending_transaction_id":None,"view":"game","api_calls":0,"api_events":[],"usage":{"input":0,"output":0,"thoughts":0},"model":settings.model,"analysis_attempts":0,"error":None}
         if request.custom_text is not None:
             session["custom_text"] = request.custom_text
+        update_progress(session)
         store.save(session)
         return public(session)
 
 
 @app.get("/api/sessions/{sid}")
-def get_session(sid:str):
-    return public(load(sid))
+async def get_session(sid:str):
+    session = load(sid)
+    if "story_progress" in session:
+        return public(session)
+    # Only legacy migration needs the lock; normal polling must not wait for generation.
+    async with store.lock(sid):
+        session = load_progress(sid)
+        if "story_progress" not in session:
+            update_progress(session)
+            store.save(session)
+        return public(session)
 
 
 @app.post("/api/sessions/{sid}/transactions",status_code=202)
 async def trade(sid:str,request:TradeRequest):
     async with store.lock(sid):
-        session=load(sid)
+        session=load_progress(sid)
+        update_progress(session)
         try:
             generate=engine.settle_draw(session,request)
         except ValueError as error:
@@ -143,7 +170,8 @@ async def trade(sid:str,request:TradeRequest):
 @app.post("/api/sessions/{sid}/transactions/{transaction_id}/play", status_code=202)
 async def play_game(sid: str, transaction_id: str, request: GameMoveRequest):
     async with store.lock(sid):
-        session = load(sid)
+        session = load_progress(sid)
+        update_progress(session)
         try:
             settled = engine.apply_game_move(session, transaction_id, request)
         except ValueError as error:
@@ -155,7 +183,7 @@ async def play_game(sid: str, transaction_id: str, request: GameMoveRequest):
 
 @app.post("/api/sessions/{sid}/transactions/{transaction_id}/finish")
 async def finish_gamble(sid: str, transaction_id: str):
-    load(sid)
+    await get_session(sid)
     try:
         return public(await engine.finish_gamble(sid, transaction_id))
     except ValueError as error:
@@ -164,7 +192,7 @@ async def finish_gamble(sid: str, transaction_id: str):
 
 @app.post("/api/sessions/{sid}/retry",status_code=202)
 async def retry(sid:str):
-    load(sid)
+    await get_session(sid)
     try:
         return public(await engine.retry(sid))
     except ValueError as error:
@@ -174,9 +202,24 @@ async def retry(sid:str):
 @app.post("/api/sessions/{sid}/continue")
 async def continue_play(sid:str):
     async with store.lock(sid):
-        session=load(sid)
+        session=load_progress(sid)
+        update_progress(session)
+        if session["story_progress"]["phase"] in ("escapable", "ended"):
+            raise HTTPException(409,"脱出・継続の選択が必要か、すでに終了しています。")
         if session["status"] != "ready":
             raise HTTPException(409,"文章の処理が完了していません。")
         session.update(view="game",pending_transaction_id=None)
+        store.save(session)
+        return public(session)
+
+
+@app.post("/api/sessions/{sid}/story-choice")
+async def story_choice(sid: str, request: StoryChoiceRequest):
+    async with store.lock(sid):
+        session = load_progress(sid)
+        try:
+            choose_progress(session, request)
+        except ValueError as error:
+            raise HTTPException(409, str(error)) from None
         store.save(session)
         return public(session)

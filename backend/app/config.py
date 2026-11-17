@@ -12,6 +12,8 @@ class Settings:
     max_output_tokens = min(int(os.environ.get("GEMINI_MAX_OUTPUT_TOKENS", "8192")), 16384)
     win_probability = float(os.environ.get("WIN_PROBABILITY", "0.5"))
     data_dir = Path(os.environ.get("STORY_DATA_DIR", str(PROJECT / "data" / "runtime")))
+    story_rounds_min = int(os.environ.get("STORY_ROUNDS_MIN", "5"))
+    story_rounds_max = int(os.environ.get("STORY_ROUNDS_MAX", "8"))
     max_attempts = 3
     allowed_origins = [s.strip() for s in os.environ.get("ALLOWED_ORIGINS", "").split(",") if s.strip()]
     daily_call_limit = int(os.environ.get("GEMINI_DAILY_CALL_LIMIT", "0"))
@@ -20,3 +22,6 @@ class Settings:
 settings = Settings()
 if not 0 <= settings.win_probability <= 1:
     raise ValueError("WIN_PROBABILITY must be between 0 and 1")
+
+if not 1 <= settings.story_rounds_min <= settings.story_rounds_max:
+    raise ValueError("STORY_ROUNDS_MIN/MAX must be positive and ordered")
