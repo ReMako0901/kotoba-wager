@@ -195,7 +195,7 @@ export default function App(){
             </button>
           </section>}
       </>}
-      {ready&&!resultMode&&(choosingReward||!offer)&&<Modal title="何を手に入れる？" onClose={offer?()=>setChoosingReward(false):undefined}><div className="reward-options">{session.offers.map(o=><button key={o.id} className="reward-option" onClick={()=>{if(o.id!==offerId){setSelected([]);}setOfferId(o.id);setChoosingReward(false);setNotice('');action.current=undefined}}><span><b>{o.title}</b><small>{o.description}</small></span><strong>{o.required_count}<small>個</small></strong></button>)}</div></Modal>}
+      {ready&&!resultMode&&(choosingReward||!offer)&&<Modal title="何を手に入れる？" onClose={offer?()=>setChoosingReward(false):undefined}><div className="reward-options">{session.offers.map(o=><button key={o.id} className="reward-option" onClick={()=>{if(o.id!==offerId){setSelected([]);}setOfferId(o.id);setChoosingReward(false);setNotice('');action.current=undefined}}><span><small>{(o.family ? o.family === 'expression' : ['ちょっと名文','いい感じの空気','ひとことの魔法'].includes(o.title)) ? '表現系' : '展開系'}</small><b>{o.title}</b><small>{o.description}</small></span><strong>{o.required_count}<small>個</small></strong></button>)}</div></Modal>}
       {ready && !resultMode && !choosingReward && stakesReady && choosingGame &&
         <Modal title="どのギャンブルにする？" onClose={() => { if (!busy) setChoosingGame(false); }}>
           {hasBeginnerGames && <div className="game-tiers" role="group" aria-label="難易度">
