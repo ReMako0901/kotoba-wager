@@ -57,7 +57,7 @@
 
 - `betting_mode: count-v1`：旧点数セッションを黙って読み替えないための方式ID。
 - Unit：`id/text/start/end/stakeable`。scoreはない。オフセットはPython文字列の位置として生成する。JSのUTF-16 indexへ勝手に流用しない。画面はユニットのtextで描画する。
-- Offer：`id/title/description/required_count/change_scale/tier`。required_pointsは廃止。
+- Offer：`id/title/description/family/required_count/change_scale/tier`。familyは`expression`（表現系）／`plot`（展開系）。`rewards.py`の段階×要求数×系統の候補から選び、成立する価格ごとに1件、展開系を最低1件保証する。提示はセッションのoffersとして保存し、GET・開始再送・取引再送・continueでは再抽選しない。旧保存のfamily欠落は名称から生成方針と表示だけを補い、候補は置換しない。required_pointsは廃止。
 - Session：本文、version、analysis、offers、transactions、lost_concepts、status、view、pending_transaction_id、win_probability、api_calls、usage等。
 - Transaction：request_id由来のid、source_version、unit_ids、selected_units、stakes、outcome、staked_concepts、lost、meanings_resolved、attempts、before/after等。
 - ResolvedConcept：label/kind/descriptionと、実際に選んだselected_surfaces・本文に存在するmentions。異なる位置の同じ意味をまとめても個数は減らさない。
