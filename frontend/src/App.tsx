@@ -1,3 +1,4 @@
+import { AnomaResult, Opening } from './Anoma';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { api } from './api';
 import type { Story, Session, GameKind, GameOption } from './types';
@@ -29,7 +30,7 @@ function Modal({title,onClose,children}:{title:string;onClose?:()=>void;children
 }
 
 export default function App(){
-  const [screen,setScreen]=useState<'title'|'choose'|'game'>('title');
+  const [screen,setScreen]=useState<'title'|'opening'|'choose'|'game'>('title');
   const [session,setSession]=useState<Session>();
   const [helpOpen,setHelpOpen]=useState(false);
   const [paperIndex,setPaperIndex]=useState<number>();
@@ -150,8 +151,9 @@ export default function App(){
       <p className="intro">言葉を賭けて、物語を書き換える</p>
       <button className="secondary" onClick={() => setHelpOpen(true)}>遊び方</button>
       {session && <><p className="quiet">進行は残っています。「つづきから」で再開できます。</p><button className="secondary" disabled={busy} onClick={() => act(async () => accept(await api<Session>(`/sessions/${session.id}`)))}>つづきから</button></>}
-      <button className="primary" disabled={busy} onClick={() => void reroll(true)}>はじめる <span>→</span></button>
+      <button className="primary" disabled={busy} onClick={() => setScreen('opening')}>はじめる <span>→</span></button>
     </main>}
+    {screen === 'opening' && <Opening busy={busy} onComplete={() => void reroll(true)} />}
     {helpOpen && <Modal title="遊び方" onClose={() => setHelpOpen(false)}><p>報酬を選び、赤線の言葉を賭けてギャンブルへ。勝てば報酬を得て、負けると賭けた言葉の意味が消えます。</p></Modal>}
     {screen === 'choose' && <main className="choose-screen">
       <h1>物語を選ぶ</h1>
@@ -190,6 +192,7 @@ export default function App(){
       <h1 className="story-title">{session.title}</h1>
       {session.intro && <p className="story-intro" aria-label="物語の導入">{session.intro}</p>}
       {resultMode?<>
+        <AnomaResult key={`${session.id}-${last.id}`} transactions={session.transactions} />
         <StoryPaperStack key={highlight ? 'changes' : 'reading'} session={session} dust={dust} losses={losses} result pageIndex={paperIndex} onPageChange={setPaperIndex} highlight={highlight} />
         <details className="changes" onToggle={event => { if(event.currentTarget.open) { setPaperIndex(session.transactions.filter(t => t.status === 'committed').length); setHighlight(true); } else setHighlight(false); }}><summary>どこが変わった？</summary><p>{last.summary}</p><p className="quiet">ベット：{last.stakes.join(' / ')}{last.outcome==='loss'&&<> / 失った意味：{last.lost.map(c=>c.label).join('・')}</>}</p>{last.changes?.map((change,i)=><p key={i}>{change}</p>)}</details>
         <div className="bottom-actions"><button className="primary" disabled={busy} onClick={()=>act(async()=>{setSelected([]);setOfferId('');setChoosingReward(true);accept(await api<Session>(`/sessions/${session.id}/continue`,{}))})}>次は何をねらう？ <span>→</span></button></div>
