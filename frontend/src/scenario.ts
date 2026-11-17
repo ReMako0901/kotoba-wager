@@ -23,13 +23,26 @@ export const scenario = {
 };
 export type ReactionTrigger = Exclude<keyof typeof scenario, 'opening'>;
 export type ReactionKind = 'normal' | 'gain' | 'loss' | 'change';
-export type AnomaExpression = 'normal' | 'smile' | 'laugh' | 'taunt' | 'surprise' | 'perplexed' | 'displeased' | 'uncanny';
-export const expressionForTrigger: Record<ReactionTrigger, AnomaExpression> = {
-  gain: 'smile', winStreak: 'laugh', loss: 'taunt', lossStreak: 'perplexed', change: 'uncanny',
+export type AnomaExpression = 'normal' | 'smile' | 'laugh' | 'taunt' | 'surprise' | 'perplexed' | 'displeased' | 'uncanny'
+  | 'wink' | 'giggle' | 'satisfied' | 'exasperated' | 'worried' | 'deadpan' | 'composed';
+export const expressionPools: Record<ReactionTrigger, readonly AnomaExpression[]> = {
+  gain: ['smile', 'wink', 'satisfied'], winStreak: ['laugh', 'giggle'],
+  loss: ['taunt', 'composed'], lossStreak: ['perplexed', 'worried', 'exasperated'], change: ['smile', 'giggle'],
 };
-export const storyExpressions = { opening: 'normal', escapable: 'surprise', extensionWelcome: 'taunt' } as const;
-export function expressionForEnding(difference: number): AnomaExpression {
-  return difference > 0 ? 'smile' : difference < 0 ? 'displeased' : 'normal';
+export const storyExpressions = { opening: 'normal', escapable: 'surprise' } as const;
+export function chooseExpression(pool: readonly AnomaExpression[], key: string): AnomaExpression {
+  const hash = Array.from(key).reduce((value, char) => (Math.imul(value, 31) + char.charCodeAt(0)) >>> 0, 0);
+  return pool[hash % pool.length];
+}
+export function expressionForTrigger(trigger: ReactionTrigger, transaction: Transaction): AnomaExpression {
+  if (trigger === 'change' && ((transaction.gamble?.strength ?? 0) >= 8 || (transaction.lost?.length ?? 0) >= 3)) return 'uncanny';
+  return chooseExpression(expressionPools[trigger], transaction.id);
+}
+export function expressionForExtension(key: string): AnomaExpression {
+  return chooseExpression(['taunt', 'composed'], key);
+}
+export function expressionForEnding(difference: number, key = String(difference)): AnomaExpression {
+  return difference === 0 ? 'deadpan' : chooseExpression(difference > 0 ? ['smile', 'satisfied'] : ['displeased', 'worried'], key);
 }
 export const reactionKinds: Record<ReactionTrigger, ReactionKind> = {
   gain: 'gain', loss: 'loss', change: 'change', winStreak: 'gain', lossStreak: 'loss',

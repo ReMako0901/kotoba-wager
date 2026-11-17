@@ -114,7 +114,7 @@ export function resultReaction(transactions: Transaction[]) {
     if (!trigger) continue;
     const seed = Array.from(committed[i].id).reduce((hash, char) => (Math.imul(hash, 31) + char.charCodeAt(0)) >>> 0, 0);
     previous = chooseLine(scenario[trigger], previous, () => seed / 4294967296);
-    result = { line: previous, reaction: reactionKinds[trigger], expression: expressionForTrigger[trigger] };
+    result = { line: previous, reaction: reactionKinds[trigger], expression: expressionForTrigger(trigger, committed[i]) };
   }
   return result;
 }

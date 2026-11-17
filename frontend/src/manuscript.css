@@ -187,3 +187,6 @@ body, .app-shell, .story-board, .modal { background: #fff; }
 
 /* Short screens scroll the screen, while the paper always keeps all ten rows. */
 .playing .game-screen { overflow-y: auto; }
+.game-heading { display: flex; align-items: baseline; gap: 8px; min-width: 0; flex-shrink: 0; }
+.game-heading .chapter-line { flex-shrink: 0; white-space: nowrap; }
+.game-heading .story-title { min-width: 0; flex-shrink: 1; font-size: 18px; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

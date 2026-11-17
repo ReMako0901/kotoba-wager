@@ -1,5 +1,5 @@
 import { StagePublisher } from './Anoma';
-import { extensionWelcome, normalEnding, expressionForEnding, storyExpressions } from './scenario';
+import { extensionWelcome, normalEnding, expressionForEnding, expressionForExtension, storyExpressions } from './scenario';
 import type { StoryProgress, StoryTotals } from './types';
 
 export function StoryCounts({ totals }: { totals: StoryTotals }) {
@@ -16,7 +16,8 @@ export function StoryDecision({ progress, busy, onChoice }: {
   const reached = progress.phase === 'escapable';
   const welcome = progress.phase === 'extension' && progress.totals.rounds === progress.extension_start;
   const lines = welcome ? extensionWelcome : normalEnding(progress.totals.difference);
-  const expression = reached ? storyExpressions.escapable : welcome ? storyExpressions.extensionWelcome : expressionForEnding(progress.totals.difference);
+  const key = JSON.stringify(progress.totals);
+  const expression = reached ? storyExpressions.escapable : welcome ? expressionForExtension(key) : expressionForEnding(progress.totals.difference, key);
   return <section className="story-decision" aria-label="脱出と継続">
     <StoryCounts totals={progress.totals} />
     <StagePublisher lines={lines} expression={expression} />
@@ -28,7 +29,7 @@ export function NormalEnding({ progress, onTitle }: { progress: StoryProgress; o
   return <main className="ending-screen">
     <h1>ノーマルエンディング</h1>
     <StoryCounts totals={progress.totals} />
-    <StagePublisher lines={normalEnding(progress.totals.difference)} expression={expressionForEnding(progress.totals.difference)} />
+    <StagePublisher lines={normalEnding(progress.totals.difference)} expression={expressionForEnding(progress.totals.difference, JSON.stringify(progress.totals))} />
     <button className="primary" onClick={onTitle}>タイトルへ戻る</button>
   </main>;
 }

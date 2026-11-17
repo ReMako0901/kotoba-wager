@@ -79,7 +79,7 @@ test('result reaction is pure and repeated histories keep the same line and expr
   const before = JSON.stringify(transactions);
   const reaction = resultReaction(transactions);
   assert.equal(reaction.reaction, 'change');
-  assert.equal(reaction.expression, 'uncanny');
+  assert.ok(['smile', 'giggle'].includes(reaction.expression));
   assert.equal(reaction.line, scenario.change[0]);
   assert.deepEqual(resultReaction([...transactions]), reaction);
   assert.deepEqual(resultReaction(JSON.parse(before)), reaction);

@@ -111,6 +111,15 @@ function AppContent(){
   const gambleMode = Boolean(last?.gamble && !last.presentation_completed && !resultMode);
   const ready=session?.status==='ready',processing=session&&['analyzing','generating'].includes(session.status);
   const round=(session?.transactions.filter(t=>t.status==='committed').length||0)+(resultMode?0:1);
+  const wasStakesReady = useRef(false);
+  useEffect(() => {
+    const selectable = screen === 'game' && ready && !resultMode && !gambleMode && !choosingReward;
+    if (stakesReady && !wasStakesReady.current && selectable) {
+      setError('');
+      setChoosingGame(true);
+    }
+    wasStakesReady.current = stakesReady;
+  }, [stakesReady, screen, ready, resultMode, gambleMode, choosingReward]);
   function toggle(id:string){
     if(busy||!ready||resultMode||!offer||choosingReward)return;
     action.current=undefined;
@@ -206,9 +215,8 @@ function AppContent(){
       {gambleMode && last?.gamble ? <><StagePublisher expression="taunt" /><GamblePlay key={last.id} gamble={last.gamble} busy={busy} error={session.error} prepared={session.status === 'awaiting_reveal'}
         onMove={(attempt, choice) => act(async () => accept(await api<Session>(`/sessions/${session.id}/transactions/${last.id}/play`, { attempt, choice })))}
         onFinish={() => act(async () => accept(await api<Session>(`/sessions/${session.id}/transactions/${last.id}/finish`, {})))} /></> : <>
-      <div className="chapter-line"><span>第{round}章</span></div>
-      <h1 className="story-title">{session.title}</h1>
-      {session.intro && <p className="story-intro" aria-label="物語の導入">{session.intro}</p>}
+      <div className="game-heading"><div className="chapter-line"><span>第{round}章</span></div>
+      <h1 className="story-title" title={session.title}>{session.title}</h1></div>
       {resultMode?<>
         {session.story_progress && ['escapable', 'extension'].includes(session.story_progress.phase)
           ? <StoryDecision progress={session.story_progress} busy={busy} onChoice={choice => void chooseStory(choice)} />
@@ -235,7 +243,7 @@ function AppContent(){
                 onClick={() => { setError(''); setChoosingGame(true); }}>ギャンブルを選ぶ<span>→</span></button>
           </section>}
       </>}
-      {ready&&!resultMode&&(choosingReward||!offer)&&<Modal title="何を手に入れる？" onClose={offer?()=>setChoosingReward(false):undefined}><div className="reward-options">{session.offers.map(o=><button key={o.id} className="reward-option" onClick={()=>{if(o.id!==offerId){setSelected([]);}setOfferId(o.id);setChoosingReward(false);action.current=undefined}}><span><b>{o.title}</b></span><strong>{o.required_count}<small>個</small></strong></button>)}</div></Modal>}
+      {ready&&!resultMode&&(choosingReward||!offer)&&<Modal title="何を手に入れる？" onClose={offer?()=>setChoosingReward(false):undefined}><div className="reward-options">{session.offers.map(o=><button key={o.id} className="reward-option" onClick={()=>{if(o.id!==offerId){setSelected([]);}setOfferId(o.id);setChoosingReward(false);action.current=undefined}}><span><b>{o.title}</b><small>{o.description}</small></span><strong>{o.required_count}<small>個</small></strong></button>)}</div></Modal>}
       {ready && !resultMode && !choosingReward && stakesReady && choosingGame &&
         <Modal title="どのギャンブルにする？" onClose={() => { if (!busy) setChoosingGame(false); }}>
 

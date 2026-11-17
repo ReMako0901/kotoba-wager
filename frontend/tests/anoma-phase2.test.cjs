@@ -2,7 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const { stageMount, PortraitPublisher } = require('./anoma-stage-harness.cjs');
-const { expressionForTrigger, expressionForEnding } = require('../src/scenario.ts');
+const { expressionPools, expressionForEnding, expressionForExtension } = require('../src/scenario.ts');
 const { resultReaction, Opening } = require('../src/Anoma.tsx');
 const { StoryDecision, NormalEnding } = require('../src/StoryProgress.tsx');
 const current = ui => ui.find(n => n.type === 'img' && n.props.className.includes('anoma-portrait-current'));
@@ -10,25 +10,25 @@ const tx = (outcome, extra = {}) => ({ id: 'round', status: 'committed', outcome
 const progress = (phase, difference = 0) => ({ phase, totals: { rounds: 5, gained: 2, lost: 2, difference }, extension_start: 5 });
 
 test('all result triggers use the specified expressions and retain reaction kinds', () => {
-  assert.deepEqual(expressionForTrigger, { gain: 'smile', winStreak: 'laugh', loss: 'taunt', lossStreak: 'perplexed', change: 'uncanny' });
-  for (const [transactions, expression, reaction] of [
-    [[tx('win')], 'smile', 'gain'], [[tx('win'), tx('win')], 'laugh', 'gain'],
-    [[tx('loss')], 'taunt', 'loss'], [[tx('loss'), tx('loss')], 'perplexed', 'loss'],
-    [[tx('loss', { lost: [{}, {}] })], 'uncanny', 'change'],
+  for (const [transactions, trigger, reaction] of [
+    [[tx('win')], 'gain', 'gain'], [[tx('win'), tx('win')], 'winStreak', 'gain'],
+    [[tx('loss')], 'loss', 'loss'], [[tx('loss'), tx('loss')], 'lossStreak', 'loss'],
+    [[tx('loss', { lost: [{}, {}] })], 'change', 'change'],
   ]) {
-    assert.equal(resultReaction(transactions).expression, expression);
+    assert.ok(expressionPools[trigger].includes(resultReaction(transactions).expression));
     assert.equal(resultReaction(transactions).reaction, reaction);
   }
 });
 
 test('opening, arrival, extension welcome and all ending signs select their expressions', () => {
   assert.equal(current(stageMount(Opening, { busy: false, onComplete() {} })).props.src, '/anoma/normal.webp');
-  for (const [phase, expression] of [['escapable', 'surprise'], ['extension', 'taunt']]) {
+  for (const [phase, expression] of [['escapable', 'surprise'], ['extension', expressionForExtension(JSON.stringify(progress('extension').totals))]]) {
     const ui = stageMount(StoryDecision, { progress: progress(phase), busy: false, onChoice() {} });
     assert.ok(ui.all(n => n.type === 'img' && n.props.className.includes('current')).every(n => n.props.src === `/anoma/${expression}.webp`));
   }
-  for (const [difference, expression] of [[10, 'smile'], [0, 'normal'], [-10, 'displeased']]) {
-    assert.equal(expressionForEnding(difference), expression);
+  for (const difference of [10, 0, -10]) {
+    const expression = expressionForEnding(difference, JSON.stringify(progress('ended', difference).totals));
+    assert.ok((difference > 0 ? ['smile', 'satisfied'] : difference < 0 ? ['displeased', 'worried'] : ['deadpan']).includes(expression));
     const ui = stageMount(NormalEnding, { progress: progress('ended', difference), onTitle() {} });
     assert.equal(current(ui).props.src, `/anoma/${expression}.webp`);
   }
