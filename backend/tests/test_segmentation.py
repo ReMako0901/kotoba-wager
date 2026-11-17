@@ -16,7 +16,7 @@ def test_spacing_emoji_and_newlines_are_preserved():
 
 def test_starting_stories_are_short_and_fully_segmented():
     stories=json.loads((Path(__file__).parents[2]/'data/stories.json').read_text())
-    assert len(stories) == 100
+    assert len(stories) == 150
     from app.analysis import build_analysis
     from app.starter_stories import load_precomputed
 

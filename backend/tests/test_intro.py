@@ -83,7 +83,7 @@ def test_draft_matches_imported_catalog():
     root = Path(__file__).resolve().parents[2]
     stories = json.loads((root / 'data/stories.json').read_text())
     rows = (root / 'docs/STARTER_INTROS_DRAFT.md').read_text().splitlines()[6:]
-    assert len(rows) == len(stories) == 100
+    assert len(rows) == len(stories) == 150
     for row, story in zip(rows, stories):
         _, story_id, text, intro, _ = row.split('|')
         assert story_id == story['id'] and text == story['text']
