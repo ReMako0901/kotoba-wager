@@ -2,6 +2,7 @@
   background: #fff;
   color: #241d1c;
   --cell-size: 32px;
+  --paper-rows: 10;
   --ink: #241d1c;
   --stamp: #9c2e32;
   --rule: #dec2c0;
@@ -39,9 +40,9 @@ body, .app-shell, .story-board, .modal { background: #fff; }
 .primary:disabled { background: #f7eeee; border-color: #f7eeee; color: #6e5a59; }
 .secondary { border-color: var(--rule); border-radius: 2px; }
 .story-board {
-  flex: 1 1 0;
-  min-height: 0;
-  overflow: auto;
+  flex: 0 0 auto;
+  min-height: calc(var(--paper-rows) * var(--cell-size) + 28px);
+  overflow: visible;
   border: 0;
   border-radius: 0;
   padding: 6px 0 10px;
@@ -52,8 +53,8 @@ body, .app-shell, .story-board, .modal { background: #fff; }
 .paper-scroll {
   direction: rtl;
   overflow-x: auto;
-  overflow-y: auto;
-  max-height: 100%;
+  overflow-y: hidden;
+  min-height: calc(var(--paper-rows) * var(--cell-size) + 18px);
   scrollbar-width: thin;
 }
 .vertical-paper {
@@ -183,3 +184,6 @@ body, .app-shell, .story-board, .modal { background: #fff; }
 .show-changes .result-change.cut-before { animation: none; box-shadow: 0 -2px var(--stamp); }
 .show-changes .result-change.cut-after { animation: none; box-shadow: 0 2px var(--stamp); }
 .trade-dock .selection-incomplete { padding: 12px; min-height: 52px; text-align: center; font-size: 14px; }
+
+/* Short screens scroll the screen, while the paper always keeps all ten rows. */
+.playing .game-screen { overflow-y: auto; }

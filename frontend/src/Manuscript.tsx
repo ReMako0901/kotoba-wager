@@ -1,68 +1,34 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import type { CSSProperties } from 'react';
 import type { Transaction, Unit } from './types';
 import { addPaperDust, PaperDust, sampleDustSize } from './PaperDust';
 import type { Dust, DustProps } from './PaperDust';
 import { manuscriptChanges } from './manuscriptChanges';
 
-export function manuscriptRows(text: string, units: Unit[] = []) {
-  return Math.max(2, Math.ceil(Array.from(text).length / 8) + text.split('\n').length,
-    ...units.filter(unit => unit.stakeable).map(unit => Array.from(unit.text).length + 1));
+// CSS owns the geometry; the fallback also permits non-DOM rendering.
+export function paperRows() {
+  return typeof getComputedStyle === 'undefined' ? 10
+    : Number(getComputedStyle(document.documentElement).getPropertyValue('--paper-rows'));
 }
-const noColumnStart = /^[、。，．！？!?：；・…‥ー〜～々〻ゝゞヽヾぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮヵヶ」』）〕］｝〉》】〗〙〛’”)]/u;
-const punctuation = /^[、。，．]$/u;
-const closingQuote = /^[」』]$/u;
-const smallKana = /^[ぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮヵヶ]$/u;
-const noColumnEnd = /^[「『（〔［｛〈《【〖〘〚‘“(]/u;
-const dialogueStart = /^[「『]/u;
 
-function paperPositions(text: string, rows: number, runStarts: Set<number>, atomic: Map<number, number>) {
+export function paperPositions(text: string, rows = paperRows()) {
   const positions = new Map<number, number>();
-  let offset = 0;
-  let column = 0;
-  for (const paragraph of text.split('\n')) {
-    const glyphs = Array.from(paragraph);
-    const first = glyphs.findIndex(glyph => !/^[ \t　]$/.test(glyph));
-    if (first >= 0) {
-      let start = first;
-      let row = dialogueStart.test(glyphs[first]) ? 0 : 1;
-      while (start < glyphs.length) {
-        let full = Math.min(start + rows - row, glyphs.length);
-        for (const [from, to] of atomic) {
-          const localFrom = from - offset, localTo = to - offset;
-          if (localFrom >= start && localFrom < full && localTo > full) {
-            full = localFrom;
-            break;
-          }
-        }
-        if (full === start) { column++; row = 0; continue; }
-        const next = glyphs[full] ?? '';
-        const canTuck = !atomic.has(offset + full) && (punctuation.test(next) || (smallKana.test(next) && !runStarts.has(offset + full)));
-        const tuckedMarks = punctuation.test(next) && closingQuote.test(glyphs[full + 1] ?? '') ? 2 : 1;
-        let tucked = full > start && canTuck && !noColumnEnd.test(glyphs[full - 1]) &&
-          !noColumnStart.test(glyphs[full + tuckedMarks] ?? '') ? tuckedMarks : 0;
-        let end = full;
-        if (!tucked) {
-          while (end > start && end < glyphs.length &&
-            (noColumnStart.test(glyphs[end]) || noColumnEnd.test(glyphs[end - 1]))) end--;
-          if (end === start) end = full;
-        }
-        for (const [from, to] of atomic) {
-          if (from - offset >= start && from - offset < end && to - offset > end) { end = from - offset; tucked = 0; }
-        }
-        if (end === start) { column++; row = 0; continue; }
-        for (let i = start; i < end; i++) positions.set(offset + i, column * rows + row + i - start);
-        for (let i = 0; i < tucked; i++) positions.set(offset + end + i, column * rows + rows - 1);
-        start = end + tucked;
-        row = 0;
-        column++;
-      }
-    } else if (offset > 0) {
-      column++;
-    }
-    offset += glyphs.length + 1;
-  }
-  return { positions, columns: Math.max(8, column) };
+  let square = 0;
+  Array.from(text).forEach((glyph, offset) => {
+    // Newlines separate paragraphs semantically, without leaving unused squares.
+    if (glyph !== '\n' && glyph !== '\r') positions.set(offset, square++);
+  });
+  return { positions, columns: Math.max(8, Math.ceil(square / rows)) };
+}
+
+export function focusFirstChange(paper: HTMLElement) {
+  const scroll = paper.parentElement;
+  const first = paper.querySelector<HTMLElement>('.result-change');
+  if (!scroll || !first) return;
+  const viewport = scroll.getBoundingClientRect();
+  const bounds = first.getBoundingClientRect();
+  // Center the first change even when a later change is already visible.
+  // Relative coordinates work with the negative scrollLeft of RTL containers.
+  scroll.scrollLeft += (bounds.left + bounds.right - viewport.left - viewport.right) / 2;
 }
 
 function Paper({text, units, selected, disabled, onToggle, marked, changes, dust, losses}: {
@@ -75,34 +41,14 @@ function Paper({text, units, selected, disabled, onToggle, marked, changes, dust
   changes?: ReturnType<typeof manuscriptChanges>;
 } & DustProps) {
   const paper = useRef<HTMLDivElement>(null);
-  const rows = manuscriptRows(text, units);
+  const rows = paperRows();
   useLayoutEffect(() => {
-    if (!changes?.size) return;
-    const scroll = paper.current?.parentElement;
-    const highlights = paper.current?.querySelectorAll<HTMLElement>('.result-change');
-    if (!scroll || !highlights?.length) return;
-    const viewport = scroll.getBoundingClientRect();
-    const visible = [...highlights].some(glyph => {
-      const bounds = glyph.getBoundingClientRect();
-      return bounds.right > viewport.left && bounds.left < viewport.right;
-    });
-    if (!visible) {
-      const first = highlights[0].getBoundingClientRect();
-      scroll.scrollLeft += (first.left + first.right - viewport.left - viewport.right) / 2;
-    }
-  }, [changes]);
+    if (changes?.size && paper.current) focusFirstChange(paper.current);
+  }, [changes, text]);
   const runs = units ?? [{id: 'text', text, stakeable: false}];
   const content = [];
   const allGlyphs = Array.from(text);
-  const runStarts = new Set<number>();
-  let runOffset = 0;
-  const atomic = new Map<number, number>();
-  for (const run of runs) {
-    runStarts.add(runOffset);
-    if (run.stakeable) atomic.set(runOffset, runOffset + Array.from(run.text).length);
-    runOffset += Array.from(run.text).length;
-  }
-  const { positions, columns } = paperPositions(text, rows, runStarts, atomic);
+  const { positions, columns } = paperPositions(text, rows);
   const occupied = new Set<number>();
   let offset = 0;
   for (const run of runs) {
@@ -125,9 +71,8 @@ function Paper({text, units, selected, disabled, onToggle, marked, changes, dust
         length += Math.min(end - first - 1, glyphs.length - index - length);
         const characters = allGlyphs.slice(first, end);
         const isMarked = characters.some((_, i) => marked?.has(first + i));
-        const packed = characters.length === 1 ? '' : punctuation.test(characters[1]) ? ' packed-punctuation' : ' packed-kana';
         occupied.add(cell);
-        cells.push(<span key={cell} className={`ink-cell${isMarked ? ' marked' : ''}${packed}`}>
+        cells.push(<span key={cell} className={`ink-cell${isMarked ? ' marked' : ''}`}>
           {characters.map((glyph, i) => {
             const offset = first + i;
             const change = changes?.get(offset);
@@ -156,7 +101,7 @@ function Paper({text, units, selected, disabled, onToggle, marked, changes, dust
       style={{gridRow: i % rows + 1, gridColumn: Math.floor(i / rows) + 1}} />);
   }
   return <div className="paper-scroll" aria-hidden={units ? undefined : true}>
-    <div className="vertical-paper" ref={paper} style={{'--paper-rows': rows} as CSSProperties}>{content}<PaperDust dust={dust} losses={losses} /></div>
+    <div className="vertical-paper" ref={paper}>{content}<PaperDust dust={dust} losses={losses} /></div>
   </div>;
 }
 

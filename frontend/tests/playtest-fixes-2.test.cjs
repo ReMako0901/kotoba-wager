@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const { mount, text } = require('./component-harness.cjs');
-const { Manuscript, WagerManuscript, manuscriptRows } = require('../src/Manuscript.tsx');
+const { Manuscript, WagerManuscript, paperRows } = require('../src/Manuscript.tsx');
 const { StoryPaperStack, StoryHistory } = require('../src/StoryHistory.tsx');
 const { GenerationSkeleton } = require('../src/GambleMotion.tsx');
 const App = require('../src/App.tsx').default;
@@ -35,28 +35,32 @@ test('title always contains subtitle and help; resume only after a session is av
   assert.match(text(ui.tree), /進行は残っています/);
   assert.match(text(ui.tree), /遊び方/);
 });
-test('long manuscripts use text-sized rows, fixed cells, and place every glyph inside the grid', () => {
+test('long manuscripts use fixed rows, fixed cells, and place every glyph inside the grid', () => {
   for (const body of ['短い。', '長い本文。'.repeat(50), '一行目。\n\n二行目。'.repeat(8), '🐈と月。'.repeat(30)]) {
     const ui = mount(Manuscript, { text: body, dust: { grains: new Map() }, losses: [] });
     const paper = ui.find(n => n.props.className === 'vertical-paper');
-    assert.equal(paper.props.style['--paper-rows'], manuscriptRows(body));
+    assert.equal(paperRows(), 10);
     const glyphs = ui.all(n => n.props.className?.split(' ').includes('ink-glyph')).map(text).join('');
     assert.equal(glyphs, body.replace(/\n/g, ''));
     for (const node of ui.all(n => n.props.style?.gridRow)) {
       const [start, span = 'span 1'] = String(node.props.style.gridRow).split(' / ');
-      assert.ok(Number(start) + Number(span.replace('span ', '')) - 1 <= manuscriptRows(body));
+      assert.ok(Number(start) + Number(span.replace('span ', '')) - 1 <= paperRows());
     }
   }
-  assert.ok(manuscriptRows('長'.repeat(300)) > manuscriptRows('短い。'));
+  assert.equal(paperRows(), 10);
 });
-test('each stakeable unit is a single button even near a column boundary', () => {
+test('stakeable fragments keep the same selection across a column boundary', () => {
   const units = [{ id: 'a', text: 'これは長い前置きで', stakeable: false }, { id: 'b', text: '花の上を', stakeable: true }, { id: 'c', text: '歩いた。', stakeable: false }];
   const toggles = [];
   const ui = mount(WagerManuscript, { text: units.map(u => u.text).join(''), units, selected: ['b'], disabled: false, onToggle: id => toggles.push(id), dust: { grains: new Map() }, losses: [] });
-  assert.equal(ui.all(n => n.type === 'button').length, 1);
+  assert.equal(ui.all(n => n.type === 'button').length, 2);
   const button = ui.find(n => n.type === 'button');
-  assert.equal(text(button), '花の上を'); assert.equal(button.props['aria-pressed'], true);
-  ui.click('花の上を'); assert.deepEqual(toggles, ['b']);
+  assert.equal(ui.all(n => n.type === 'button').map(text).join(''), '花の上を');
+  for (const fragment of ui.all(n => n.type === 'button')) {
+    assert.equal(fragment.props['aria-pressed'], true);
+    fragment.props.onClick();
+  }
+  assert.deepEqual(toggles, ['b', 'b']);
 });
 test('history uses plays and shares controlled page index; changes stay highlighted on latest manuscript', () => {
   let current;

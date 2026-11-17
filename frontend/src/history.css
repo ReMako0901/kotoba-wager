@@ -7,8 +7,8 @@
 .paper-result{animation:result-spring var(--motion-spring) both}
 .version-metadata{font-family:inherit;font-size:10px;overflow-wrap:anywhere}
 .manuscript-sheet>.story-board{margin:4px 8px}
-.history-body .story-paper-stack{height:52dvh;min-height:260px;margin-top:12px}
-.wager-paper-stack>.paper-stack{height:calc(100% - 12px)}
+.history-body .story-paper-stack{height:auto;min-height:0;margin-top:12px}
+.wager-paper-stack>.paper-stack{height:auto}
 .wager-paper-stack .paper-scroll{position:relative;background:#fff}
 @keyframes paper-arrive{from{opacity:0;transform:translateY(-12px) rotate(-2deg)}to{opacity:1;transform:none}}
 @media(prefers-reduced-motion:reduce){.manuscript-sheet,.page-back,.page-forward,.paper-result{animation:ink-fade 150ms both}}
@@ -16,7 +16,7 @@
 .paper-navigation{flex-wrap:wrap;justify-content:flex-start;color:var(--stamp)}
 .paper-preview{position:absolute;inset:0;display:flex;flex-direction:column;background:#fff;border:1px solid var(--rule);overflow:hidden;pointer-events:none}
 .manuscript-sheet{position:relative;z-index:1;animation:none;transform-origin:center;min-height:0}
-.manuscript-sheet .story-board{overflow:auto}
+.manuscript-sheet .story-board{overflow:visible}
 .paper-drag{transition:none;will-change:transform;box-shadow:0 8px 24px #241d1c22}
 .paper-finish,.paper-return{transition:transform 240ms ease-out}
 .paper-corner{position:absolute;width:48px;height:48px;z-index:3;touch-action:none;cursor:grab;background:linear-gradient(135deg,#f4e5e4 0 30%,transparent 31%);}
@@ -27,3 +27,6 @@
 @media(prefers-reduced-motion:reduce){.paper-drag,.paper-finish,.paper-return{transform:none!important;transition:opacity 150ms}.manuscript-sheet{animation:ink-fade 150ms}}
 .paper-corner { width: 56px; height: 56px; background: linear-gradient(135deg,#dec2c0 0 28%,#9c2e3277 29% 32%,transparent 33%); filter: drop-shadow(2px 2px 2px #241d1c44); }
 .paper-navigation { font-size: 13px; line-height: 1.6; }
+
+/* Keep the fixed-height manuscript inside its sheet, including on short screens. */
+.story-paper-stack, .paper-stack, .manuscript-sheet { min-height: min-content; flex-shrink: 0; min-width: 0; }
