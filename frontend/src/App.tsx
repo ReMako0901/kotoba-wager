@@ -4,8 +4,10 @@ import type { Story, Session, GameKind, GameOption } from './types';
 import { GamblePlay } from './GamblePlay';
 import './style.css';
 import './manuscript.css';
-import { Manuscript, WagerManuscript, LossManuscript } from './Manuscript';
+import { Manuscript, WagerManuscript } from './Manuscript';
 import { usePaperDust } from './PaperDust';
+import { StoryComparison, StoryHistory } from './StoryHistory';
+import './history.css';
 
 function requestId() {
   const b=crypto.getRandomValues(new Uint8Array(16)); b[6]=(b[6]&15)|64; b[8]=(b[8]&63)|128;
@@ -167,8 +169,8 @@ export default function App(){
       {resultMode?<>
         <section className={`result-banner${last.outcome === 'win' ? ' result-win' : ''}`}><strong>{last.outcome==='win'?'勝利':'敗北'}</strong><span>{last.outcome==='win'?last.offer.title+'を獲得':'「'+last.stakes.join('・')+'」の意味が消えた'}</span></section>
         {last.gamble && <p className="reading-hint">{games.find(g => g.id === last.gamble!.kind)?.name}{last.gamble.kind === 'slot' && <> · {last.gamble.label}</>}</p>}
-        <section className="story-board result-board" aria-label="変わった物語">{last.outcome === 'loss' ? <LossManuscript key={last.id} transaction={last} text={session.text} dust={dust} losses={losses} /> : <Manuscript key={last.id} text={session.text} before={last.before} dust={dust} losses={losses} />}</section>
-        <details className="changes"><summary>どこが変わった？</summary><p>{last.summary}</p><p className="quiet">ベット：{last.stakes.join(' / ')}{last.outcome==='loss'&&<> / 失った意味：{last.lost.map(c=>c.label).join('・')}</>}</p><p>{last.before}</p></details>
+        <StoryComparison before={last.before} after={last.after ?? session.text} />
+        <details className="changes"><summary>どこが変わった？</summary><p>{last.summary}</p><p className="quiet">ベット：{last.stakes.join(' / ')}{last.outcome==='loss'&&<> / 失った意味：{last.lost.map(c=>c.label).join('・')}</>}</p>{last.changes?.map((change,i)=><p key={i}>{change}</p>)}</details>
         <div className="bottom-actions"><button className="primary" disabled={busy} onClick={()=>act(async()=>{setSelected([]);setOfferId('');setChoosingReward(true);accept(await api<Session>(`/sessions/${session.id}/continue`,{}))})}>次は何をねらう？ <span>→</span></button></div>
       </>:<>
         <button className="reward-summary" disabled={!ready||busy} onClick={()=>{setChoosingGame(false);setChoosingReward(true)}}><span><small>今回ねらうもの</small><b>{offer?.title||'報酬を選ぼう'}</b></span><span>{offer?`${offer.required_count}個`:`${session.offers.length}つから`} <small>変更 ↗</small></span></button>
@@ -211,7 +213,7 @@ export default function App(){
           {busy && <p className="quiet" role="status">ゲームを準備中…</p>}
           {error && <p className="input-error" role="alert">{error}</p>}
         </Modal>}
-      {historyOpen&&<Modal title="これまでの取引" onClose={()=>setHistoryOpen(false)}><div className="history-body">{session.transactions.length?session.transactions.map((t,i)=><p key={t.id}><b>{i+1}. {t.outcome==='win'?'WIN':t.outcome==='loss'?'LOSE':'対戦中'}</b> / {t.offer.title}<small>{t.stakes.join(' / ')} · {t.status==='committed'?'反映済み':'反映待ち'}</small></p>):<p>まだ取引はないよ。</p>}<h3>失われた設定</h3><p>{session.lost_concepts.map(c=>c.label).join('・')||'まだなし'}</p><p className="quiet">生成 {session.api_calls}回 / {session.model}<br/>入力 {session.usage.input}・出力 {session.usage.output} tokens</p></div></Modal>}
+      {historyOpen&&<Modal title="物語の変遷" onClose={()=>setHistoryOpen(false)}><StoryHistory session={session} /></Modal>}
     </>}
     </main>}
   </div>;
