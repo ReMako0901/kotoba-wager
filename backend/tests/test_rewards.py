@@ -1,3 +1,4 @@
+from app.review_policy import REVIEW_DEDUCTIONS
 import asyncio
 from copy import deepcopy
 
@@ -89,7 +90,7 @@ def test_edit_and_review_prompts_switch_policy_without_affecting_loss(monkeypatc
         return Result(candidate, {}, 0)
     async def generate(instruction, payload, schema, **kwargs):
         captured.append((instruction, payload))
-        return Result(StoryReview(verdict='accept', edits=[], summary='', changes=[], checks=candidate.checks), {}, 0)
+        return Result(StoryReview(findings={key: {'present': False, 'reason': ''} for key in REVIEW_DEDUCTIONS}, verdict='accept', edits=[], summary='', changes=[], checks=candidate.checks), {}, 0)
     monkeypatch.setattr(editor, 'edit', edit)
     monkeypatch.setattr(editor, 'generate', generate)
     offer = dict(family=family, title='心の声', change_scale=1)

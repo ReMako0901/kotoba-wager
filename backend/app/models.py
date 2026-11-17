@@ -106,7 +106,27 @@ class EditProposal(BaseModel):
     checks: Checks
 
 
+class ReviewFinding(BaseModel):
+    present: bool = Field(strict=True)
+    reason: str
+
+    @model_validator(mode='after')
+    def require_reason(self):
+        if self.present and not self.reason.strip():
+            raise ValueError('減点項目には具体的な理由が必要です。')
+        return self
+
+
+class ReviewFindings(BaseModel):
+    lost_reference: ReviewFinding
+    setting_conflict: ReviewFinding
+    style_shift: ReviewFinding
+    broken_connection: ReviewFinding
+    outcome_conflict: ReviewFinding
+
+
 class StoryReview(BaseModel):
+    findings: ReviewFindings
     verdict: Literal['accept', 'repair', 'reject']
     edits: list[TextEdit] = Field(max_length=12)
     summary: str

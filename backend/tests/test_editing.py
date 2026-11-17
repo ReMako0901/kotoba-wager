@@ -1,3 +1,4 @@
+from app.review_policy import REVIEW_DEDUCTIONS
 import asyncio
 import pytest
 from app.editing import edit_plan, apply_edits
@@ -31,7 +32,7 @@ def test_review_replaces_the_draft_using_original_edit_constraints(monkeypatch, 
         assert data['original_text'] == BEFORE and data['outcome'] == 'loss'
         assert data['reward'] is None and schema is StoryReview
         assert data['protected_stakes'] == [] and data['new_lost_concepts'] == [PRICE]
-        return Result(StoryReview(verdict='repair', **proposal(edits).model_dump()), {}, .1)
+        return Result(StoryReview(findings={key: {'present': False, 'reason': ''} for key in REVIEW_DEDUCTIONS}, verdict='repair', **proposal(edits).model_dump()), {}, .1)
 
     monkeypatch.setattr(ai, 'generate', review_response)
     task = ai.review(BEFORE, draft, 'loss', {'title': 'うれしい知らせ'}, [PRICE], [])

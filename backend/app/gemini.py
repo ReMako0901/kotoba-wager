@@ -1,4 +1,5 @@
 import json
+import logging
 import time
 from dataclasses import dataclass
 from typing import TypeVar
@@ -9,6 +10,9 @@ from .config import settings
 from .models import EditProposal, MeaningResponse, StakesResolution, ResolvedConcept, StoryReview
 from .prompts import SYSTEM, RESOLVE, WIN, LOSS, REVIEW
 from .rewards import reward_policy
+from .review_policy import REVIEW_FULL_SCORE, REVIEW_REJECTION_THRESHOLD, REVIEW_DEDUCTIONS, evaluate_review
+
+logger = logging.getLogger(__name__)
 
 T = TypeVar("T", bound=BaseModel)
 
@@ -23,6 +27,10 @@ class EditRejected(GenerationError):
 
 class ReviewRejected(EditRejected):
     pass
+
+
+class ReviewScoreRejected(GenerationError):
+    """A completed deduction review goes directly to the existing fallback."""
 
 
 class EditBudgetExceeded(GenerationError):
@@ -166,8 +174,18 @@ class Gemini:
             'protected_stakes': stakes if outcome == 'win' else [],
             'new_lost_concepts': stakes if outcome == 'loss' else [],
             'past_lost_concepts': lost,
+            'review_policy': {
+                'full_score': REVIEW_FULL_SCORE,
+                'rejection_threshold': REVIEW_REJECTION_THRESHOLD,
+                'deductions': {key: {'label': label, 'points': points} for key, (label, points) in REVIEW_DEDUCTIONS.items()},
+            },
         }, StoryReview, thinking_level="MEDIUM")
         review = result.value
+        total, deductions = evaluate_review(review.findings)
+        if total > REVIEW_REJECTION_THRESHOLD:
+            logger.warning('ReviewRejected total_deduction=%s threshold=%s deductions=%s',
+                           total, REVIEW_REJECTION_THRESHOLD, json.dumps(deductions, ensure_ascii=False))
+            raise ReviewScoreRejected('文章の整合性検査で不採用になりました。')
         if review.verdict == 'reject':
             raise ReviewRejected('文章全体の読み直しで違和感が残りました。')
         if review.verdict == 'repair':
