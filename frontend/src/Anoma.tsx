@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useLayoutEffect, useState, type ReactNode } from 'react';
 import type { Transaction } from './types';
 import { chooseLine, openingNarration, reactionKinds, reactionTrigger, scenario, expressionForTrigger, storyExpressions, type AnomaExpression, type ReactionKind } from './scenario';
 import './anoma.css';
@@ -22,10 +22,37 @@ function AnomaPortrait({ expression }: { expression: AnomaExpression }) {
   </div>;
 }
 
-export function AnomaFrame({ line, reaction = 'normal', expression = 'normal' }: { line: string; reaction?: ReactionKind; expression?: AnomaExpression }) {
-  return <aside className="anoma-frame" aria-label="アノマの台詞" data-reaction={reaction}>
-    <AnomaPortrait key={expression} expression={expression} />
-    <div><span className="anoma-name">アノマ</span><p>{line}</p></div>
+type StageContent = { lines?: readonly string[]; expression: AnomaExpression; reaction?: ReactionKind };
+const defaultStage: StageContent = { expression: 'normal' };
+const StageContext = createContext(defaultStage);
+const StageDispatchContext = createContext<(content: StageContent) => void>(() => {});
+
+export function AnomaStageProvider({ children }: { children: ReactNode }) {
+  const [content, setContent] = useState<StageContent>(defaultStage);
+  return <StageDispatchContext.Provider value={setContent}>
+    <StageContext.Provider value={content}>{children}</StageContext.Provider>
+  </StageDispatchContext.Provider>;
+}
+
+// Publishers own presentation only; leaving a screen restores the quiet normal stage.
+export function StagePublisher({ lines, expression, reaction }: StageContent) {
+  const publish = useContext(StageDispatchContext);
+  // Callers may construct arrays during render. Compare their contents, not their identity.
+  const linesKey = JSON.stringify(lines ?? []);
+  useLayoutEffect(() => {
+    publish({ lines: JSON.parse(linesKey) as string[], expression, reaction });
+    return () => publish(defaultStage);
+  }, [publish, linesKey, expression, reaction]);
+  return null;
+}
+
+export function AnomaStage() {
+  const { lines, expression, reaction } = useContext(StageContext);
+  return <aside className="anoma-stage" aria-label="アノマ" data-expression={expression} data-reaction={reaction ?? 'normal'}>
+    <div className="anoma-portrait-tile"><AnomaPortrait key={expression} expression={expression} /></div>
+    <div className="anoma-stage-content"><span className="anoma-name">アノマ</span>
+      <div className="anoma-dialogue">{lines?.map((line, index) => <p key={index}>{line}</p>)}</div>
+    </div>
   </aside>;
 }
 
@@ -34,26 +61,23 @@ export function Opening({ busy, onComplete }: { busy: boolean; onComplete: () =>
   const last = index === scenario.opening.length - 1;
   return <main className="opening-screen">
     <div className="opening-narration">{openingNarration.map(line => <p key={line}>{line}</p>)}</div>
-    <AnomaFrame line={scenario.opening[index]} expression={storyExpressions.opening} />
+    <StagePublisher lines={[scenario.opening[index]]} expression={storyExpressions.opening} />
     <button className="primary" disabled={busy} onClick={() => last ? onComplete() : setIndex(index + 1)}>{last ? '物語を選ぶ' : '次へ'}</button>
     <button className="secondary" disabled={busy} onClick={onComplete}>スキップ</button>
   </main>;
 }
 
-export function AnomaResult({ transactions }: { transactions: Transaction[] }) {
-  // Reconstruct once from confirmed rounds, so rerenders and retries cannot select another line.
-  const [reaction] = useState(() => {
-    let previous: string | undefined;
-    let result: { line: string; reaction: ReactionKind; expression: AnomaExpression } | undefined;
-    const committed = transactions.filter(tx => tx.status === 'committed');
-    for (let i = 0; i < committed.length; i++) {
-      const trigger = reactionTrigger(committed.slice(0, i + 1));
-      if (!trigger) continue;
-      const seed = Array.from(committed[i].id).reduce((hash, char) => (Math.imul(hash, 31) + char.charCodeAt(0)) >>> 0, 0);
-      previous = chooseLine(scenario[trigger], previous, () => seed / 4294967296);
-      result = { line: previous, reaction: reactionKinds[trigger], expression: expressionForTrigger[trigger] };
-    }
-    return result;
-  });
-  return reaction ? <AnomaFrame {...reaction} /> : null;
+export function resultReaction(transactions: Transaction[]) {
+  // Reconstruct from confirmed rounds, so rerenders and retries select the same line.
+  let previous: string | undefined;
+  let result: { line: string; reaction: ReactionKind; expression: AnomaExpression } | undefined;
+  const committed = transactions.filter(tx => tx.status === 'committed');
+  for (let i = 0; i < committed.length; i++) {
+    const trigger = reactionTrigger(committed.slice(0, i + 1));
+    if (!trigger) continue;
+    const seed = Array.from(committed[i].id).reduce((hash, char) => (Math.imul(hash, 31) + char.charCodeAt(0)) >>> 0, 0);
+    previous = chooseLine(scenario[trigger], previous, () => seed / 4294967296);
+    result = { line: previous, reaction: reactionKinds[trigger], expression: expressionForTrigger[trigger] };
+  }
+  return result;
 }

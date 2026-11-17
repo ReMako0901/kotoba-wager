@@ -1,4 +1,4 @@
-import { AnomaResult, Opening } from './Anoma';
+import { AnomaStageProvider, AnomaStage, StagePublisher, resultReaction, Opening } from './Anoma';
 import { NormalEnding, StoryDecision } from './StoryProgress';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { api } from './api';
@@ -30,7 +30,11 @@ function Modal({title,onClose,children}:{title:string;onClose?:()=>void;children
   return <dialog ref={ref} className="modal" aria-labelledby="modal-title" onCancel={e=>{e.preventDefault();onClose?.()}}><div className="modal-heading"><h2 id="modal-title">{title}</h2>{onClose&&<button className="icon-button" aria-label="閉じる" onClick={onClose}>×</button>}</div>{children}</dialog>;
 }
 
-export default function App(){
+export default function App() {
+  return <AnomaStageProvider><AppContent /></AnomaStageProvider>;
+}
+
+function AppContent(){
   const [screen,setScreen]=useState<'title'|'opening'|'choose'|'game'>('title');
   const [session,setSession]=useState<Session>();
   const [helpOpen,setHelpOpen]=useState(false);
@@ -140,6 +144,7 @@ export default function App(){
       }));
     });
   }
+  const reaction = resultMode && session ? resultReaction(session.transactions) : undefined;
   const ended = session?.story_progress?.phase === 'ended';
   function startCustom() {
     if (customCount < MIN_STORY || customCount > MAX_STORY) return;
@@ -152,12 +157,15 @@ export default function App(){
   }
 
   return <div className={`app-shell ${screen==='game'?'playing':''}`}>
-    {screen !== 'title' && <header className="navigation-bar">
+    <header className="navigation-bar">
+      {screen !== 'title' && <>
       <button className="icon-button" aria-label="タイトルへ" disabled={busy} onClick={() => {
         setScreen('title'); setHistoryOpen(false); setError('');
       }}>タイトルへ</button>
       {screen === 'game' && <button className="icon-button" aria-label="取引履歴" onClick={() => setHistoryOpen(true)}>☰</button>}
-    </header>}
+      </>}
+    </header>
+    <AnomaStage />
     {error && !customOpen && !choosingGame && <div className="alert" role="alert">{error}{screen === 'game' && session &&
       <button onClick={() => act(async () => accept(await api<Session>(`/sessions/${session.id}`)))}>状態を確認</button>}</div>}
     {screen === 'title' && <main className="title-screen">
@@ -200,7 +208,7 @@ export default function App(){
     </main>}
     {screen === 'game' && session?.story_progress && ended && <NormalEnding progress={session.story_progress} onTitle={() => { setScreen('title'); setHistoryOpen(false); }} />}
     {screen==='game'&&session&&!ended&&<main key={`${session.id}-${session.version}-${session.view}`} className={`game-screen${session.version > 1 && session.view !== 'result' ? ' round-reveal' : ''}`}>
-      {gambleMode && last?.gamble ? <><p className="wager-context">賭けた言葉：{last.stakes.join(' / ')}<br />報酬：{last.offer.title}</p><GamblePlay key={last.id} gamble={last.gamble} busy={busy} error={session.error} prepared={session.status === 'awaiting_reveal'}
+      {gambleMode && last?.gamble ? <><StagePublisher expression="taunt" /><p className="wager-context">賭けた言葉：{last.stakes.join(' / ')}<br />報酬：{last.offer.title}</p><GamblePlay key={last.id} gamble={last.gamble} busy={busy} error={session.error} prepared={session.status === 'awaiting_reveal'}
         onMove={(attempt, choice) => act(async () => accept(await api<Session>(`/sessions/${session.id}/transactions/${last.id}/play`, { attempt, choice })))}
         onFinish={() => act(async () => accept(await api<Session>(`/sessions/${session.id}/transactions/${last.id}/finish`, {})))} /></> : <>
       <div className="chapter-line"><span>第{round}章</span>{(resultMode || processing) && <span>{resultMode ? '結果' : '準備中'}</span>}</div>
@@ -209,7 +217,7 @@ export default function App(){
       {resultMode?<>
         {session.story_progress && ['escapable', 'extension'].includes(session.story_progress.phase)
           ? <StoryDecision progress={session.story_progress} busy={busy} onChoice={choice => void chooseStory(choice)} />
-          : <AnomaResult key={`${session.id}-${last.id}`} transactions={session.transactions} />}
+          : <StagePublisher lines={reaction ? [reaction.line] : undefined} expression={reaction?.expression ?? 'normal'} reaction={reaction?.reaction} />}
         <StoryPaperStack key={highlight ? 'changes' : 'reading'} session={session} dust={dust} losses={losses} result pageIndex={paperIndex} onPageChange={setPaperIndex} highlight={highlight} />
         <details className="changes" onToggle={event => { if(event.currentTarget.open) { setPaperIndex(session.transactions.filter(t => t.status === 'committed').length); setHighlight(true); } else setHighlight(false); }}><summary>どこが変わった？</summary><p>{last.summary}</p><p className="quiet">ベット：{last.stakes.join(' / ')}{last.outcome==='loss'&&<> / 失った意味：{last.lost.map(c=>c.label).join('・')}</>}</p>{last.changes?.map((change,i)=><p key={i}>{change}</p>)}</details>
         {session.story_progress?.phase !== 'escapable' && <div className="bottom-actions"><button className="primary" disabled={busy} onClick={()=>act(async()=>{setSelected([]);setOfferId('');setChoosingReward(true);accept(await api<Session>(`/sessions/${session.id}/continue`,{}))})}>次は何をねらう？ <span>→</span></button></div>}

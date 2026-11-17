@@ -3,7 +3,8 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const { mount, text } = require('./component-harness.cjs');
 const { scenario, openingNarration, chooseLine, reactionTrigger } = require('../src/scenario.ts');
-const { AnomaResult, Opening } = require('../src/Anoma.tsx');
+const { resultReaction, Opening } = require('../src/Anoma.tsx');
+const { stageMount } = require('./anoma-stage-harness.cjs');
 const App = require('../src/App.tsx').default;
 const flush = () => new Promise(resolve => setImmediate(resolve));
 const tx = (outcome, extra = {}) => ({ id: 'round', status: 'committed', outcome, lost: [], ...extra });
@@ -40,12 +41,12 @@ test('priority uses current-round loss count and strength, then consecutive comm
 });
 test('opening advances only on explicit clicks and supports skip', () => {
   let done = 0;
-  const ui = mount(Opening, { busy: false, onComplete: () => done++ });
+  const ui = stageMount(Opening, { busy: false, onComplete: () => done++ });
   assert.match(text(ui.tree), new RegExp(scenario.opening[0]));
   ui.tick(); assert.match(text(ui.tree), new RegExp(scenario.opening[0]));
   for (let i = 1; i < scenario.opening.length; i++) { ui.click('次へ'); assert.ok(text(ui.tree).includes(scenario.opening[i])); }
   assert.equal(done, 0); ui.click('物語を選ぶ'); assert.equal(done, 1);
-  const skipped = mount(Opening, { busy: false, onComplete: () => done++ });
+  const skipped = stageMount(Opening, { busy: false, onComplete: () => done++ });
   skipped.click('スキップ'); assert.equal(done, 2);
 });
 function environment(saved, session) {
@@ -68,15 +69,20 @@ test('new start opens before drawing stories; resume bypasses opening for both m
     environment(true, session);
     ui = mount(App, {}); await flush(); ui.draw(); ui.draw();
     ui.click('つづきから'); await flush(); ui.draw();
-    assert.equal(ui.all(n => n.props['aria-label'] === 'アノマの台詞').length, 1, kind);
+    assert.equal(ui.all(n => n.props['aria-label'] === 'アノマ').length, 1, kind);
     assert.ok(text(ui.tree).includes(scenario.gain[0]), kind);
     assert.ok(!text(ui.tree).includes(scenario.opening[0]), kind);
   }
 });
-test('reaction state and nameplate are exposed, and polling rerenders keep the same line', () => {
-  const props = { transactions: [tx('loss', { lost: [{}, {}] })] };
-  const ui = mount(AnomaResult, props);
-  assert.equal(ui.find(n => n.props['data-reaction']).props['data-reaction'], 'change');
-  assert.equal(text(ui.find(n => n.props.className === 'anoma-name')), 'アノマ');
-  const before = text(ui.tree); ui.draw({ transactions: [...props.transactions] }); assert.equal(text(ui.tree), before);
+test('result reaction is pure and repeated histories keep the same line and expression', () => {
+  const transactions = [tx('loss', { lost: [{}, {}] })];
+  const before = JSON.stringify(transactions);
+  const reaction = resultReaction(transactions);
+  assert.equal(reaction.reaction, 'change');
+  assert.equal(reaction.expression, 'uncanny');
+  assert.equal(reaction.line, scenario.change[0]);
+  assert.deepEqual(resultReaction([...transactions]), reaction);
+  assert.deepEqual(resultReaction(JSON.parse(before)), reaction);
+  assert.equal(JSON.stringify(transactions), before);
+  assert.equal(resultReaction([]), undefined);
 });

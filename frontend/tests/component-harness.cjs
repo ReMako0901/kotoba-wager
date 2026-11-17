@@ -6,11 +6,23 @@ const path = require('node:path');
 const local = createRequire(path.resolve(__dirname, '../package.json'));
 const ts = local('typescript');
 let active;
+let revision = 0;
 const hooks = {
+  createContext(value) {
+    const context = { current: value };
+    context.Provider = { context };
+    return context;
+  },
+  useContext(context) { return context.current; },
   useState(initial) {
     const state = active.state, i = active.cursor++;
     if (!(i in state)) state[i] = typeof initial === 'function' ? initial() : initial;
-    return [state[i], value => { state[i] = typeof value === 'function' ? value(state[i]) : value; }];
+    state.setters ??= [];
+    state.setters[i] ??= value => {
+      const next = typeof value === 'function' ? value(state[i]) : value;
+      if (!Object.is(next, state[i])) { state[i] = next; revision++; }
+    };
+    return [state[i], state.setters[i]];
   },
   useRef(initial) { return hooks.useState(() => ({ current: initial }))[0]; },
   useMemo(fn) { active.cursor++; return fn(); },
@@ -53,10 +65,19 @@ function mount(Component, initialProps, reduced = false) {
     setTimeout(fn) { timers.set(++serial, fn); return serial; }, clearTimeout(id) { timers.delete(id); } };
   global.requestAnimationFrame = fn => window.setTimeout(fn, 16);
   global.cancelAnimationFrame = id => window.clearTimeout(id);
+  let visited;
   function expand(node, key, effects) {
     if (!node || typeof node !== 'object') return node;
+    if (node.type?.context) {
+      const context = node.type.context, previous = context.current;
+      context.current = node.props.value;
+      const children = [node.props.children].flat(Infinity).map((child, i) => expand(child, `${key}/${i}`, effects));
+      context.current = previous;
+      return { props: { children } };
+    }
     if (typeof node.type === 'function') {
       const identity = `${key}/${node.type.name}:${node.key ?? ''}`;
+      visited.add(identity);
       if (!instances.has(identity)) instances.set(identity, []);
       active = { state: instances.get(identity), cursor: 0, effects };
       return expand(node.type(node.props), identity, effects);
@@ -67,13 +88,26 @@ function mount(Component, initialProps, reduced = false) {
     return { ...node, props: { ...node.props, children: [node.props?.children].flat(Infinity).map((child, i) => expand(child, `${key}/${i}`, effects)) } };
   }
   function draw(next = props) {
-    props = next; const effects = [];
-    tree = expand({ type: Component, props }, 'root', effects);
-    effects.forEach(effect => effect());
-    return tree;
+    props = next;
+    for (let pass = 0; pass < 25; pass++) {
+      const before = revision, effects = [];
+      visited = new Set();
+      tree = expand({ type: Component, props }, 'root', effects);
+      for (const [identity, state] of instances) if (!visited.has(identity)) {
+        state.forEach(value => value?.cleanup?.());
+        instances.delete(identity);
+      }
+      effects.forEach(effect => effect());
+      if (before === revision) return tree;
+    }
+    throw new Error('Render did not settle');
   }
   const api = {
     draw,
+    unmount() {
+      for (const state of instances.values()) state.forEach(value => value?.cleanup?.());
+      instances.clear(); tree = null;
+    },
     get tree() { return tree; },
     find: predicate => nodes(tree, predicate)[0],
     all: predicate => nodes(tree, predicate),

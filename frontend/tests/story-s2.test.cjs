@@ -2,6 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const { mount, text } = require('./component-harness.cjs');
+const { stageMount } = require('./anoma-stage-harness.cjs');
 const { StoryDecision, NormalEnding } = require('../src/StoryProgress.tsx');
 const { normalEnding, normalEndings, extensionWelcome } = require('../src/scenario.ts');
 const progress = (phase, difference=1) => ({ phase, totals: { rounds: 5, gained: 3, lost: 2, difference }, extension_start: 5 });
@@ -16,7 +17,7 @@ test('all S2/S3 lines are confirmed and endings use only the sign', () => {
 test('reach has totals and explicit choices; busy prevents double actions', () => {
   const choices = [];
   const props = { progress: progress('escapable'), busy: false, onChoice: c => choices.push(c) };
-  const ui = mount(StoryDecision, props);
+  const ui = stageMount(StoryDecision, props);
   assert.ok(text(ui.tree).includes('規定回数に到達しました'));
   for (const label of ['獲得数', '喪失数', '差分', '+1個']) assert.ok(text(ui.tree).includes(label));
   ui.click('さらに賭ける'); ui.click('脱出する');
@@ -25,7 +26,7 @@ test('reach has totals and explicit choices; busy prevents double actions', () =
   assert.ok(ui.all(n => n.type === 'button').every(n => n.props.disabled));
 });
 test('extension entrance uses both confirmed lines; later rounds allow escape', () => {
-  const ui = mount(StoryDecision, { progress: progress('extension'), busy: false, onChoice() {} });
+  const ui = stageMount(StoryDecision, { progress: progress('extension'), busy: false, onChoice() {} });
   for (const line of extensionWelcome) assert.ok(text(ui.tree).includes(line));
   assert.equal(ui.all(n => n.type === 'button').length, 1);
   ui.draw({ progress: { ...progress('extension', -2), totals: { rounds: 6, gained: 2, lost: 4, difference: -2 } }, busy: false, onChoice() {} });
@@ -35,7 +36,7 @@ test('extension entrance uses both confirmed lines; later rounds allow escape', 
 test('ending renders all final lines and returns to title', () => {
   for (const difference of [-3, 0, 4]) {
     let title = false;
-    const ui = mount(NormalEnding, { progress: progress('ended', difference), onTitle: () => title = true });
+    const ui = stageMount(NormalEnding, { progress: progress('ended', difference), onTitle: () => title = true });
     for (const line of normalEnding(difference)) assert.ok(text(ui.tree).includes(line));
     ui.click('タイトルへ戻る'); assert.ok(title);
   }
