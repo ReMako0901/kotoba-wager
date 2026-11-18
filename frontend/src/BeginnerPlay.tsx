@@ -23,10 +23,10 @@ function RockPaperScissors({ gamble, busy, onMove, renderActions = inlineActions
   const attempts = gamble.moves as HandMove[];
   const latest = attempts.at(-1);
   return <>
-    {latest && <div className="rps-result" aria-live="polite">
-      <div><span>あなた</span><b aria-hidden="true">{handSymbols[latest.choice]}</b><span>{hands[latest.choice]}</span></div>
-      <div><span>アノマ</span><b aria-hidden="true">{handSymbols[latest.opponent]}</b><span>{hands[latest.opponent]}</span></div>
-    </div>}
+    <div className={`rps-result${latest ? ` rps-settled rps-${latest.outcome}` : ' rps-standby'}`} aria-live="polite">
+      <div className="rps-side rps-player"><span>あなた</span><b aria-hidden="true">{latest ? handSymbols[latest.choice] : '？'}</b>{latest && <span>{hands[latest.choice]}</span>}</div>
+      <div className="rps-side rps-opponent"><span>アノマ</span><b aria-hidden="true">{latest ? handSymbols[latest.opponent] : '？'}</b>{latest && <span>{hands[latest.opponent]}</span>}</div>
+    </div>
     {!gamble.outcome && renderActions(<div className="rps-buttons">
       {hands.map((hand, index) => <button className="secondary" key={hand} type="button"
         disabled={busy} onClick={() => onMove(attempts.length, index)}>
@@ -40,8 +40,8 @@ function Dice({ gamble, busy, onMove, renderActions = inlineActions }: Props) {
   const move = gamble.moves?.[0] as DiceMove | undefined;
   return <>
     <div className="dice-game">
-      {move ? <output className="dice-face" aria-label={`${move.face}の目`}>{diceSymbols[move.face - 1]}</output>
-        : <span className="dice-face" aria-hidden="true">⚄</span>}
+      {move ? <output className={`dice-face dice-${move.outcome}`} aria-label={`${move.face}の目`}>{diceSymbols[move.face - 1]}</output>
+        : <span className="dice-face dice-standby" aria-hidden="true">⚄</span>}
     </div>
     {!move && renderActions(<button type="button" className="primary" disabled={busy} onClick={() => onMove(0)}>サイコロを振る</button>)}
   </>;

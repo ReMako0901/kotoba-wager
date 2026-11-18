@@ -1,21 +1,151 @@
-.game-tiers { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; margin: 12px 0; }
-.game-tiers button { border: 1px solid var(--rule); background: #fff; border-radius: 2px; font-weight: 700; }
-.game-tiers button[aria-pressed=true] { background: #f0e6e3; color: var(--stamp); border-color: var(--stamp); }
+.game-tiers {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+  margin: 12px 0;
+  padding: 4px;
+  background: #f4eae8;
+  border: 1px solid var(--rule);
+}
+.game-tiers button {
+  min-height: 38px;
+  border: 1px solid transparent;
+  background: transparent;
+  border-radius: 2px;
+  font-family: var(--serif);
+  font-size: 13px;
+  font-weight: 800;
+  color: #5e4a48;
+}
+.game-tiers button[aria-pressed=true] {
+  background: #fff;
+  color: var(--stamp);
+  border-color: var(--stamp);
+  box-shadow: 2px 2px 0 rgba(156, 46, 50, 0.18);
+}
+.gamble-screen {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 14px;
+  width: 100%;
+  padding: 18px 14px;
+  background: #fff;
+  border: 1.5px solid var(--ink);
+  box-shadow: inset 0 0 0 3px #fff, inset 0 0 0 4px var(--rule), 4px 5px 14px rgba(36, 29, 28, 0.08);
+}
+.gamble-screen .eyebrow {
+  text-align: center;
+  letter-spacing: .2em;
+  font-family: var(--serif);
+}
+.gamble-screen h1 {
+  text-align: center;
+  font-size: clamp(22px, 6.5vw, 30px);
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--rule);
+}
+.gamble-screen.motion-result h1 {
+  color: var(--stamp);
+  border-bottom-color: var(--stamp);
+}
 .beginner-game { gap: 16px; }
-.rps-result, .rps-buttons { display: grid; gap: 8px; text-align: center; }
-.rps-result { grid-template-columns: repeat(2, 1fr); }
-.rps-result > div { display: grid; padding: 8px; border: 1px solid var(--rule); }
-.rps-result b { font-size: clamp(30px, 12vw, 48px); }
-.rps-result span { font-size: 13px; }
+.rps-result, .rps-buttons { display: grid; gap: 10px; text-align: center; }
+.rps-result {
+  position: relative;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  padding: 6px 0;
+}
+.rps-result::after {
+  content: "対";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--stamp);
+  background: #fdf2f0;
+  color: var(--stamp);
+  font: 800 12px/1 var(--serif);
+  box-shadow: 2px 2px 0 rgba(156, 46, 50, 0.15);
+}
+.rps-result > div {
+  display: grid;
+  align-content: center;
+  gap: 6px;
+  min-height: 128px;
+  padding: 14px 10px;
+  background: linear-gradient(180deg, #ffffff 0%, #fbf5f4 100%);
+  border: 1px solid var(--ink);
+  box-shadow: inset 0 0 0 2px #fff, inset 0 0 0 3px var(--rule), 3px 3px 0 #ead7d5;
+}
+.rps-result.rps-standby > div b {
+  color: var(--stamp);
+  opacity: .55;
+  font-family: var(--serif);
+}
+.rps-result.rps-win .rps-player,
+.rps-result.rps-loss .rps-opponent {
+  border-color: var(--stamp);
+  background: linear-gradient(180deg, #fff9f8 0%, #fdedea 100%);
+  box-shadow: inset 0 0 0 2px #fff, inset 0 0 0 3px var(--stamp), 3px 3px 0 rgba(156, 46, 50, 0.24);
+}
+.rps-result b { font-size: clamp(34px, 12vw, 50px); line-height: 1.1; }
+.rps-result span { font-size: 12.5px; font-family: var(--serif); font-weight: 700; color: #4a3a38; }
 .rps-buttons { grid-template-columns: repeat(3, 1fr); }
-.rps-buttons .secondary { margin: 0; padding: 8px 0; }
-.rps-buttons span { display: block; font-size: 29px; }
+.rps-buttons .secondary {
+  margin: 0;
+  padding: 6px 0;
+  border: 1px solid var(--ink);
+  background: #fff;
+  box-shadow: 2px 2px 0 var(--rule);
+  font-family: var(--serif);
+  font-weight: 800;
+}
+.rps-buttons .secondary:hover:not(:disabled) {
+  border-color: var(--stamp);
+  background: #fdf6f5;
+}
+.rps-buttons span { display: block; font-size: 26px; line-height: 1.15; }
 .dice-game, .card-guess { display: grid; gap: 12px; }
-.dice-face { justify-self: center; font: 86px/1.12 "Apple Symbols", "Segoe UI Symbol", sans-serif; }
-.guess-board { width: min(100%, 360px); aspect-ratio: 2 / 1; position: relative; justify-self: center; }
+.dice-game {
+  padding: 20px;
+  background: radial-gradient(circle at 50% 50%, #fff 0%, #faf1ef 100%);
+  border: 1px solid var(--rule);
+  box-shadow: inset 0 0 0 3px #fff, inset 0 0 0 4px #eedad7;
+}
+.dice-face {
+  justify-self: center;
+  display: grid;
+  place-items: center;
+  width: 108px;
+  height: 108px;
+  background: #fff;
+  border: 1.5px solid var(--ink);
+  box-shadow: 4px 4px 0 var(--rule);
+  font: 80px/1 "Apple Symbols", "Segoe UI Symbol", sans-serif;
+}
+.dice-face.dice-win {
+  color: var(--stamp);
+  border-color: var(--stamp);
+  box-shadow: 4px 4px 0 rgba(156, 46, 50, 0.28);
+}
+.guess-board {
+  width: min(100%, 360px);
+  aspect-ratio: 2 / 1;
+  position: relative;
+  justify-self: center;
+  background: #faf3f2;
+  border: 1px dashed var(--rule);
+}
 .guess-card.playing-card {
   position: absolute; left: 2.166%; top: 6%; width: 29%; height: auto; aspect-ratio: 167 / 243;
   display: grid; place-content: center; padding: 0; overflow: hidden;
+  box-shadow: 2px 3px 8px rgba(36, 29, 28, 0.14);
 }
 .guess-card.playing-card:disabled { opacity: 1; cursor: default; }
 .guess-card .baccarat-face { position: absolute; inset: 0; }

@@ -6,6 +6,13 @@
   overflow: hidden;
 }
 
+.app-shell.title-mode,
+.app-shell.opening-mode {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+}
+
 .app-shell > .navigation-bar .icon-button {
   height: 100%;
   min-height: 0;
@@ -33,9 +40,14 @@
   min-width: 0;
 }
 
+.playing .fixed-game {
+  grid-template-rows: 34px auto minmax(0, 1fr) 66px;
+}
+
 .fixed-game > .game-heading {
   grid-row: 1;
   align-items: center;
+  padding: 2px 0;
   font: 700 14px/1.3 var(--serif);
 }
 
@@ -45,8 +57,9 @@
   align-items: center;
   gap: 8px;
   min-width: 0;
-  min-height: 20px;
-  font-size: 10px;
+  min-height: 24px;
+  padding: 2px 0 4px;
+  font-size: 11px;
 }
 
 .meta-loss {
@@ -54,6 +67,12 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  padding: 2px 8px;
+  background: #f5ebe9;
+  border-left: 3px solid var(--stamp);
+  color: var(--ink);
+  font-family: var(--serif);
+  font-weight: 700;
 }
 
 .result-meta .story-counts,
@@ -78,6 +97,26 @@
   min-width: 0;
   min-height: 0;
   overflow: clip;
+  margin-inline: -10px;
+  padding: 10px;
+  background:
+    radial-gradient(circle at 50% 50%, #ffffff 0%, #f3e8e6 100%);
+  border-block: 1px solid #e6d3d0;
+  box-shadow: inset 0 2px 8px rgba(36, 29, 28, 0.04);
+}
+
+.result-win-view > .game-hero {
+  background:
+    radial-gradient(circle at 50% 42%, #fffdf9 0%, #fceae6 65%, #f5d8d3 100%);
+  border-block-color: var(--stamp);
+  box-shadow: inset 0 0 24px rgba(156, 46, 50, 0.1);
+}
+
+.result-loss-view > .game-hero {
+  background:
+    radial-gradient(circle at 50% 50%, #faf7f7 0%, #e9e0df 100%);
+  border-block-color: #b8a3a1;
+  box-shadow: inset 0 0 20px rgba(36, 29, 28, 0.08);
 }
 
 .game-hero > .story-board,
@@ -107,39 +146,87 @@
   grid-row: 4;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   min-width: 0;
-  border-top: 1px solid var(--rule);
+  padding-top: 4px;
+  background: #fcf9f8;
+  border-top: 1px solid var(--ink);
+  box-shadow: 0 -4px 12px rgba(36, 29, 28, 0.04);
 }
 
 .action-bar :is(.secondary, .primary) {
   width: auto;
   min-height: 44px;
   margin: 0;
-  padding: 4px 8px;
-  font-size: 12px;
+  padding: 6px 11px;
+  font-size: 12.5px;
   line-height: 1.35;
 }
 
 .action-bar .primary { flex-shrink: 1; }
 .action-bar .primary span:not(.spinner) { font-size: 15px; }
-.action-bar .text-button { flex-shrink: 0; padding-inline: 3px; }
+.action-bar .text-button {
+  flex-shrink: 0;
+  padding: 4px 7px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #5a4644;
+}
 .action-bar .reward-change {
   display: flex;
   align-items: center;
   margin-right: auto;
   min-width: 0;
   white-space: nowrap;
+  border-left: 3.5px solid var(--stamp);
+  background: #fff;
+  padding-inline: 9px;
 }
 .action-bar .reward-change span {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-family: var(--serif);
+  font-weight: 800;
+  color: var(--stamp);
 }
-.stake-count { flex-shrink: 0; font-size: 13px; font-weight: 800; white-space: nowrap; }
+.stake-count {
+  flex-shrink: 0;
+  padding: 3px 8px;
+  border: 1px solid var(--rule);
+  background: #fff;
+  font-family: var(--serif);
+  font-size: 13px;
+  font-weight: 900;
+  white-space: nowrap;
+  transition: background 150ms ease, color 150ms ease, border-color 150ms ease;
+}
+.stake-count.stakes-ready {
+  background: var(--stamp);
+  border-color: var(--stamp);
+  color: #fff;
+}
 
-.result-bar > .text-button { margin-right: auto; }
+.result-bar > .text-button {
+  margin-right: auto;
+  min-height: 40px;
+  padding: 6px 12px;
+  border: 1px solid var(--ink);
+  background: #fff;
+  box-shadow: 2px 2px 0 var(--rule);
+  text-decoration: none;
+  font-family: var(--serif);
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--ink);
+}
+.result-bar > .text-button[aria-pressed="true"] {
+  background: var(--stamp);
+  border-color: var(--stamp);
+  color: #fff;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2);
+}
 .result-bar > .story-decision { display: contents; }
 .result-bar .story-decision > button { min-height: 44px; }
 
@@ -151,6 +238,7 @@
 
 @media (max-width: 370px) {
   .app-shell:is(.playing, .choosing) { padding-inline: 12px; }
+  .game-hero { margin-inline: -6px; padding: 6px; }
   .action-bar { gap: 4px; }
 }
 

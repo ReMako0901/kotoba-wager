@@ -1,8 +1,36 @@
 .baccarat-screen { gap: 8px; }
+.card-table {
+  padding: 12px;
+  background: linear-gradient(180deg, #ffffff 0%, #fbf5f4 100%);
+  border: 1px solid var(--rule);
+  box-shadow: inset 0 0 0 2px #fff;
+}
+.hand-heading span {
+  font-family: var(--serif);
+  font-weight: 700;
+  color: #4a3a38;
+}
+.hand-heading b {
+  display: inline-grid;
+  place-items: center;
+  min-width: 28px;
+  padding: 1px 6px;
+  border: 1px solid var(--rule);
+  background: #fdf3f2;
+  color: var(--stamp);
+  font-family: var(--serif);
+  font-size: 15px;
+}
+.slot-machine {
+  padding: 14px;
+  background: linear-gradient(180deg, #ffffff 0%, #faf2f0 100%);
+  border: 1.5px solid var(--ink);
+  box-shadow: inset 0 0 0 3px #fff, inset 0 0 0 4px var(--rule);
+}
 .baccarat-screen .card-table {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
-  padding: 8px 0;
+  padding: 8px 4px;
   border: 0;
   border-bottom: 1px solid var(--rule);
 }
