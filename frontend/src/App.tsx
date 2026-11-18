@@ -16,6 +16,7 @@ import './gamble-motion.css';
 import { GenerationSkeleton } from './GambleMotion';
 import { storyVersions } from './storyVersions';
 import './layout.css';
+import './table-finish.css';
 
 function requestId() {
   const b=crypto.getRandomValues(new Uint8Array(16)); b[6]=(b[6]&15)|64; b[8]=(b[8]&63)|128;
