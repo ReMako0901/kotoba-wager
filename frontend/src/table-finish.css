@@ -238,3 +238,32 @@
   58% { translate: -5px 1px; rotate: -18deg; }
   79% { translate: 2px -2px; rotate: 7deg; }
 }
+
+/* 第6ラウンド：肖像は小さく、下半分はスクロールなしで完結させる */
+.anoma-stage:has(.wager-paper-stack) { grid-template-rows: clamp(108px, 16dvh, 160px) minmax(0, 1fr); }
+.anoma-stage:has(.story-paper-stack) { grid-template-rows: clamp(94px, 14dvh, 180px) minmax(0, 1fr); }
+.anoma-stage:has(.choose-screen) { grid-template-rows: clamp(118px, 18dvh, 170px) minmax(0, 1fr); }
+.game-heading .story-title { font-size: 13.5px; }
+.game-heading .chapter-line { font-size: 10px; }
+.edition-badge { font-size: 11px; padding: 1px 7px; }
+.game-object .manuscript-sheet:has(.paper-stamp) { padding-top: 16px; }
+.paper-stamp { top: 0; left: 50px; }
+.game-screen:is(.result-win-view, .result-loss-view) .paper-tabs .primary { min-height: 40px; }
+.game-heading .story-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 46vw; }
+.game-heading .story-title { line-height: 1.15; }
+.story-card .story-intro { display: none; }
+.table-objects .title-screen { display: flex; flex-direction: column; justify-content: center; }
+.game-screen:is(.result-win-view, .result-loss-view) .game-heading { position: absolute; top: 0; left: 14px; z-index: 5; margin: 0; pointer-events: none; }
+.game-object:not(:has(.story-decision)) .result-meta { position: absolute; top: 0; right: 14px; z-index: 5; margin: 0; pointer-events: none; }
+.game-screen:is(.result-win-view, .result-loss-view) .story-paper-stack { margin-top: 4px; }
+.game-screen:is(.result-win-view, .result-loss-view) .manuscript-sheet::after { height: 1px; margin-top: 0; }
+.game-object:has(.story-decision) .story-paper-stack,
+.game-object:has(.story-decision) .paper-tabs,
+.game-object:has(.story-decision) .game-heading { display: none; }
+
+@media (max-height: 700px) {
+  .anoma-stage-content { margin: 7px 6px 4px; padding: 8px 12px 6px; }
+  .story-card { padding: 7px 10px 7px 9px; }
+  .story-card h2 { font-size: 15px; }
+  .choose-screen h1 { font-size: 18px; margin-bottom: 3px; }
+}

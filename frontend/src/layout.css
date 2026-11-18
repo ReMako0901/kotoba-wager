@@ -20,7 +20,7 @@ html, body { background: #100b13; }
   flex-direction: column;
   min-height: 0;
   overflow: hidden;
-  padding: 5px var(--scene-gutter) max(9px, env(safe-area-inset-bottom));
+  padding: 3px var(--scene-gutter) max(6px, env(safe-area-inset-bottom));
   border-top: 5px solid #936044;
   border-bottom: 9px solid #43251e;
   background:
@@ -156,7 +156,7 @@ html, body { background: #100b13; }
   flex-direction: column;
   min-width: 0;
   min-height: 0;
-  padding: 2px 4px 8px;
+  padding: 2px 4px 4px;
 }
 
 
