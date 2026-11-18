@@ -39,14 +39,14 @@ test('expression pools have the specified ranges, cover all candidates and are d
   assert.deepEqual(extension, Array.from({ length: 100 }, (_, i) => expressionForExtension(String(i))));
 });
 
-test('change classification stays at 6/2 while uncanny is restricted to strength 8 or loss 3', () => {
+test('change classification stays at 6/2 and uncanny is never selected', () => {
   for (const strength of [0, 5, 6, 7, 8, 9]) for (const lost of [0, 1, 2, 3, 4]) {
     const history = [tx('threshold', strength, lost)];
     const change = strength >= 6 || lost >= 2;
     assert.equal(reactionTrigger(history), change ? 'change' : 'loss');
     const result = resultReaction(history);
-    assert.equal(result.expression === 'uncanny', strength >= 8 || lost >= 3);
-    if (change && strength < 8 && lost < 3) assert.ok(['smile', 'giggle'].includes(result.expression));
+    assert.notEqual(result.expression, 'uncanny');
+    if (change) assert.ok(['smile', 'giggle'].includes(result.expression));
     assert.deepEqual(resultReaction(JSON.parse(JSON.stringify(history))), result);
   }
 });

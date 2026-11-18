@@ -35,7 +35,8 @@ export function chooseExpression(pool: readonly AnomaExpression[], key: string):
   return pool[hash % pool.length];
 }
 export function expressionForTrigger(trigger: ReactionTrigger, transaction: Transaction): AnomaExpression {
-  if (trigger === 'change' && ((transaction.gamble?.strength ?? 0) >= 8 || (transaction.lost?.length ?? 0) >= 3)) return 'uncanny';
+  // 異常（uncanny）は怖いため使わない（2026-11-18 ユーザー確定）。
+  // 大きな改変でも笑み系プールのままにする。
   return chooseExpression(expressionPools[trigger], transaction.id);
 }
 export function expressionForExtension(key: string): AnomaExpression {
