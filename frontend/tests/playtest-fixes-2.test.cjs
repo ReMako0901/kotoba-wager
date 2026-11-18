@@ -88,15 +88,16 @@ test('history uses plays and shares controlled page index; changes stay highligh
   assert.match(text(history.tree), /第2版/); assert.match(text(history.tree), /プレイ 1回/);
   assert.doesNotMatch(text(history.tree), /PRIVATE_MODEL|tokens|999|生成 \d回/);
 });
-test('generation uses the same paper and busy spinner while waiting and ready', () => {
+test('generation waits with a busy spinner and ink shimmer, never an empty paper', () => {
   const ui = mount(GenerationSkeleton, {});
   assert.ok(ui.find(n => n.props.className === 'spinner'));
   assert.equal(ui.find(n => n.props.className === 'generation-skeleton').props['aria-busy'], true);
-  assert.ok(ui.find(n => n.props.className === 'skeleton-paper'));
+  assert.ok(ui.find(n => n.props.className === 'skeleton-ink'));
+  assert.equal(ui.all(n => n.props.className === 'skeleton-paper').length, 0);
   ui.draw({ complete: true });
   assert.equal(ui.all(n => n.props.className === 'spinner').length, 0);
   assert.equal(ui.find(n => n.props.className === 'generation-skeleton').props['aria-busy'], false);
-  assert.ok(ui.find(n => n.props.className === 'skeleton-paper'));
+  assert.ok(ui.find(n => n.props.className === 'skeleton-ink'));
 });
 test('round reset, help copy, history availability and fixed cell definition remain explicit', () => {
   const app = source('App.tsx');

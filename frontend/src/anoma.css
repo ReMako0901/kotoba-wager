@@ -25,12 +25,8 @@
 
 .anoma-portrait {
   transform-origin: center;
-  filter: blur(0) brightness(1);
-  transition: filter 420ms ease;
   animation: anoma-breathe 6s ease-in-out infinite;
 }
-
-.anoma-backdrop[data-focus="table"] .anoma-portrait { filter: blur(2.5px) brightness(.88); }
 
 @keyframes anoma-breathe {
   0%, 100% { transform: scale(1); }
@@ -42,8 +38,8 @@
   inset: 0;
   width: 100%;
   height: 100%;
-  object-fit: contain;
-  object-position: center;
+  object-fit: cover;
+  object-position: 50% 20%;
 }
 
 .anoma-portrait-current { opacity: 0; }
@@ -68,26 +64,58 @@
 }
 
 .anoma-stage-content {
+  position: relative;
   flex-shrink: 0;
-  align-self: start;
+  align-self: stretch;
   max-width: 100%;
-  margin: 0 3px 6px;
-  padding: 4px 9px;
-  border: 1px solid #a9866a;
-  border-left: 3px solid #a14f49;
-  border-radius: 2px;
-  background: #f2e4cd;
-  color: #2c231d;
-  box-shadow: 1px 2px #382b25;
+  margin: 12px 6px 8px;
+  padding: 13px 16px 11px;
+  border: 1px solid #c9a24d;
+  border-radius: 3px;
+  background: linear-gradient(180deg, #42242d 0%, #2c171e 100%);
+  color: #f7ecd2;
+  box-shadow:
+    inset 0 0 0 3px #2c171e,
+    inset 0 0 0 4px rgba(201, 162, 77, .55),
+    0 6px 16px rgba(0, 0, 0, .5);
   font-family: var(--serif);
 }
 
+.anoma-stage-content::before {
+  content: "アノマ";
+  position: absolute;
+  top: -10px;
+  left: 12px;
+  padding: 2px 12px 3px;
+  background: linear-gradient(180deg, #dcbc6a, #b98f36);
+  color: #2c171e;
+  border: 1px solid #8a6a24;
+  border-radius: 2px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .35em;
+  text-indent: .35em;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, .4);
+}
+
+.anoma-stage-content::after {
+  content: "";
+  position: absolute;
+  right: 10px;
+  bottom: 8px;
+  width: 6px;
+  height: 6px;
+  background: #c9a24d;
+  transform: rotate(45deg);
+  opacity: .85;
+}
+
 .anoma-dialogue {
-  max-height: clamp(32px, 10dvh, 85px);
+  max-height: clamp(36px, 11dvh, 92px);
   overflow-y: auto;
   overscroll-behavior: contain;
-  font-size: 13px;
-  line-height: 1.45;
+  font-size: 14.5px;
+  line-height: 1.6;
   overflow-wrap: anywhere;
 }
 

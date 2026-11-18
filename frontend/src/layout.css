@@ -135,7 +135,7 @@ html, body { background: #100b13; }
 .choose-header { margin: 0; padding: 0; border: 0; }
 .choose-screen h1 { color: #fff3e4; font-size: 20px; margin: 0 0 6px; }
 .choose-screen h1::before { content: none; }
-.choose-screen .story-list { min-height: 0; overflow-y: auto; padding: 4px 7px 10px 2px; }
+.choose-screen .story-list { min-height: 0; overflow-y: auto; padding: 4px 7px 10px 2px; align-items: start; grid-auto-rows: max-content; }
 .story-card {
   border-radius: 2px 6px 6px 2px;
   border: 1px solid #ac896a;

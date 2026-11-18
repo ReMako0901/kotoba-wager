@@ -19,6 +19,7 @@ body { background: #0e0a0a; }
   border-inline: 1px solid #3c2625;
 }
 .story-board { background: #fff; }
+.story-board.is-processing { background: transparent; }
 .masthead { height: 66px; border-bottom: 1px solid var(--ink); }
 .wordmark { font: 800 21px/1.3 var(--serif); }
 .icon-button { border: 0; border-radius: 0; color: var(--ink); }

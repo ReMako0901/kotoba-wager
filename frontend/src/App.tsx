@@ -256,12 +256,12 @@ function AppContent(){
             : resultMode ?
               <StoryPaperStack session={session} dust={dust} losses={losses} result pageIndex={paperIndex} onPageChange={setPaperIndex} highlight={highlight} />
             : <>
-              <section className="story-board wager-paper-stack" aria-label="賭ける言葉を選ぶ">
-                <PaperLayers count={round}>{processing ? <GenerationSkeleton /> : session.analysis ?
+              <section className={`story-board wager-paper-stack${processing ? ' is-processing' : ''}`} aria-label="賭ける言葉を選ぶ">
+                {processing ? <GenerationSkeleton /> : <PaperLayers count={round}>{session.analysis ?
                   <WagerManuscript text={session.text} units={units} selected={selected}
                     disabled={!ready || !offer || busy || choosingReward || choosingGame} onToggle={toggle} dust={dust} losses={losses} />
                   : <Manuscript text={session.text} dust={dust} losses={losses} />}
-                </PaperLayers>
+                </PaperLayers>}
               </section>
               {session.status === 'error' && <div className="api-error" role="alert"><p>{session.error}</p></div>}
             </>}

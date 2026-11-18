@@ -39,8 +39,8 @@
 }
 .gamble-screen .primary { min-height: 44px; padding-block: 4px; }
 .gamble-screen .text-button { color: #fff5e7; background: #1b352c; }
-.gamble-screen .generation-skeleton { background: #fffcf0; border: 1px solid #c8aa92; padding: 3px 6px; }
-.gamble-screen .generation-skeleton[aria-busy=false] .skeleton-paper { opacity: .7; }
+.gamble-screen .generation-skeleton { background: transparent; border: 0; padding: 3px 6px; }
+.gamble-screen .generation-skeleton[aria-busy=false] .skeleton-ink { opacity: .45; }
 
 
 .rps-result {
