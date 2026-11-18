@@ -1,3 +1,4 @@
+const { drawStories, startStory } = require('./app-flow-harness.cjs');
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -32,7 +33,6 @@ test('publisher draws nothing, updates lines and expression, and resets on unmou
   assert.equal(text(stage(ui)), 'アノマ');
 });
 test('stage is shared on title, opening and story selection; all have dialogue', async () => {
-  global.localStorage = { getItem: () => null, setItem() {} };
   global.fetch = async url => ({ ok: true, json: async () => url.endsWith('/games') ? { games: [] } : { stories: [], exhausted: false } });
   const ui = mount(App, {}); await flush(); ui.draw();
   for (const action of [null, 'はじめる', 'スキップ']) {
@@ -48,12 +48,11 @@ test('stage is shared on title, opening and story selection; all have dialogue',
 });
 test('game publishes scene dialogue for reward, generation, gambling and title', async () => {
   for (const [status, gamble, scene] of [['ready', false, 'rewardSelect'], ['generating', false, 'generating'], ['generating', true, 'gamblePlay:dice']]) {
-    global.localStorage = { getItem: key => key === 'story-wager-session-count-v1' ? 'saved' : null, setItem() {} };
     const session = { id: 'saved', betting_mode: 'count-v1', status, view: 'select', version: 1, text: '猫。', title: '物語', offers: [], lost_concepts: [], usage: {},
       transactions: gamble ? [{ id: 'r', status: 'generating', stakes: ['猫'], offer: { title: '報酬' }, gamble: { kind: 'dice', strength: 1, outcome: null, rounds: [], moves: [] } }] : [] };
-    global.fetch = async url => ({ ok: true, json: async () => url.endsWith('/games') ? { games: [] } : session });
+    global.fetch = async url => ({ ok: true, json: async () => url.endsWith('/games') ? { games: [] } : drawStories(url) ?? session });
     const ui = mount(App, {}); await flush(); ui.draw();
-    ui.click('つづきから'); await flush(); ui.draw();
+    await startStory(ui);
     assertScene(ui, scene);
     ui.click('タイトルへ');
     assertScene(ui, 'title');
@@ -71,7 +70,9 @@ test('all dialogue owners publish and obsolete embedded frames are removed', () 
   assert.doesNotMatch(anoma + app + progress, /AnomaFrame|AnomaResult/);
   const css = fs.readFileSync('frontend/src/anoma.css', 'utf8');
   assert.match(css, /position: sticky;\s*top: 0/);
-  assert.match(css, /height: 116px/);
-  assert.match(css, /height: 5.6em;\s*overflow-y: auto/);
+  assert.match(css, /height: 76px/);
+  assert.match(css, /max-height: 2.8em;\s*overflow-y: auto/);
+  assert.match(css, /width: 52px; height: 52px/);
+  assert.match(css, /\.anoma-stage-content \{ display: flex/);
   assert.match(css, /object-fit: cover; object-position: 50% 20%/);
 });

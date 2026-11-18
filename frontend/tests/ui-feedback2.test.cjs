@@ -1,3 +1,4 @@
+const { drawStories, startStory } = require('./app-flow-harness.cjs');
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -69,8 +70,6 @@ test('new faces use named open/closed assets and missing assets preserve dialogu
 
 test('game hides intro, restores reward descriptions and opens only on selection completion', async () => {
   for (const required_count of [1, 2, 3]) {
-    const values = new Map([['story-wager-session-count-v1', 'saved']]);
-    global.localStorage = { getItem: key => values.get(key) ?? null, setItem: (key, value) => values.set(key, value) };
     const session = { id: 'saved', betting_mode: 'count-v1', status: 'ready', view: 'select', version: 1,
       title: '長い物語のタイトル', intro: 'ゲーム画面では隠す導入', text: '猫犬鳥月', transactions: [], lost_concepts: [], usage: {},
       offers: [{ id: 'reward', title: '出会い', description: '新しい相手に出会う', required_count, family: 'plot' }],
@@ -78,14 +77,18 @@ test('game hides intro, restores reward descriptions and opens only on selection
     const requests = [];
     global.fetch = async (url, options) => {
       requests.push([url, options.method]);
-      return { ok: true, json: async () => url.endsWith('/games') ? { games: [{ id: 'dice', name: 'サイコロ', tier: 'beginner' }] } : session };
+      return { ok: true, json: async () => url.endsWith('/games') ? { games: [{ id: 'dice', name: 'サイコロ', tier: 'beginner' }] } : drawStories(url) ?? session };
     };
     const ui = mount(App, {}); await flush(); ui.draw();
-    ui.click('つづきから'); await flush(); ui.draw();
+    await startStory(ui);
     assert.doesNotMatch(text(ui.tree), /ゲーム画面では隠す導入/);
     assert.match(text(ui.tree), /新しい相手に出会う/);
     assert.doesNotMatch(text(ui.tree), /展開系|表現系/);
     ui.click('出会い');
+    assert.equal(ui.find(n => n.props.className === 'reward-summary'), undefined);
+    const bar = ui.find(n => n.props.className === 'action-bar wager-bar');
+    assert.match(text(bar), new RegExp(`出会い・${required_count}個 変更`));
+    assert.match(text(bar), new RegExp(`0 / ${required_count}`));
     const gameModal = () => ui.find(n => n.type === 'dialog' && text(n).includes('どのギャンブルにする？'));
     for (let i = 0; i < required_count; i++) {
       assert.equal(gameModal(), undefined);
@@ -94,7 +97,7 @@ test('game hides intro, restores reward descriptions and opens only on selection
     assert.ok(gameModal());
     ui.click('閉じる'); ui.draw(); ui.draw();
     assert.equal(gameModal(), undefined);
-    ui.click('今回ねらうもの');
+    ui.click('変更');
     ui.find(n => n.type === 'button' && n.props.className === 'reward-option').props.onClick(); ui.draw();
     assert.equal(gameModal(), undefined);
     ui.click('ギャンブルを選ぶ'); assert.ok(gameModal()); ui.click('閉じる');
@@ -102,7 +105,7 @@ test('game hides intro, restores reward descriptions and opens only on selection
     ui.click('月'); assert.ok(gameModal()); ui.click('閉じる'); // Ready again.
     ui.click('猫'); assert.equal(gameModal(), undefined);
     ui.click('猫'); assert.ok(gameModal());
-    assert.ok(requests.every(([, method]) => method === 'GET'), 'opening never starts a wager');
+    assert.ok(requests.every(([url]) => !url.endsWith('/transactions')), 'opening never starts a wager');
     assert.equal(session.intro, 'ゲーム画面では隠す導入');
     ui.unmount();
   }

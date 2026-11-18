@@ -234,8 +234,8 @@ function animateInk(canvas: HTMLCanvasElement, frame: HTMLElement, dust: Dust, i
   };
 }
 
-export function LossManuscript({ transaction, text, dust, losses }: {transaction: Transaction; text: string} & DustProps) {
-  const [playing, setPlaying] = useState(() => !window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+export function LossManuscript({ transaction, text, dust, losses, highlight = false }: {transaction: Transaction; text: string; highlight?: boolean} & DustProps) {
+  const [playing, setPlaying] = useState(() => !highlight && !window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   const changes = useMemo(() => manuscriptChanges(transaction.before, text), [transaction.before, text]);
   const previousLosses = useMemo(() => losses.filter(loss => loss.id !== transaction.id), [losses, transaction.id]);
   const frame = useRef<HTMLDivElement>(null);
@@ -253,6 +253,7 @@ export function LossManuscript({ transaction, text, dust, losses }: {transaction
     }
   }
   useEffect(() => {
+    if (highlight) { setPlaying(false); return; }
     if (!playing) return;
     let stop: (() => void) | undefined;
     let cancelled = false;
@@ -272,7 +273,7 @@ export function LossManuscript({ transaction, text, dust, losses }: {transaction
       window.clearTimeout(fallback);
       stop?.();
     };
-  }, [playing, dust, transaction.id]);
+  }, [playing, highlight, dust, transaction.id]);
 
   return <>
     <p className="sr-only">{text}</p>

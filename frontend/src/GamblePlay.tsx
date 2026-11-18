@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { BaccaratCard, CardFace } from './BaccaratCard';
 import { GambleMotion, GenerationSkeleton } from './GambleMotion';
 import { BeginnerPlay } from './BeginnerPlay';
@@ -38,20 +38,20 @@ function CardHand({ cards, label, isOpen, blackjack, selected, onSelect, onOpenA
 }
 
 type PlayProps = {
+  renderActions?: (children: ReactNode) => ReactNode;
   gamble: Gamble; busy: boolean; error?: string; prepared: boolean; onFinish: () => void; onMove: (attempt: number, choice?: number) => void;
 };
 
-function Finish({ gamble, busy, error, prepared, onFinish }: PlayProps) {
+const inlineActions = (children: ReactNode) => <div className="gamble-actions">{children}</div>;
+
+function Finish({ gamble, busy, error, prepared, onFinish, renderActions }: PlayProps) {
   return <>
     {gamble.kind === 'slot' && <div className="gamble-outcome"><b>{gamble.label}</b></div>}
     {!error && <GenerationSkeleton complete={prepared} />}
-    <div className="gamble-actions">
-      <button className={`primary${!prepared && !error ? ' loading-bet' : ''}`} aria-busy={!prepared && !error} disabled={busy || (!prepared && !error)} onClick={onFinish}>
+    {(renderActions ?? inlineActions)(<button className={`primary${!prepared && !error ? ' loading-bet' : ''}`} aria-busy={!prepared && !error} disabled={busy || (!prepared && !error)} onClick={onFinish}>
         {!prepared && !error && <span className="spinner" aria-hidden="true" />}
         この結果を物語へ <span>→</span>
-      </button>
-
-    </div>
+      </button>)}
   </>;
 }
 
@@ -84,7 +84,7 @@ function SlotPlay(props: PlayProps) {
         <button key={i} disabled={stop || props.busy}
           onClick={() => setStopped(current => current.map((value, index) => value || index === i))}>STOP {i + 1}</button>)}</div>
     </div>
-    {complete ? <Finish {...props} /> : <div className="gamble-actions"><button className="text-button" onClick={() => setStopped([true, true, true])}>演出をスキップ</button></div>}
+    {complete ? <Finish {...props} /> : (props.renderActions ?? inlineActions)(<button className="text-button" onClick={() => setStopped([true, true, true])}>演出をスキップ</button>)}
   </section>;
 }
 
@@ -105,27 +105,26 @@ function BlackjackPlay(props: PlayProps) {
   return <section className={`gamble-screen blackjack-screen${complete ? ' motion-result' : ''}`} aria-label="ブラックジャックの進行">
     <p className="eyebrow">ブラックジャック</p>
     {complete && <h1>{won ? '勝利' : '敗北'}</h1>}
-    {!complete && <button className="text-button" onClick={() => { setHits(round.player.length - 2); setStood(true); setSkipped(true); }}>演出をスキップ</button>}
     <div className="card-table">
       <CardHand cards={ended || skipped ? dealer : dealer.slice(0, 2)} label="アノマ" isOpen={index => index === 0 || ended} blackjack />
       <CardHand cards={player} label="あなた / プレイヤー" isOpen={() => true} blackjack />
     </div>
-    {complete ? <Finish {...props} /> : <div className="gamble-actions">
-      {!ended && <div className="blackjack-actions">
+    {complete ? <Finish {...props} /> : (props.renderActions ?? inlineActions)(<>
+      <button className="text-button" onClick={() => { setHits(round.player.length - 2); setStood(true); setSkipped(true); }}>演出をスキップ</button>
+      <div className="blackjack-actions">
         {canHit && <button className="primary" onClick={() => setHits(count => count + 1)}>HIT<span>＋</span></button>}
         {canStand && <button className={canHit ? 'secondary' : 'primary'} onClick={() => setStood(true)}>
           {canHit ? 'STAND' : '結果を見る'}
         </button>}
-      </div>}
-
-    </div>}
+      </div>
+    </>)}
   </section>;
 }
 
 type Side = 'banker' | 'player';
 type Selection = { side: Side; index: number; card: PlayingCard; label: string };
 
-function BaccaratRound({ round, nextRound, ...props }: PlayProps & { round: CardRound; nextRound: () => void }) {
+function BaccaratRound({ round, nextRound, onSkip, ...props }: PlayProps & { round: CardRound; nextRound: () => void; onSkip: () => void }) {
   const [opened, setOpened] = useState<Record<Side, number[]>>({ banker: [], player: [] });
   const [selected, setSelected] = useState<Selection>();
   const firstTwoOpen = (side: Side) => opened[side].includes(0) && opened[side].includes(1);
@@ -155,10 +154,10 @@ function BaccaratRound({ round, nextRound, ...props }: PlayProps & { round: Card
       card={selected.card} label={selected.label} open={opened[selected.side].includes(selected.index)}
       onOpen={() => reveal(selected.side, [selected.index])} />}
     {complete && !tied && <Finish {...props} />}
-    <div className="gamble-actions">
+    {(!complete || tied) && (props.renderActions ?? inlineActions)(<>
+      <button className="text-button" onClick={onSkip}>演出をスキップ</button>
       {tied && <button className="primary" disabled={props.busy} onClick={nextRound}>同じことばでもう一度 <span>→</span></button>}
-
-    </div>
+    </>)}
   </section>;
 }
 
@@ -168,14 +167,14 @@ function BaccaratPlay(props: PlayProps) {
   if (skipped) return <section className="gamble-screen motion-result"><h1>{props.gamble.outcome === 'win' ? '勝利' : '敗北'}</h1>
     <div className="card-table"><CardHand cards={props.gamble.rounds.at(-1)!.banker} label="バンカー" isOpen={() => true} />
     <CardHand cards={props.gamble.rounds.at(-1)!.player} label="あなた / プレイヤー" isOpen={() => true} /></div><Finish {...props} /></section>;
-  return <div><button className="text-button" onClick={() => setSkipped(true)}>演出をスキップ</button><BaccaratRound key={roundIndex} {...props} round={props.gamble.rounds[roundIndex]}
-    nextRound={() => setRoundIndex(index => index + 1)} /></div>;
+  return <BaccaratRound key={roundIndex} {...props} round={props.gamble.rounds[roundIndex]}
+    nextRound={() => setRoundIndex(index => index + 1)} onSkip={() => setSkipped(true)} />;
 }
 
 function GameContent(props: PlayProps) {
   if (props.gamble.kind === 'slot') return <SlotPlay {...props} />;
   if (props.gamble.kind === 'blackjack') return <BlackjackPlay {...props} />;
-  if (props.gamble.moves) return <BeginnerPlay gamble={props.gamble} busy={props.busy} onMove={props.onMove}>
+  if (props.gamble.moves) return <BeginnerPlay gamble={props.gamble} busy={props.busy} onMove={props.onMove} renderActions={props.renderActions}>
     {props.gamble.outcome && <Finish {...props} />}
   </BeginnerPlay>;
   return <BaccaratPlay {...props} />;

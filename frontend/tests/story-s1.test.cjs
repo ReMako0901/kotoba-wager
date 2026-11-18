@@ -1,3 +1,4 @@
+const { drawStories, startStory } = require('./app-flow-harness.cjs');
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -49,14 +50,13 @@ test('opening advances only on explicit clicks and supports skip', () => {
   const skipped = stageMount(Opening, { busy: false, onComplete: () => done++ });
   skipped.click('スキップ'); assert.equal(done, 2);
 });
-function environment(saved, session) {
-  global.localStorage = { getItem: () => saved ? 'saved' : null, setItem() {} };
+function environment(session) {
   const requests = [];
-  global.fetch = async url => { requests.push(url); return { ok: true, json: async () => url.endsWith('/games') ? { games: [] } : url.endsWith('/stories/draw') ? { stories: [], exhausted: false } : session }; };
+  global.fetch = async url => { requests.push(url); return { ok: true, json: async () => url.endsWith('/games') ? { games: [] } : drawStories(url) ?? session }; };
   return requests;
 }
-test('new start opens before drawing stories; resume bypasses opening for both modes', async () => {
-  let requests = environment(false);
+test('new start opens before drawing stories; results publish reactions for all games', async () => {
+  let requests = environment();
   let ui = mount(App, {}); await flush(); ui.draw();
   ui.click('はじめる'); assert.ok(text(ui.tree).includes(scenario.opening[0]));
   assert.equal(requests.some(url => url.endsWith('/stories/draw')), false);
@@ -66,9 +66,9 @@ test('new start opens before drawing stories; resume bypasses opening for both m
   for (const kind of ['rps', 'card_guess', 'dice', 'slot', 'blackjack', 'baccarat']) {
     const transaction = tx('win', { gamble: { kind, strength: 1 }, before: '猫が来た。', after: '犬が来た。', stakes: ['猫'], offer: { title: '報酬' } });
     const session = { id: 'saved', betting_mode: 'count-v1', status: 'ready', view: 'result', version: 2, text: transaction.after, transactions: [transaction], offers: [], lost_concepts: [], title: '物語', usage: {} };
-    environment(true, session);
+    environment(session);
     ui = mount(App, {}); await flush(); ui.draw(); ui.draw();
-    ui.click('つづきから'); await flush(); ui.draw();
+    await startStory(ui);
     assert.equal(ui.all(n => n.props['aria-label'] === 'アノマ').length, 1, kind);
     assert.ok(text(ui.tree).includes(scenario.gain[0]), kind);
     assert.ok(!text(ui.tree).includes(scenario.opening[0]), kind);

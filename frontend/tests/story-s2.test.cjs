@@ -1,3 +1,4 @@
+const { drawStories, startStory } = require('./app-flow-harness.cjs');
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -44,12 +45,10 @@ test('ending renders all final lines and returns to title', () => {
 });
 
 
-test('App resumes reach for both modes, records choice, then excludes the ending from resume', async () => {
+test('App handles reaching the goal and escaping for all games', async () => {
   const App = require('../src/App.tsx').default;
   const flush = () => new Promise(resolve => setImmediate(resolve));
   for (const kind of ['rps', 'card_guess', 'dice', 'slot', 'blackjack', 'baccarat']) {
-    const stored = new Map([['story-wager-session-count-v1', 'saved-story']]);
-    global.localStorage = { getItem: k => stored.get(k) ?? null, setItem: (k,v) => stored.set(k,v), removeItem: k => stored.delete(k) };
     global.crypto = require('node:crypto').webcrypto;
     let saved = { id: 'saved-story', betting_mode: 'count-v1', title: '物語', text: '猫が来た。', version: 6,
       status: 'ready', view: 'result', offers: [], lost_concepts: [], usage: {},
@@ -62,17 +61,16 @@ test('App resumes reach for both modes, records choice, then excludes the ending
         const body = JSON.parse(options.body); choices.push(body);
         saved = { ...saved, story_progress: { ...saved.story_progress, phase: 'ended' } };
       }
-      return { ok: true, json: async () => saved };
+      return { ok: true, json: async () => drawStories(url) ?? saved };
     };
     const ui = mount(App, {}); await flush(); ui.draw(); ui.draw();
-    ui.click('つづきから'); await flush(); ui.draw();
+    await startStory(ui);
     assert.ok(text(ui.tree).includes('さらに賭ける'), kind);
     assert.ok(!text(ui.tree).includes('次は何をねらう？'));
     ui.click('脱出する'); await flush(); ui.draw();
     assert.equal(choices[0].choice, 'escape');
     assert.equal(choices[0].version, 6);
     assert.ok(text(ui.tree).includes('ノーマルエンディング'));
-    assert.equal(stored.has('story-wager-session-count-v1'), false);
     ui.click('タイトルへ戻る');
     assert.ok(!text(ui.tree).includes('つづきから'));
   }

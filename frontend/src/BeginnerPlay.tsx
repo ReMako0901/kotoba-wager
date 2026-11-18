@@ -9,14 +9,17 @@ type Props = {
   busy: boolean;
   onMove: (attempt: number, choice?: number) => void;
   children: ReactNode;
+  renderActions?: (children: ReactNode) => ReactNode;
 };
+
+const inlineActions = (children: ReactNode) => children;
 
 const hands = ['グー', 'パー', 'チョキ'];
 const handSymbols = ['✊', '✋', '✌️'];
 const diceSymbols = ['⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
 const startingOrder = [0, 1, 2];
 
-function RockPaperScissors({ gamble, busy, onMove }: Props) {
+function RockPaperScissors({ gamble, busy, onMove, renderActions = inlineActions }: Props) {
   const attempts = gamble.moves as HandMove[];
   const latest = attempts.at(-1);
   return <>
@@ -24,26 +27,27 @@ function RockPaperScissors({ gamble, busy, onMove }: Props) {
       <div><span>あなた</span><b aria-hidden="true">{handSymbols[latest.choice]}</b><span>{hands[latest.choice]}</span></div>
       <div><span>アノマ</span><b aria-hidden="true">{handSymbols[latest.opponent]}</b><span>{hands[latest.opponent]}</span></div>
     </div>}
-    {!gamble.outcome && <div className="rps-buttons">
+    {!gamble.outcome && renderActions(<div className="rps-buttons">
       {hands.map((hand, index) => <button className="secondary" key={hand} type="button"
         disabled={busy} onClick={() => onMove(attempts.length, index)}>
         <span aria-hidden="true">{handSymbols[index]}</span>{hand}
       </button>)}
-    </div>}
+    </div>)}
   </>;
 }
 
-function Dice({ gamble, busy, onMove }: Props) {
+function Dice({ gamble, busy, onMove, renderActions = inlineActions }: Props) {
   const move = gamble.moves?.[0] as DiceMove | undefined;
-  return <div className="dice-game">
-    {move
-      ? <output className="dice-face" aria-label={`${move.face}の目`}>{diceSymbols[move.face - 1]}</output>
-      : <><span className="dice-face" aria-hidden="true">⚄</span>
-          <button type="button" className="primary" disabled={busy} onClick={() => onMove(0)}>サイコロを振る</button></>}
-  </div>;
+  return <>
+    <div className="dice-game">
+      {move ? <output className="dice-face" aria-label={`${move.face}の目`}>{diceSymbols[move.face - 1]}</output>
+        : <span className="dice-face" aria-hidden="true">⚄</span>}
+    </div>
+    {!move && renderActions(<button type="button" className="primary" disabled={busy} onClick={() => onMove(0)}>サイコロを振る</button>)}
+  </>;
 }
 
-function CardGuess({ gamble, busy, onMove }: Props) {
+function CardGuess({ gamble, busy, onMove, renderActions = inlineActions }: Props) {
   const cards = gamble.cards!;
   const swaps = gamble.swaps!;
   const target = gamble.target!;
@@ -123,15 +127,15 @@ function CardGuess({ gamble, busy, onMove }: Props) {
         </button>;
       })}
     </div>
-    {phase === 'shuffle' && !move && <button type="button" className="text-button" onClick={() => {
+    {phase === 'shuffle' && !move && renderActions(<button type="button" className="text-button" onClick={() => {
       skipShuffle.current = true;
       animations.current.forEach(animation => animation.cancel());
       setOrder(swaps.reduce((positions, [left, right]) => {
         [positions[left], positions[right]] = [positions[right], positions[left]]; return positions;
       }, [...startingOrder]));
       setPhase('pick');
-    }}>シャッフル演出をスキップ</button>}
-    {phase === 'show' && !move && <button type="button" className="primary" onClick={() => void shuffle()}>シャッフル開始</button>}
+    }}>シャッフル演出をスキップ</button>)}
+    {phase === 'show' && !move && renderActions(<button type="button" className="primary" onClick={() => void shuffle()}>シャッフル開始</button>)}
   </div>;
 }
 

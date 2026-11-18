@@ -29,7 +29,7 @@ body, .app-shell, .story-board, .modal { background: #fff; }
 }
 .chapter-line, .eyebrow { color: var(--stamp); }
 .story-title { font-size: 27px; }
-.story-card, .reward-summary, .game-summary, .reward-option, .modal {
+.story-card, .game-summary, .reward-option, .modal {
   border-radius: 0;
   border: 1px solid var(--rule);
   box-shadow: none;
@@ -163,9 +163,7 @@ body, .app-shell, .story-board, .modal { background: #fff; }
   .playing .game-screen { gap: 5px; padding-block: 5px; }
   .playing .chapter-line { line-height: 1.2; }
   .playing .story-title { font-size: 20px; line-height: 1.2; }
-  .playing .reward-summary { min-height: 44px; padding: 3px 10px; }
   .story-board { padding-block: 2px; }
-  .trade-dock .primary, .bottom-actions .primary { min-height: 44px; padding: 4px 12px; }
   .result-banner:not(.result-win) { padding: 4px 8px; }
   .result-banner:not(.result-win) strong { font-size: 18px; }
   .changes { max-height: 58px; }
@@ -185,8 +183,6 @@ body, .app-shell, .story-board, .modal { background: #fff; }
 .show-changes .result-change.cut-after { animation: none; box-shadow: 0 2px var(--stamp); }
 
 
-/* Short screens scroll the screen, while the paper always keeps all ten rows. */
-.playing .game-screen { overflow-y: auto; }
 .game-heading { display: flex; align-items: baseline; gap: 8px; min-width: 0; flex-shrink: 0; }
 .game-heading .chapter-line { flex-shrink: 0; white-space: nowrap; }
 .game-heading .story-title { min-width: 0; flex-shrink: 1; font-size: 18px; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

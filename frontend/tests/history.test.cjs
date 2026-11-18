@@ -85,7 +85,7 @@ test('history retains losses and counts plays instead of generation stats, initi
 test('result and history share manuscript stack and contain no comparison view', () => {
   const app = fs.readFileSync(path.resolve(__dirname, '../src/App.tsx'), 'utf8');
   const source = fs.readFileSync(path.resolve(__dirname, '../src/StoryHistory.tsx'), 'utf8');
-  assert.match(app, /<StoryPaperStack key=\{highlight[^\n]+session=\{session\} dust=\{dust\} losses=\{losses\} result/);
+  assert.match(app, /<StoryPaperStack session=\{session\} dust=\{dust\} losses=\{losses\} result/);
   assert.match(source, /<StoryPaperStack key=/);
   for (const value of [app, source]) assert.doesNotMatch(value, /StoryComparison|comparison-pair|変化前|変化後|最初と最新を比べる|dangerouslySetInnerHTML/);
   const ui = mount(StoryPaperStack, paperProps(session([tx(1, '<script>危険</script>', '自分の本文。')])));

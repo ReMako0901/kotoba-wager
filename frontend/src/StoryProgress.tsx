@@ -10,8 +10,8 @@ export function StoryCounts({ totals }: { totals: StoryTotals }) {
     <div><dt>差分</dt><dd>{totals.difference > 0 ? '+' : ''}{totals.difference}個</dd></div>
   </dl>;
 }
-export function StoryDecision({ progress, busy, onChoice }: {
-  progress: StoryProgress; busy: boolean; onChoice: (choice: 'escape' | 'continue') => void;
+export function StoryDecision({ progress, busy, onChoice, showCounts = true }: {
+  progress: StoryProgress; busy: boolean; showCounts?: boolean; onChoice: (choice: 'escape' | 'continue') => void;
 }) {
   const reached = progress.phase === 'escapable';
   const welcome = progress.phase === 'extension' && progress.totals.rounds === progress.extension_start;
@@ -19,7 +19,7 @@ export function StoryDecision({ progress, busy, onChoice }: {
   const key = JSON.stringify(progress.totals);
   const expression = reached ? storyExpressions.escapable : welcome ? expressionForExtension(key) : expressionForEnding(progress.totals.difference, key);
   return <section className="story-decision" aria-label="脱出と継続">
-    <StoryCounts totals={progress.totals} />
+    {showCounts && <StoryCounts totals={progress.totals} />}
     <StagePublisher lines={lines} expression={expression} />
     <button className="secondary" disabled={busy} onClick={() => onChoice('escape')}>脱出する</button>
     {reached && <button className="primary" disabled={busy} onClick={() => onChoice('continue')}>さらに賭ける</button>}

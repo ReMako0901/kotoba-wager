@@ -63,14 +63,14 @@ export function StoryPaperStack({ session, dust, losses, result = false, pageInd
     transform: `translate(${drag.x}px, ${drag.y}px) rotate(${drag.x / 18}deg)`,
   } : undefined;
   return <section className="story-paper-stack" aria-label="原稿の束">
-    <div className="paper-navigation">
+    {!result && <div className="paper-navigation">
       <span aria-live="polite">第{current.version}版 / {versions.length}枚</span>
-    </div>
+    </div>}
     <PaperLayers count={versions.length}>
       {preview && <div className="paper-preview" aria-hidden="true" inert>
-        <header className="paper-caption">
+        {!result && <header className="paper-caption">
           <p>{preview.transaction ? `第${preview.round}ラウンド · ${preview.transaction.outcome === 'win' ? '勝利' : '敗北'}` : '最初の物語'}</p>
-        </header>
+        </header>}
         <div className="story-board"><Manuscript text={preview.text} dust={{ grains: new Map() }} losses={[]} /></div>
       </div>}
       <article key={current.version} style={movingStyle}
@@ -91,12 +91,12 @@ export function StoryPaperStack({ session, dust, losses, result = false, pageInd
             onLostPointerCapture={event => { if (pointer.current) end(event, true); }}>
             <span className="paper-turn-arrow" aria-hidden="true">{direction === -1 ? '↖' : '↘'}</span>
           </div>)}
-        <header className={`paper-caption${result && latest ? ' paper-result' : ''}`}>
+        {!result && <header className="paper-caption">
           <p>{transaction ? `第${current.round}ラウンド · ${transaction.outcome === 'win' ? '勝利' : '敗北'}` : '最初の物語'}</p>
-        </header>
+        </header>}
         <div className="story-board">
-          {result && latest && !highlight && transaction?.outcome === 'loss'
-            ? <LossManuscript transaction={transaction} text={current.text} dust={dust} losses={pageLosses} />
+          {result && latest && transaction?.outcome === 'loss'
+            ? <LossManuscript transaction={transaction} highlight={highlight} text={current.text} dust={dust} losses={pageLosses} />
             : <Manuscript text={current.text} before={latest ? transaction?.before : undefined} dust={dust} losses={pageLosses} />}
         </div>
       </article>

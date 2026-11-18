@@ -1,3 +1,4 @@
+const { drawStories, startStory } = require('./app-flow-harness.cjs');
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -11,30 +12,39 @@ const source = name => fs.readFileSync(path.join(__dirname, '../src', name), 'ut
 const tx = { id: 'tx', status: 'committed', source_version: 1, before: '猫が来た。', after: '犬が来た。', stakes: ['猫'], offer: { title: '出会い' }, outcome: 'win' };
 const session = { id: 'saved', betting_mode: 'count-v1', status: 'ready', view: 'result', version: 2, text: tx.after, transactions: [tx], offers: [], lost_concepts: [], title: '物語', model: 'PRIVATE_MODEL', usage: { input: 999, output: 999 } };
 const flush = () => new Promise(resolve => setImmediate(resolve));
-function environment(saved) {
-  const values = new Map(saved ? [['story-wager-session-count-v1', 'saved']] : []);
-  global.localStorage = { getItem: key => values.get(key) ?? null, setItem: (key, value) => values.set(key, value) };
+test('title always contains subtitle and help and ignores legacy saves', async () => {
+  const stored = new Map([
+    ['story-wager-session-count-v1', 'saved'],
+    ['story-wager-selection-count-v1-saved-2', '{"units":["old"],"offer":"old"}'],
+  ]);
+  const storageCalls = [];
+  global.localStorage = {
+    getItem: key => { storageCalls.push(['get', key]); return stored.get(key) ?? null; },
+    setItem: key => storageCalls.push(['set', key]),
+    removeItem: key => storageCalls.push(['remove', key]),
+  };
   const requests = [];
-  global.fetch = async url => { requests.push(url); return { ok: true, json: async () => url.endsWith('/games') ? { games: [] } : session }; };
-  return requests;
-}
-test('title always contains subtitle and help; resume only after a session is available', async () => {
-  environment(false);
-  let ui = mount(App, {}); await flush(); ui.draw();
+  const ready = { ...session, view: 'game', transactions: [], text: '猫', offers: [
+    { id: 'offer', title: '新しい報酬', description: '報酬の説明', required_count: 1 },
+  ], analysis: { units: [{ id: 'unit', text: '猫', stakeable: true, start: 0, end: 1 }] } };
+  global.fetch = async url => {
+    requests.push(url);
+    return { ok: true, json: async () => url.endsWith('/games') ? { games: [] } : drawStories(url) ?? ready };
+  };
+  const ui = mount(App, {}); await flush(); ui.draw();
   assert.match(text(ui.tree), /言葉を賭けて、物語を書き換える/);
-  assert.match(text(ui.tree), /遊び方/);
-  assert.doesNotMatch(text(ui.tree), /つづきから/);
+  assert.doesNotMatch(text(ui.tree), /つづきから|つづきを確認できませんでした/);
   ui.click('遊び方'); assert.match(text(ui.tree), /勝てば報酬/);
-  const requests = environment(true);
-  ui = mount(App, {}); await flush(); ui.draw(); ui.draw();
-  assert.match(text(ui.tree), /つづきから/);
-  ui.click('つづきから'); await flush(); ui.draw();
-  assert.ok(ui.find(n => n.props.className === 'story-title'));
-  assert.equal(requests.filter(url => url.endsWith('/sessions/saved')).length, 2);
+  ui.click('閉じる');
+  await startStory(ui);
+  ui.click('新しい報酬');
+  ui.click('猫');
+  ui.click('閉じる');
   ui.click('タイトルへ');
-  assert.match(text(ui.tree), /つづきから/);
-  assert.doesNotMatch(text(ui.tree), /進行は残っています/);
+  assert.doesNotMatch(text(ui.tree), /つづきから|進行は残っています/);
   assert.match(text(ui.tree), /遊び方/);
+  assert.deepEqual(storageCalls, []);
+  assert.equal(requests.some(url => url.endsWith('/sessions/saved')), false);
 });
 test('long manuscripts use fixed rows, fixed cells, and place every glyph inside the grid', () => {
   for (const body of ['短い。', '長い本文。'.repeat(50), '一行目。\n\n二行目。'.repeat(8), '🐈と月。'.repeat(30)]) {
@@ -96,28 +106,27 @@ test('round reset, help copy, history availability and fixed cell definition rem
   assert.doesNotMatch(app, /あと\{MIN_STORY - customCount\}文字/);
   assert.match(app, /customCount < MIN_STORY \|\| customCount > MAX_STORY/);
   assert.doesNotMatch(app, /disabled=\{gambleMode\}|33％|％〜/);
-  assert.match(app, /setPaperIndex\(session.transactions/);
+  assert.match(app, /setPaperIndex\(versions.length - 1\)/);
   assert.match(source('manuscript.css'), /--cell-size: 32px/);
   assert.doesNotMatch(source('Manuscript.tsx'), /MAX_ROWS|rows = 9/);
 });
 test('gamble tier resets to beginner after a new version and history opens during a gamble', async () => {
-  environment(true);
   const offer = { id: 'offer', title: '報酬候補', description: '物語が変わる', required_count: 1 };
   let response = { ...session, view: 'game', version: 3, transactions: [], offers: [offer], analysis: { units: [{ id: 'unit', text: '猫', stakeable: true }, { id: 'rest', text: 'が来た。', stakeable: false }] }, text: '猫が来た。' };
-  global.fetch = async url => ({ ok: true, json: async () => url.endsWith('/games') ? { games: [{ id: 'rps', tier: 'beginner', name: 'じゃんけん', win_probability: .33 }, { id: 'slot', name: 'スロット', win_probability: .5 }] } : response });
+  global.fetch = async url => ({ ok: true, json: async () => url.endsWith('/games') ? { games: [{ id: 'rps', tier: 'beginner', name: 'じゃんけん', win_probability: .33 }, { id: 'slot', name: 'スロット', win_probability: .5 }] } : drawStories(url) ?? response });
   const ui = mount(App, {}); await flush(); ui.draw(); ui.draw();
-  ui.click('つづきから'); await flush(); ui.draw();
-  const choose = () => { ui.click('報酬候補'); ui.click('猫'); ui.click('ギャンブルを選ぶ'); };
+  await startStory(ui);
+  const choose = () => { ui.click('報酬候補'); ui.click('猫'); };
   choose(); ui.click('上級者');
   assert.equal(ui.find(n => n.type === 'button' && text(n) === '上級者').props['aria-pressed'], true);
   ui.click('閉じる'); ui.click('タイトルへ');
   response = { ...response, version: 4 };
-  ui.click('つづきから'); await flush(); ui.draw(); ui.draw();
+  await startStory(ui);
   choose();
   assert.equal(ui.find(n => n.type === 'button' && text(n) === '初心者').props['aria-pressed'], true);
   ui.click('閉じる'); ui.click('タイトルへ');
   response = { ...response, version: 5, status: 'playing', transactions: [{ ...tx, status: 'playing', presentation_completed: false, gamble: { kind: 'rps', moves: [] } }] };
-  ui.click('つづきから'); await flush(); ui.draw(); ui.draw();
+  await startStory(ui);
   assert.doesNotMatch(text(ui.tree), /賭けた言葉：猫/);
   assert.match(text(ui.tree), /じゃんけん/);
   ui.click('取引履歴'); assert.match(text(ui.tree), /物語の変遷/);

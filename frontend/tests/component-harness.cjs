@@ -37,6 +37,7 @@ const hooks = {
 hooks.useLayoutEffect = hooks.useEffect;
 const load = Module._load;
 Module._load = function(name, parent, main) {
+  if (name === 'react-dom' && parent.filename.includes('/frontend/src/')) return { createPortal: (children, target) => { target.children = children; return null; } };
   if (name === 'react' && parent.filename.includes('/frontend/src/')) return hooks;
   return load.call(this, name, parent, main);
 };
@@ -65,6 +66,7 @@ function mount(Component, initialProps, reduced = false) {
     setTimeout(fn) { timers.set(++serial, fn); return serial; }, clearTimeout(id) { timers.delete(id); } };
   global.requestAnimationFrame = fn => window.setTimeout(fn, 16);
   global.cancelAnimationFrame = id => window.clearTimeout(id);
+  const portalTarget = {};
   let visited;
   function expand(node, key, effects) {
     if (!node || typeof node !== 'object') return node;
@@ -85,12 +87,17 @@ function mount(Component, initialProps, reduced = false) {
     if (node.type === 'dialog' && node.props.ref) node.props.ref.current = { showModal() {}, close() {} };
     // Only the shuffle needs a measured board. Leave canvas/layout refs unmounted.
     if (node.props?.className === 'guess-board' && node.props.ref) node.props.ref.current = { clientWidth: 300 };
+    if (node.props?.className === 'action-bar gamble-bar') {
+      effects.push(() => node.props.ref(portalTarget));
+      return { ...node, props: { ...node.props, children: [expand(portalTarget.children, `${key}/portal`, effects)] } };
+    }
     return { ...node, props: { ...node.props, children: [node.props?.children].flat(Infinity).map((child, i) => expand(child, `${key}/${i}`, effects)) } };
   }
   function draw(next = props) {
     props = next;
     for (let pass = 0; pass < 25; pass++) {
       const before = revision, effects = [];
+      portalTarget.children = undefined;
       visited = new Set();
       tree = expand({ type: Component, props }, 'root', effects);
       for (const [identity, state] of instances) if (!visited.has(identity)) {
