@@ -16,16 +16,16 @@ const inlineActions = (children: ReactNode) => children;
 
 const hands = ['グー', 'パー', 'チョキ'];
 const handSymbols = ['✊', '✋', '✌️'];
-const diceSymbols = ['⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
+const diePips = [[4], [0, 8], [0, 4, 8], [0, 2, 6, 8], [0, 2, 4, 6, 8], [0, 2, 3, 5, 6, 8]];
 const startingOrder = [0, 1, 2];
 
 function RockPaperScissors({ gamble, busy, onMove, renderActions = inlineActions }: Props) {
   const attempts = gamble.moves as HandMove[];
   const latest = attempts.at(-1);
   return <>
-    <div className={`rps-result${latest ? ` rps-settled rps-${latest.outcome}` : ' rps-standby'}`} aria-live="polite">
-      <div className="rps-side rps-player"><span>あなた</span><b aria-hidden="true">{latest ? handSymbols[latest.choice] : '？'}</b>{latest && <span>{hands[latest.choice]}</span>}</div>
+    <div key={attempts.length} className={`rps-result${latest ? ` rps-settled rps-${latest.outcome}` : ' rps-standby'}`} aria-live="polite">
       <div className="rps-side rps-opponent"><span>アノマ</span><b aria-hidden="true">{latest ? handSymbols[latest.opponent] : '？'}</b>{latest && <span>{hands[latest.opponent]}</span>}</div>
+      <div className="rps-side rps-player"><span>あなた</span><b aria-hidden="true">{latest ? handSymbols[latest.choice] : '？'}</b>{latest && <span>{hands[latest.choice]}</span>}</div>
     </div>
     {!gamble.outcome && renderActions(<div className="rps-buttons">
       {hands.map((hand, index) => <button className="secondary" key={hand} type="button"
@@ -40,8 +40,10 @@ function Dice({ gamble, busy, onMove, renderActions = inlineActions }: Props) {
   const move = gamble.moves?.[0] as DiceMove | undefined;
   return <>
     <div className="dice-game">
-      {move ? <output className={`dice-face dice-${move.outcome}`} aria-label={`${move.face}の目`}>{diceSymbols[move.face - 1]}</output>
-        : <span className="dice-face dice-standby" aria-hidden="true">⚄</span>}
+      <output key={move ? 'rolled' : 'ready'} className={`dice-face dice-${move?.outcome ?? 'standby'}`}
+        aria-label={move ? `${move.face}の目` : 'サイコロ'}>
+        {diePips[(move?.face ?? 5) - 1].map(pip => <i key={pip} style={{ gridArea: `${Math.floor(pip / 3) + 1} / ${pip % 3 + 1}` }} />)}
+      </output>
     </div>
     {!move && renderActions(<button type="button" className="primary" disabled={busy} onClick={() => onMove(0)}>サイコロを振る</button>)}
   </>;
@@ -113,10 +115,10 @@ function CardGuess({ gamble, busy, onMove, renderActions = inlineActions }: Prop
   }, [...startingOrder]) : order;
 
   return <div className="card-guess">
-    <div className="guess-board" ref={board}>
+    <div className="guess-board" ref={board} data-dealing={phase === 'show'} data-revealing={Boolean(move)}>
       {finalOrder.map((index, slot) => {
         const card = cards[index];
-        const open = (phase === 'show' || !!move) && index === target;
+        const open = (phase === 'show' && index === target) || Boolean(move && (index === target || move.choice === slot));
         return <button key={index} ref={element => { buttons.current[index] = element; }}
           className={`guess-card playing-card ${open ? 'face-up' : 'face-down'}${move?.choice === slot ? ' guess-selected' : ''}`}
           type="button" disabled={phase !== 'pick' || busy || !!move}
@@ -144,7 +146,7 @@ export function BeginnerPlay(props: Props) {
   const title = gamble.kind === 'rps' ? 'じゃんけん' : gamble.kind === 'dice' ? '一発サイコロ' : 'カード当て';
   const tied = gamble.moves?.at(-1)?.outcome === 'tie';
   const heading = gamble.outcome ? (gamble.outcome === 'win' ? '勝利' : '敗北')
-    : tied ? 'あいこ。もう一回！' : title;
+    : tied ? 'あいこ' : title;
   return <section className="gamble-screen beginner-game" aria-label={`${title}の進行`}>
     <h1 aria-live="polite">{heading}</h1>
     {gamble.kind === 'rps' ? <RockPaperScissors {...props} /> : gamble.kind === 'dice' ? <Dice {...props} /> : <CardGuess {...props} />}

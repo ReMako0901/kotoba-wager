@@ -14,12 +14,12 @@ function total(cards: PlayingCard[], blackjack: boolean) {
 
 type SelectCard = (index: number, card: PlayingCard, label: string) => void;
 
-function CardHand({ cards, label, isOpen, blackjack, selected, onSelect, onOpenAll }: {
+function CardHand({ cards, label, isOpen, blackjack, selected, onSelect, onOpenAll, side }: {
   cards: PlayingCard[]; label: string; isOpen: (index: number) => boolean;
-  blackjack?: boolean; selected?: number; onSelect?: SelectCard; onOpenAll?: () => void;
+  side: 'banker' | 'player'; blackjack?: boolean; selected?: number; onSelect?: SelectCard; onOpenAll?: () => void;
 }) {
   const visible = cards.filter((_, index) => isOpen(index));
-  return <section className="card-hand" aria-label={label}>
+  return <section className="card-hand" data-side={side} aria-label={label}>
     <div className="hand-heading"><span>{label}</span><b>{visible.length ? total(visible, !!blackjack) : '—'}</b></div>
     <div className="playing-cards">{cards.map((card, index) => {
       const open = isOpen(index);
@@ -44,9 +44,8 @@ type PlayProps = {
 
 const inlineActions = (children: ReactNode) => <div className="gamble-actions">{children}</div>;
 
-function Finish({ gamble, busy, error, prepared, onFinish, renderActions }: PlayProps) {
+function Finish({ busy, error, prepared, onFinish, renderActions }: PlayProps) {
   return <>
-    {gamble.kind === 'slot' && <div className="gamble-outcome"><b>{gamble.label}</b></div>}
     {!error && <GenerationSkeleton complete={prepared} />}
     {(renderActions ?? inlineActions)(<button className={`primary${!prepared && !error ? ' loading-bet' : ''}`} aria-busy={!prepared && !error} disabled={busy || (!prepared && !error)} onClick={onFinish}>
         {!prepared && !error && <span className="spinner" aria-hidden="true" />}
@@ -63,26 +62,29 @@ const slotSymbols: Record<string, { file: string; label: string }> = {
 };
 
 function SlotPlay(props: PlayProps) {
+  const [spinning, setSpinning] = useState(false);
   const [stopped, setStopped] = useState([false, false, false]);
   const complete = stopped.every(Boolean);
   const won = props.gamble.outcome === 'win';
   return <section className={`gamble-screen${complete ? ' motion-result' : isNearMiss(props.gamble) && stopped.filter(Boolean).length === 2 ? ' near-pulse' : ''}`} aria-label="スロットの進行">
-    <p className="eyebrow">スロット</p>
-    <h1>{complete ? won ? '勝利' : '敗北' : 'リールを止める'}</h1>
+    {complete && <h1>{won ? '勝利' : '敗北'}</h1>}
     <div className="slot-machine">
+      <div className="slot-marquee">スロット</div>
       <div className="slot-reels">{props.gamble.reels!.map((symbol, i) => {
         const artwork = slotSymbols[symbol];
-        return <div className={`slot-reel ${stopped[i] ? '' : 'rolling'}`} key={i}
-          aria-label={stopped[i] ? artwork?.label ?? symbol : '回転中'}>
+        return <div className={`slot-reel${spinning && !stopped[i] ? ' rolling' : ''}`} key={i}
+          aria-label={stopped[i] ? artwork?.label ?? symbol : undefined}>
           {stopped[i] ? artwork
             ? <img className="slot-symbol" src={`${import.meta.env.BASE_URL}slot-symbols/${artwork.file}`}
                 alt={artwork.label} draggable={false} />
-            : symbol : '✦'}
+            : symbol : <div className="reel-strip" aria-hidden="true"><span>BAR</span><span>7</span><span>◆</span><span>BAR</span></div>}
         </div>;
       })}</div>
       <div className="slot-stops">{stopped.map((stop, i) =>
-        <button key={i} disabled={stop || props.busy}
+        <button key={i} disabled={!spinning || stop || props.busy}
           onClick={() => setStopped(current => current.map((value, index) => value || index === i))}>STOP {i + 1}</button>)}</div>
+      {!complete && <button className="slot-lever" type="button" aria-label="レバーを引く"
+        disabled={spinning || props.busy} onClick={() => setSpinning(true)}><span aria-hidden="true" /></button>}
     </div>
     {complete ? <Finish {...props} /> : (props.renderActions ?? inlineActions)(<button className="text-button" onClick={() => setStopped([true, true, true])}>演出をスキップ</button>)}
   </section>;
@@ -105,9 +107,9 @@ function BlackjackPlay(props: PlayProps) {
   return <section className={`gamble-screen blackjack-screen${complete ? ' motion-result' : ''}`} aria-label="ブラックジャックの進行">
     <p className="eyebrow">ブラックジャック</p>
     {complete && <h1>{won ? '勝利' : '敗北'}</h1>}
-    <div className="card-table">
-      <CardHand cards={ended || skipped ? dealer : dealer.slice(0, 2)} label="アノマ" isOpen={index => index === 0 || ended} blackjack />
-      <CardHand cards={player} label="あなた / プレイヤー" isOpen={() => true} blackjack />
+    <div className="dealt-hands">
+      <CardHand side="banker" cards={ended || skipped ? dealer : dealer.slice(0, 2)} label="アノマ" isOpen={index => index === 0 || ended} blackjack />
+      <CardHand side="player" cards={player} label="あなた / プレイヤー" isOpen={() => true} blackjack />
     </div>
     {complete ? <Finish {...props} /> : (props.renderActions ?? inlineActions)(<>
       <button className="text-button" onClick={() => { setHits(round.player.length - 2); setStood(true); setSkipped(true); }}>演出をスキップ</button>
@@ -138,7 +140,7 @@ function BaccaratRound({ round, nextRound, onSkip, ...props }: PlayProps & { rou
   }
 
   function hand(cards: PlayingCard[], side: Side, label: string) {
-    return <CardHand cards={cards} label={label} isOpen={index => opened[side].includes(index)}
+    return <CardHand side={side} cards={cards} label={label} isOpen={index => opened[side].includes(index)}
       selected={selected?.side === side ? selected.index : undefined}
       onSelect={(index, card, cardLabel) => setSelected({ side, index, card, label: cardLabel })}
       onOpenAll={side === 'banker' ? () => reveal(side, cards.map((_, index) => index)) : undefined} />;
@@ -146,13 +148,14 @@ function BaccaratRound({ round, nextRound, onSkip, ...props }: PlayProps & { rou
 
   return <section className={`gamble-screen baccarat-screen${complete ? ' baccarat-complete motion-result' : isNearMiss(props.gamble) && round.outcome === 'loss' && playerDone ? ' near-pulse' : ''}`} aria-label="バカラの進行">
     {complete && <h1>{tied ? '引き分け' : props.gamble.outcome === 'win' ? '勝利' : '敗北'}</h1>}
-    <div className="card-table">
-      {hand(bankerCards, 'banker', 'バンカー')}{hand(playerCards, 'player', 'あなた / プレイヤー')}
-      {complete && <p className="hand-comparison">{round.player_total} 対 {round.banker_total}</p>}
+    <div className="baccarat-deal">
+      <div className="dealt-hands">
+        {hand(bankerCards, 'banker', 'バンカー')}{hand(playerCards, 'player', 'あなた / プレイヤー')}
+      </div>
+      {selected && !complete && <BaccaratCard key={`${selected.side}-${selected.index}`}
+        card={selected.card} label={selected.label} open={opened[selected.side].includes(selected.index)}
+        onOpen={() => reveal(selected.side, [selected.index])} />}
     </div>
-    {selected && <BaccaratCard key={`${selected.side}-${selected.index}`}
-      card={selected.card} label={selected.label} open={opened[selected.side].includes(selected.index)}
-      onOpen={() => reveal(selected.side, [selected.index])} />}
     {complete && !tied && <Finish {...props} />}
     {(!complete || tied) && (props.renderActions ?? inlineActions)(<>
       <button className="text-button" onClick={onSkip}>演出をスキップ</button>
@@ -165,8 +168,8 @@ function BaccaratPlay(props: PlayProps) {
   const [roundIndex, setRoundIndex] = useState(0);
   const [skipped, setSkipped] = useState(false);
   if (skipped) return <section className="gamble-screen motion-result"><h1>{props.gamble.outcome === 'win' ? '勝利' : '敗北'}</h1>
-    <div className="card-table"><CardHand cards={props.gamble.rounds.at(-1)!.banker} label="バンカー" isOpen={() => true} />
-    <CardHand cards={props.gamble.rounds.at(-1)!.player} label="あなた / プレイヤー" isOpen={() => true} /></div><Finish {...props} /></section>;
+    <div className="dealt-hands"><CardHand side="banker" cards={props.gamble.rounds.at(-1)!.banker} label="バンカー" isOpen={() => true} />
+    <CardHand side="player" cards={props.gamble.rounds.at(-1)!.player} label="あなた / プレイヤー" isOpen={() => true} /></div><Finish {...props} /></section>;
   return <BaccaratRound key={roundIndex} {...props} round={props.gamble.rounds[roundIndex]}
     nextRound={() => setRoundIndex(index => index + 1)} onSkip={() => setSkipped(true)} />;
 }

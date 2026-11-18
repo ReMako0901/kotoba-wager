@@ -9,10 +9,11 @@ const App = require('../src/App.tsx').default;
 const { scenePools } = require('../src/sceneDialogue.ts');
 const { scenario } = require('../src/scenario.ts');
 function assertScene(ui, key) {
-  assert.ok(scenePools[key].lines.some(line => text(stage(ui)) === 'アノマ' + line), key);
+  assert.ok(scenePools[key].lines.some(line => stageLine(ui) === line), key);
   assert.ok(scenePools[key].expressions.includes(stage(ui).props['data-expression']), key);
 }
-const stage = ui => ui.find(n => n.type === 'aside' && n.props['aria-label'] === 'アノマ');
+const stage = ui => ui.find(n => n.props.className === 'anoma-stage');
+const stageLine = ui => text(ui.find(n => n.props.className === 'anoma-dialogue'));
 const flush = () => new Promise(resolve => setImmediate(resolve));
 
 function Host({ visible, lines, expression = 'taunt' }) {
@@ -21,17 +22,17 @@ function Host({ visible, lines, expression = 'taunt' }) {
 test('publisher draws nothing, updates lines and expression, and resets on unmount', () => {
   const ui = mount(Host, { visible: false });
   assert.equal(stage(ui).props['data-expression'], 'normal');
-  assert.equal(text(stage(ui)), 'アノマ');
+  assert.equal(stageLine(ui), '');
   ui.draw({ visible: true, lines: ['一行目', '二行目'], expression: 'surprise' });
   assert.equal(stage(ui).props['data-expression'], 'surprise');
   assert.deepEqual(ui.all(n => n.type === 'p').map(text), ['一行目', '二行目']);
   assert.equal(ui.all(n => n.type === 'aside').length, 1);
   ui.draw({ visible: true, lines: ['次の台詞'], expression: 'smile' });
-  assert.equal(text(stage(ui)), 'アノマ次の台詞');
+  assert.equal(stageLine(ui), '次の台詞');
   assert.equal(stage(ui).props['data-expression'], 'smile');
   ui.draw({ visible: false });
   assert.equal(stage(ui).props['data-expression'], 'normal');
-  assert.equal(text(stage(ui)), 'アノマ');
+  assert.equal(stageLine(ui), '');
 });
 test('stage is shared on title, opening and story selection; all have dialogue', async () => {
   global.fetch = async url => ({ ok: true, json: async () => url.endsWith('/games') ? { games: [] } : { stories: [], exhausted: false } });
@@ -39,9 +40,11 @@ test('stage is shared on title, opening and story selection; all have dialogue',
   for (const action of [null, 'はじめる', 'スキップ']) {
     if (action) { ui.click(action); await flush(); ui.draw(); }
     assert.equal(ui.all(n => n.props.className === 'anoma-stage').length, 1);
+    const portrait = ui.find(n => n.props.className === 'anoma-backdrop');
+    assert.equal(portrait.props['data-focus'], action === 'スキップ' ? 'table' : 'portrait');
     if (action === 'はじめる') {
       assert.equal(stage(ui).props['data-expression'], 'normal');
-      assert.equal(text(stage(ui)), 'アノマ' + scenario.opening[0]);
+      assert.equal(stageLine(ui), scenario.opening[0]);
     } else {
       assertScene(ui, action ? 'storySelect' : 'title');
     }
@@ -72,5 +75,5 @@ test('all dialogue owners publish and obsolete embedded frames are removed', () 
   assert.doesNotMatch(anoma + app + progress, /AnomaFrame|AnomaResult/);
   const css = fs.readFileSync('frontend/src/anoma.css', 'utf8');
   assert.match(css, /\.anoma-dialogue\s*\{[^}]*overflow-y:\s*auto/);
-  assert.match(css, /\.anoma-stage\s*\{[^}]*position:\s*absolute;[^}]*inset:\s*0/);
+  assert.match(css, /\.anoma-stage\s*\{[^}]*grid-template-rows:\s*46% minmax\(0, 1fr\)/);
 });

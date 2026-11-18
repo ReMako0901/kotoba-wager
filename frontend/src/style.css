@@ -7,27 +7,8 @@
 .game-summary small{font-size:10px;color:#666;text-align:right}
 .game-option{min-height:0}
 .game-option small:first-of-type{color:#171717;font-weight:800}
-.gamble-screen{display:flex;flex-direction:column;gap:13px;min-height:0;overflow:auto;padding:7px 0 4px;flex:1}
-.gamble-screen h1{font-size:26px}
-.slot-machine,.card-table{display:grid;gap:12px;background:#191919;color:#fff;border-radius:14px;padding:12px}
-.slot-reels,.slot-stops{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
-.slot-reel{height:70px;display:grid;place-items:center;background:#fff;color:#171717;border-radius:7px;font-size:clamp(14px,5vw,23px);font-weight:900}
-.slot-symbol{width:100%;height:68px;display:block;object-fit:contain;padding:2px}
-.slot-reel.rolling{animation:reel-pulse .36s linear infinite alternate}
-@keyframes reel-pulse{from{background:#fff}to{background:#bcbcb4}}
-.slot-stops button{min-width:0;padding:0 3px;background:#fff;border:0;color:#171717;font-size:11px;font-weight:800}
-.card-hand{display:grid;gap:6px}
-.hand-heading{display:flex;align-items:center;justify-content:space-between;font-size:11px}
-.hand-heading b{font-size:17px}
-.playing-cards{display:flex;flex-wrap:wrap;gap:5px}
-.playing-card{width:43px;height:52px;border-radius:6px;display:grid;place-items:center;align-content:center;font-size:17px;line-height:1.05}
-.playing-card span{font-size:13px}
-.playing-card.face-up{background:#fff;color:#171717}
-.playing-card.face-down{border:1px solid #aaa;background:#3a3a3a;color:#ccc}
-.hand-comparison{font-size:12px;text-align:center}
-.gamble-outcome{font-size:12px;border-left:3px solid;padding:1px 10px}
 .gamble-actions{margin-top:auto;display:grid;gap:6px}
-@media(prefers-reduced-motion:reduce){.slot-reel.rolling{animation:none}}
+
 
 .story-intro { white-space: pre-wrap; overflow-wrap: anywhere; font-family: var(--font-serif, serif); line-height: 1.8; }
 

@@ -5,7 +5,7 @@ const { text } = require('./component-harness.cjs');
 const { stageMount } = require('./anoma-stage-harness.cjs');
 const { ScenePublisher } = require('../src/ScenePublisher.tsx');
 const { scenePools, chooseScene, gameScene } = require('../src/sceneDialogue.ts');
-const stage = ui => ui.find(n => n.type === 'aside');
+const stage = ui => ui.find(n => n.props.className === 'anoma-stage');
 const line = ui => ui.find(n => n.type === 'p');
 test('all fifteen pools and expressions match the authoritative specification', () => {
   const spec = fs.readFileSync('docs/UI_FEEDBACK3.md', 'utf8');

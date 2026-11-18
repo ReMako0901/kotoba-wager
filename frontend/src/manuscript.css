@@ -65,6 +65,7 @@ body { background: #0e0a0a; }
 }
 .secondary {
   background: #fff;
+  color: var(--ink);
   border: 1px solid var(--ink);
   border-radius: 2px;
   box-shadow: 2px 2px 0 var(--rule);
@@ -168,8 +169,6 @@ body { background: #0e0a0a; }
 .result-win { border: 0; gap: 8px; padding: 0; line-height: 1.35; }
 .result-win strong { font-size: 17px; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-.card-table, .slot-machine { border-radius: 0; background: #fff; color: var(--ink); border: 1px solid var(--rule); }
-.playing-card.face-up, .slot-reel { border: 1px solid var(--rule); }
 .playing-card.face-down, .squeeze-back {
   border: 1px solid var(--stamp);
   background: repeating-linear-gradient(45deg, #fff 0 3px, #f1dada 3px 6px);
@@ -338,15 +337,6 @@ body { background: #0e0a0a; }
   align-items: center;
   justify-content: space-between;
 }
-.game-option > span:first-child::after {
-  content: "勝負 →";
-  font-size: 11px;
-  font-weight: 800;
-  color: var(--stamp);
-  padding: 2px 8px;
-  border: 1px solid var(--rule);
-  background: #fdf4f3;
-}
 .custom-story { display: grid; gap: 8px; margin-top: 12px; }
 .custom-story label { font-size: 13px; color: #f5e6e2; }
 .custom-story textarea { width: 100%; padding: 10px; resize: vertical; border: 1px solid #8a5a56; background: #fffdf9; color: var(--ink); font: 16px/1.65 var(--serif); }
@@ -400,27 +390,4 @@ body { background: #0e0a0a; }
   color: #faefec;
   font: 800 13px/1.35 var(--serif);
   letter-spacing: .04em;
-}
-.edition-badge.outcome-win {
-  border-color: #f5d0c8;
-  background: var(--stamp);
-  color: #fff;
-  box-shadow: 0 0 14px rgba(214, 69, 75, 0.45);
-}
-.edition-badge.outcome-win::before {
-  content: "祝";
-  display: inline-grid;
-  place-items: center;
-  width: 16px;
-  height: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.8);
-  border-radius: 50%;
-  font-size: 10px;
-  line-height: 1;
-}
-.edition-badge.outcome-loss {
-  border-color: #7c6765;
-  background: #140f0f;
-  color: #e6d5d2;
-  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.5);
 }

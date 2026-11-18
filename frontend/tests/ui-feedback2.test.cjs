@@ -11,7 +11,7 @@ const flush = () => new Promise(resolve => setImmediate(resolve));
 const tx = (id, strength = 0, lost = 0) => ({ id, status: 'committed', outcome: 'loss', gamble: { strength }, lost: Array(lost).fill({}) });
 
 test('expression pools have the specified ranges, cover all candidates and are deterministic', () => {
-  assert.deepEqual(expressionPools, { gain: ['smile', 'wink', 'satisfied'], winStreak: ['laugh', 'giggle'], loss: ['taunt', 'composed'], lossStreak: ['perplexed', 'worried', 'exasperated'], change: ['smile', 'giggle'] });
+  assert.deepEqual(expressionPools, { gain: ['smile', 'wink', 'satisfied'], winStreak: ['laugh', 'giggle'], loss: ['taunt', 'composed'], lossStreak: ['deadpan', 'composed'], change: ['smile', 'giggle'] });
   for (const [trigger, pool] of Object.entries(expressionPools)) {
     const seen = new Set();
     for (let i = 0; i < 100; i++) {
@@ -23,7 +23,7 @@ test('expression pools have the specified ranges, cover all candidates and are d
     }
     assert.deepEqual([...seen].sort(), [...pool].sort());
   }
-  for (const [difference, pool] of [[5, ['smile', 'satisfied']], [0, ['deadpan']], [-5, ['displeased', 'worried']]]) {
+  for (const [difference, pool] of [[5, ['smile', 'satisfied']], [0, ['deadpan']], [-5, ['deadpan', 'composed']]]) {
     const seen = new Set();
     for (let i = 0; i < 100; i++) {
       const key = JSON.stringify({ rounds: i, difference });

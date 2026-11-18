@@ -5,8 +5,9 @@ import './anoma.css';
 
 // Presentation memory only: no session storage or game state changes.
 let previousExpression: AnomaExpression | undefined;
+const unavailableTalkExpressions = new Set<AnomaExpression>();
 const unavailableClosedExpressions = new Set<AnomaExpression>();
-function AnomaPortrait({ expression }: { expression: AnomaExpression }) {
+function AnomaPortrait({ expression, speaking }: { expression: AnomaExpression; speaking: boolean }) {
   const [previous, setPrevious] = useState(() => previousExpression);
   const [loaded, setLoaded] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -14,6 +15,8 @@ function AnomaPortrait({ expression }: { expression: AnomaExpression }) {
   const [reducedMotion, setReducedMotion] = useState(true);
   const [closedFailed, setClosedFailed] = useState(() => unavailableClosedExpressions.has(expression));
   const [closedLoaded, setClosedLoaded] = useState(false);
+  const [talkLoaded, setTalkLoaded] = useState(false);
+  const [talkFailed, setTalkFailed] = useState(() => unavailableTalkExpressions.has(expression));
   const [blinking, setBlinking] = useState(false);
   useEffect(() => {
     const media = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -47,6 +50,12 @@ function AnomaPortrait({ expression }: { expression: AnomaExpression }) {
     <img key={expression} className={`anoma-portrait-current${loaded ? ' anoma-portrait-fade' : ''}`}
       src={source(expression)} alt="" onLoad={() => setLoaded(true)} onError={() => setFailed(true)}
       onAnimationEnd={() => { setPrevious(undefined); setSettled(true); }} />
+    {!reducedMotion && !talkFailed && <img
+      className={`anoma-portrait-talk${speaking ? ' anoma-portrait-speaking' : ''}`}
+      data-ready={talkLoaded && loaded}
+      src={`${import.meta.env.BASE_URL}anoma/${expression}-talk.webp`} alt=""
+      onLoad={() => setTalkLoaded(true)}
+      onError={() => { unavailableTalkExpressions.add(expression); setTalkFailed(true); }} />}
     {settled && !reducedMotion && !closedFailed && <img
       className={`anoma-portrait-closed${blinking && closedLoaded ? ' anoma-portrait-blinking' : ''}`}
       src={`${import.meta.env.BASE_URL}anoma/${expression}-closed.webp`} alt=""
@@ -83,14 +92,28 @@ export function StagePublisher({ lines, expression, reaction }: StageContent) {
   return null;
 }
 
-export function AnomaStage() {
+export function AnomaStage({ portraitFocus = false, children }: { portraitFocus?: boolean; children?: ReactNode }) {
   const { lines, expression, reaction } = useContext(StageContext);
-  return <aside className="anoma-stage" aria-label="アノマ" data-expression={expression} data-reaction={reaction ?? 'normal'}>
-    <div className="anoma-backdrop" aria-hidden="true"><AnomaPortrait key={expression} expression={expression} /></div>
-    <div className="anoma-stage-content"><span className="anoma-name">アノマ</span>
-      <div className="anoma-dialogue">{lines?.map((line, index) => <p key={index}>{line}</p>)}</div>
+  const [speaking, setSpeaking] = useState(false);
+  useLayoutEffect(() => {
+    const dialogue = lines?.join('') ?? '';
+    setSpeaking(Boolean(dialogue));
+    if (!dialogue) return;
+    const duration = Math.min(2800, 500 + Array.from(dialogue).length * 70);
+    const timer = window.setTimeout(() => setSpeaking(false), duration);
+    return () => window.clearTimeout(timer);
+  }, [lines]);
+  return <div className="anoma-stage" data-expression={expression} data-reaction={reaction ?? 'normal'}>
+    <aside className="anoma-backdrop" data-focus={portraitFocus || Boolean(reaction && speaking) ? 'portrait' : 'table'} aria-label="アノマ">
+      <AnomaPortrait key={expression} expression={expression} speaking={speaking} />
+    </aside>
+    <div className="dealer-table">
+      <div className="anoma-stage-content">
+        <div className="anoma-dialogue" aria-live="polite">{lines?.map((line, index) => <p key={index}>{line}</p>)}</div>
+      </div>
+      {children}
     </div>
-  </aside>;
+  </div>;
 }
 
 export function Opening({ busy, onComplete }: { busy: boolean; onComplete: () => void }) {

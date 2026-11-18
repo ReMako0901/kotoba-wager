@@ -27,7 +27,7 @@ export type AnomaExpression = 'normal' | 'smile' | 'laugh' | 'taunt' | 'surprise
   | 'wink' | 'giggle' | 'satisfied' | 'exasperated' | 'worried' | 'deadpan' | 'composed';
 export const expressionPools: Record<ReactionTrigger, readonly AnomaExpression[]> = {
   gain: ['smile', 'wink', 'satisfied'], winStreak: ['laugh', 'giggle'],
-  loss: ['taunt', 'composed'], lossStreak: ['perplexed', 'worried', 'exasperated'], change: ['smile', 'giggle'],
+  loss: ['taunt', 'composed'], lossStreak: ['deadpan', 'composed'], change: ['smile', 'giggle'],
 };
 export const storyExpressions = { opening: 'normal', escapable: 'surprise' } as const;
 export function chooseExpression(pool: readonly AnomaExpression[], key: string): AnomaExpression {
@@ -42,7 +42,7 @@ export function expressionForExtension(key: string): AnomaExpression {
   return chooseExpression(['taunt', 'composed'], key);
 }
 export function expressionForEnding(difference: number, key = String(difference)): AnomaExpression {
-  return difference === 0 ? 'deadpan' : chooseExpression(difference > 0 ? ['smile', 'satisfied'] : ['displeased', 'worried'], key);
+  return difference === 0 ? 'deadpan' : chooseExpression(difference > 0 ? ['smile', 'satisfied'] : ['deadpan', 'composed'], key);
 }
 export const reactionKinds: Record<ReactionTrigger, ReactionKind> = {
   gain: 'gain', loss: 'loss', change: 'change', winStreak: 'gain', lossStreak: 'loss',

@@ -50,7 +50,7 @@ test('rock-paper-scissors shows an arena before a move and highlights the settle
   const board = standby.find(n => n.props.className?.includes('rps-result'));
   assert.ok(board);
   assert.match(board.props.className, /rps-standby/);
-  assert.match(text(board), /あなた.*？.*アノマ.*？/);
+  assert.match(text(board), /アノマ.*？.*あなた.*？/);
   standby.unmount();
 
   const settled = mount(BeginnerPlay, {
@@ -61,7 +61,7 @@ test('rock-paper-scissors shows an arena before a move and highlights the settle
   });
   const settledBoard = settled.find(n => n.props.className?.includes('rps-result'));
   assert.match(settledBoard.props.className, /rps-settled rps-win/);
-  assert.match(text(settledBoard), /あなた.*✊.*グー.*アノマ.*✌️.*チョキ/);
+  assert.match(text(settledBoard), /アノマ.*✌️.*チョキ.*あなた.*✊.*グー/);
   settled.unmount();
 });
 
@@ -83,6 +83,8 @@ test('stake counter lights up on readiness and result screen applies win/loss ce
   const count = () => ui.find(n => n.props['aria-label'] === '選んだ個数');
   assert.equal(count().props.className, 'stake-count');
   ui.click('猫');
+  assert.equal(count(), undefined);
+  ui.click('閉じる');
   assert.equal(count().props.className, 'stake-count stakes-ready');
   ui.unmount();
 
@@ -102,8 +104,8 @@ test('stake counter lights up on readiness and result screen applies win/loss ce
   assert.match(main.props.className, /result-win-view/);
   const badge = winUi.find(n => n.props.className?.includes('edition-badge'));
   assert.ok(badge);
-  assert.match(badge.props.className, /outcome-win/);
-  assert.equal(text(badge), '第2版・勝利');
+  assert.equal(text(badge), '第2版');
+  assert.equal(text(winUi.find(n => n.props.className === 'paper-stamp stamp-win')), '勝利');
   winUi.unmount();
 });
 
@@ -116,5 +118,5 @@ test('CSS defines manuscript header/footer framing, celebratory result styling a
   assert.match(historyCss, /\.result-win-view \.manuscript-sheet/);
   assert.match(layoutCss, /\.stake-count\.stakes-ready/);
   assert.match(beginnerCss, /\.rps-result::after/);
-  assert.match(beginnerCss, /\.dice-face\.dice-win/);
+  assert.match(beginnerCss, /\.dice-face\.dice-win i/);
 });

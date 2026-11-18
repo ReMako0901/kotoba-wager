@@ -29,7 +29,7 @@ test('breathing uses the full portrait and closed eyes share the absolute image 
   assert.match(css, /\.anoma-portrait-closed \{ visibility: hidden;/);
   const reduced = css.slice(css.indexOf('@media (prefers-reduced-motion: reduce)'));
   assert.match(reduced, /\.anoma-portrait \{ animation: none; transform: none;/);
-  assert.match(reduced, /\.anoma-portrait-closed \{ display: none;/);
+  assert.match(reduced, /\.anoma-portrait-closed, \.anoma-portrait-talk \{ display: none;/);
 });
 
 test('blink waits for fade and closed asset load, overlays for 130ms and clears timers', () => {
@@ -42,7 +42,7 @@ test('blink waits for fade and closed asset load, overlays for 130ms and clears 
   assert.equal(closed(ui).props.src, '/anoma/laugh-closed.webp');
   assert.equal(timers.size, 0);
   closed(ui).props.onLoad(); ui.draw();
-  const run = () => { const [id, timer] = timers.entries().next().value; timers.delete(id); timer.fn(); ui.draw(); return timer.delay; };
+  const run = () => { const [id, timer] = [...timers].find(([, timer]) => timer.delay === 130 || timer.delay >= 2800); timers.delete(id); timer.fn(); ui.draw(); return timer.delay; };
   const delay = run();
   assert.ok(delay >= 2800 && delay <= 5500);
   assert.ok(closed(ui).props.className.includes('anoma-portrait-blinking'));
@@ -50,7 +50,7 @@ test('blink waits for fade and closed asset load, overlays for 130ms and clears 
   assert.ok(!closed(ui).props.className.includes('anoma-portrait-blinking'));
   // Changing expression cancels the old blink and waits for the next fade.
   ui.draw({ expression: 'surprise', line: 'b' });
-  assert.equal(timers.size, 0);
+  assert.equal([...timers.values()].filter(timer => timer.delay >= 2800).length, 0);
   assert.equal(closed(ui), undefined);
   finishFade(ui); closed(ui).props.onLoad(); ui.draw();
   run(); // Unmount while the eyes are closed.
@@ -92,4 +92,31 @@ test('reduced motion never loads or schedules closed eyes, including preference 
   assert.equal(closed(live), undefined);
   live.unmount();
   assert.ok(removed);
+});
+
+test('speech starts on a new line, expires, and missing talk art leaves the base portrait', () => {
+  const ui = stageMount(PortraitPublisher, { expression: 'composed', line: 'a' });
+  const timers = new Map();
+  window.setTimeout = (run, delay) => { timers.set(delay, run); return delay; };
+  window.clearTimeout = delay => timers.delete(delay);
+  const talk = () => ui.find(n => n.props.className?.includes('anoma-portrait-talk'));
+  ui.draw({ expression: 'composed', line: 'こんにちは' });
+  assert.match(talk().props.className, /anoma-portrait-speaking/);
+  assert.equal(talk().props.src, '/anoma/composed-talk.webp');
+  assert.equal(talk().props['data-ready'], false);
+  current(ui).props.onLoad();
+  talk().props.onLoad();
+  ui.draw();
+  assert.equal(talk().props['data-ready'], true);
+  timers.get(850)();
+  ui.draw();
+  assert.doesNotMatch(talk().props.className, /anoma-portrait-speaking/);
+  ui.draw({ expression: 'composed', line: 'もう一度' });
+  assert.match(talk().props.className, /anoma-portrait-speaking/);
+  talk().props.onError();
+  ui.draw();
+  assert.equal(talk(), undefined);
+  assert.ok(current(ui));
+  ui.unmount();
+  assert.equal(mount(AnomaStage, {}, true).find(n => n.props.className?.includes('anoma-portrait-talk')), undefined);
 });

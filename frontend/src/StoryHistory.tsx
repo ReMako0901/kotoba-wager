@@ -91,6 +91,9 @@ export function StoryPaperStack({ session, dust, losses, result = false, pageInd
             onLostPointerCapture={event => { if (pointer.current) end(event, true); }}>
             <span className="paper-turn-arrow" aria-hidden="true">{direction === -1 ? '↖' : '↘'}</span>
           </div>)}
+        {result && transaction && <strong className={`paper-stamp stamp-${transaction.outcome}`}>
+          {transaction.outcome === 'win' ? '勝利' : '敗北'}
+        </strong>}
         {!result && <header className="paper-caption">
           <p>{transaction ? `第${current.round}ラウンド · ${transaction.outcome === 'win' ? '勝利' : '敗北'}` : '最初の物語'}</p>
         </header>}

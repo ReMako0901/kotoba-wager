@@ -28,7 +28,7 @@ test('opening, arrival, extension welcome and all ending signs select their expr
   }
   for (const difference of [10, 0, -10]) {
     const expression = expressionForEnding(difference, JSON.stringify(progress('ended', difference).totals));
-    assert.ok((difference > 0 ? ['smile', 'satisfied'] : difference < 0 ? ['displeased', 'worried'] : ['deadpan']).includes(expression));
+    assert.ok((difference > 0 ? ['smile', 'satisfied'] : difference < 0 ? ['deadpan', 'composed'] : ['deadpan']).includes(expression));
     const ui = stageMount(NormalEnding, { progress: progress('ended', difference), onTitle() {} });
     assert.equal(current(ui).props.src, `/anoma/${expression}.webp`);
   }
@@ -44,7 +44,7 @@ test('portrait remembers the last loaded expression across frames, overlays and 
   assert.ok(current(next).props.className.includes('anoma-portrait-fade'));
   assert.ok(next.all(n => n.type === 'img').every(n => n.props.alt === ''));
   current(next).props.onAnimationEnd(); next.draw();
-  assert.equal(next.all(n => n.type === 'img' && !n.props.className.includes('anoma-portrait-closed')).length, 1);
+  assert.equal(next.all(n => n.type === 'img' && !/(closed|talk)/.test(n.props.className)).length, 1);
   next.draw({ line: 'c', expression: 'laugh' });
   assert.equal(current(next).props.src, '/anoma/laugh.webp');
   assert.equal(next.find(n => n.props.className === 'anoma-portrait-previous').props.src, '/anoma/surprise.webp');
@@ -64,7 +64,7 @@ test('failure of either layer hides the whole portrait and keeps the accessible 
 test('CSS provides full-scene overlapping portraits, 900ms fade and immediate reduced motion', () => {
   const css = fs.readFileSync('frontend/src/anoma.css', 'utf8');
   assert.match(css, /\.anoma-backdrop\s*\{[^}]*background: radial-gradient/);
-  assert.match(css, /\.anoma-portrait img\s*\{[^}]*position:\s*absolute[^}]*object-fit:\s*cover[^}]*object-position:\s*50% 10%/);
+  assert.match(css, /\.anoma-portrait img\s*\{[^}]*position:\s*absolute[^}]*object-fit:\s*contain[^}]*object-position:\s*center/);
   assert.match(css, /animation:\s*anoma-expression-fade 900ms/);
   assert.match(css, /@media\s*\(prefers-reduced-motion:\s*reduce\)\s*\{\s*\.anoma-portrait-current\s*\{\s*animation:\s*none;\s*opacity:\s*1/);
   assert.match(css, /\.anoma-portrait-previous\s*\{\s*display:\s*none/);

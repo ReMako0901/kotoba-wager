@@ -1,63 +1,81 @@
+html, body, #root { height: 100%; overflow: hidden; }
+html, body { background: #100b13; }
+
 .app-shell {
-  --scene-gutter: clamp(10px, 3.4vw, 24px);
-  --table-foot: max(14px, env(safe-area-inset-bottom));
-  --dialogue-edge: clamp(114px, calc(100dvh - 490px), 28dvh);
+  --scene-gutter: 12px;
   position: relative;
   isolation: isolate;
   width: 100%;
-  max-width: none;
+  max-width: 480px;
   height: 100dvh;
-  min-height: 0;
   overflow: hidden;
+  margin: 0 auto;
+  padding: 0;
   border: 0;
   background: #100b13;
-  padding: 0;
+}
+
+.dealer-table {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  padding: 5px var(--scene-gutter) max(9px, env(safe-area-inset-bottom));
+  border-top: 5px solid #936044;
+  border-bottom: 9px solid #43251e;
+  background:
+    radial-gradient(ellipse at 50% 90%, #34554b, transparent 85%),
+    repeating-linear-gradient(105deg, #ffffff05 0 1px, transparent 1px 4px),
+    #193731;
+  box-shadow: inset 0 2px #d59e68, inset 0 9px 16px #0e211ab3;
+}
+
+.table-objects {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  padding: 4px 3px 8px;
+}
+
+.table-links {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 8px 0 0;
 }
 
 .scene-link {
-  position: absolute;
-  top: max(8px, env(safe-area-inset-top));
-  z-index: 3;
-  min-width: 44px;
   padding: 0 10px;
-  border: 1px solid #e7b0a26b;
-  border-radius: 2px;
-  background: #191019df;
+  border: 1px solid #d9ac83;
+  border-radius: 3px;
+  background: #412b27;
   color: #fff5ee;
   font: 700 12px/1 var(--serif);
 }
 
-.title-link { left: var(--scene-gutter); }
-.history-link { right: var(--scene-gutter); }
-
-.app-shell > :is(main, .scene-object) {
-  position: absolute;
-  inset: auto var(--scene-gutter) var(--table-foot);
-  width: auto;
-  max-width: 480px;
-  max-height: calc(100% - var(--dialogue-edge) - var(--table-foot) - 8px);
-  margin: 0 auto;
+.table-objects > :is(main, .scene-object) {
+  width: 100%;
+  margin: 0;
   padding: 0;
-  scrollbar-width: thin;
-  overscroll-behavior: contain;
 }
 
-.app-shell > :is(.title-screen, .opening-screen, .choose-screen, .ending-screen),
+.table-objects > :is(.title-screen, .opening-screen, .choose-screen, .ending-screen),
 .game-object,
 .scene-object {
   animation: object-arrive 340ms cubic-bezier(.2,.75,.25,1) both;
 }
 
 @keyframes object-arrive {
-  from { opacity: 0; transform: translate(12px, 32px) rotate(2deg); }
+  from { opacity: 0; transform: translateY(14px); }
   to { opacity: 1; transform: none; }
 }
 
-.app-shell > .title-screen {
-  width: min(68vw, 286px);
-  left: auto;
-  right: max(var(--scene-gutter), calc((100% - 480px) / 2));
-  overflow: auto;
+.table-objects > .title-screen {
+  width: min(100%, 340px);
+  margin: 6px auto;
 }
 
 .title-folio {
@@ -81,17 +99,17 @@
 .title-folio h1 small { font-size: 11px; }
 .title-folio .intro { margin: 0; font: 13px/1.5 var(--serif); }
 .title-actions, .story-selection-actions { display: flex; gap: 8px; }
-.title-actions button, .story-selection-actions button { width: auto; flex: 1; }
+.title-actions button, .story-selection-actions button { width: auto; flex: 1; margin: 0; }
+.title-actions .primary { white-space: nowrap; }
 
-.app-shell > .opening-screen,
-.app-shell > .ending-screen {
+.table-objects > .opening-screen,
+.table-objects > .ending-screen {
   display: grid;
   gap: 8px;
-  overflow: auto;
   padding: 2px;
 }
 
-.app-shell > .ending-screen {
+.table-objects > .ending-screen {
   padding: 16px;
   border: 1px solid #b57d69;
   background: #faefdc;
@@ -99,25 +117,34 @@
   box-shadow: 4px 5px #ab746e, 0 14px 26px #100b13bb;
 }
 
-.app-shell > .choose-screen {
+.table-objects:has(.choose-screen) {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  overflow: hidden;
+}
+.table-objects:has(.choose-screen):has(.alert) { grid-template-rows: minmax(0, 1fr) auto auto; }
+.table-objects > .choose-screen {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 12px 10px 8px 16px;
-  border: 1px solid #bc8e7c;
-  border-left: 7px solid #723843;
-  background: #e9d6bd;
-  color: var(--ink);
-  box-shadow: 3px 3px #f4e4ca, 5px 6px #6a3d40, 0 14px 26px #100b13bb;
+  height: 100%;
+  min-height: 0;
+  color: #fff3e4;
 }
 
 .choose-header { margin: 0; padding: 0; border: 0; }
-.choose-screen h1 { color: var(--ink); }
+.choose-screen h1 { color: #fff3e4; font-size: 20px; margin: 0 0 6px; }
 .choose-screen h1::before { content: none; }
 .choose-screen .story-list { min-height: 0; overflow-y: auto; padding: 4px 7px 10px 2px; }
-.story-card { border-radius: 2px 6px 6px 2px; }
+.story-card {
+  border-radius: 2px 6px 6px 2px;
+  border: 1px solid #ac896a;
+  border-left: 8px solid #884849;
+  background: #f5e5cb;
+  box-shadow: 2px 3px #c6a886, 4px 5px #462d27;
+}
 
-.app-shell > .game-screen {
+.table-objects > .game-screen:not([hidden]) {
   display: flex;
   flex-direction: column;
   gap: 0;
@@ -129,13 +156,9 @@
   flex-direction: column;
   min-width: 0;
   min-height: 0;
-  overflow-y: auto;
   padding: 2px 4px 8px;
-  overscroll-behavior: contain;
 }
 
-.game-object[inert] { pointer-events: none; }
-.game-object[inert] .paper-tabs { visibility: hidden; }
 
 .game-heading,
 .result-meta {
@@ -167,6 +190,18 @@
   white-space: nowrap;
 }
 .result-meta .story-counts dd { margin: 0; font-size: inherit; }
+
+.result-loss-view .game-object::before {
+  content: "";
+  position: absolute;
+  inset: 50px 0 12px;
+  pointer-events: none;
+  background:
+    radial-gradient(circle, #c19f78 0 1px, transparent 1.5px) 0 0 / 23px 29px,
+    radial-gradient(circle, #b28364 0 1px, transparent 1.5px) 7px 12px / 19px 17px;
+  opacity: .45;
+}
+.result-loss-view .paper-tabs { position: relative; }
 
 .game-object .paper-stack { margin-bottom: 0; }
 .game-object .wager-paper-stack { min-height: 0; }
@@ -210,25 +245,47 @@
 .reward-change span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .stake-count { padding-inline: 4px; color: #fff7ec; background: #402731; font-size: 12px; white-space: nowrap; }
 .stake-count.stakes-ready { background: var(--stamp); }
-.result-tabs .story-decision { display: contents; }
+.game-object .story-decision {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.game-object .story-decision button {
+  margin: 0;
+  justify-content: center;
+  border-radius: 3px;
+  box-shadow: 2px 3px #142720;
+}
+.game-object .manuscript-sheet:has(.paper-stamp) { padding-top: 38px; }
+.paper-stamp {
+  position: absolute;
+  z-index: 2;
+  top: 8px;
+  left: 12px;
+  padding: 2px 8px;
+  border: 3px double currentColor;
+  border-radius: 4px;
+  background: #fff8ecd9;
+  color: #761f27;
+  font: 800 16px/1.5 var(--serif);
+  transform: rotate(-8deg);
+  pointer-events: none;
+}
+.paper-stamp.stamp-loss { color: #4c4448; }
+.corner-newer ~ .game-object .manuscript-sheet:has(.paper-stamp) { padding-top: 38px; }
+.paper-stamp { left: 58px; }
 
 .scene-object {
+  color: #fff3e4;
+  min-width: 0;
+}
+.table-objects > :is(.object-help, .object-notebook, .object-history) {
   padding: 10px 12px 14px;
-  overflow: auto;
-  scrollbar-width: thin;
-  overscroll-behavior: contain;
   background: #f7e8d5;
   color: var(--ink);
   border: 1px solid #c4907c;
-  box-shadow: 3px 4px #b58773, 5px 6px #4b2933, 0 16px 28px #100b13b3;
-}
-
-.app-shell > .scene-object { padding: 10px 12px 14px; }
-.game-screen > .scene-object {
-  position: absolute;
-  z-index: 1;
-  inset: auto 4px 5px 10px;
-  max-height: 100%;
+  box-shadow: 3px 4px #b58773;
 }
 
 .object-heading {
@@ -240,45 +297,55 @@
   font: 700 14px/1.4 var(--serif);
 }
 .object-heading .icon-button { flex: 0 0 44px; border: 1px solid #a6756b; }
-.object-rewards { background: #d7b69c; }
-.object-games { background: #3a2835; color: #fff3e4; border-color: #9e6d65; }
-.scene-object .reward-options { margin: 0; gap: 6px; }
-.scene-object .reward-option { min-height: 53px; padding: 7px 10px; }
+.object-heading h2 { font-size: 15px; }
+.object-heading .icon-button { color: inherit; }
+.scene-object .reward-options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 0;
+  gap: 7px;
+}
+.scene-object .reward-option {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: stretch;
+  gap: 7px;
+  min-width: 0;
+  min-height: 70px;
+  padding: 7px;
+  border: 2px solid #c5a077;
+  border-radius: 4px;
+  background: #f7e6ca;
+  box-shadow: 0 3px #947355, 0 6px 8px #07181380;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.scene-object .reward-option b { font-size: 13px; }
+.scene-object .reward-option small { font-size: 11px; }
+.scene-object .reward-option strong {
+  width: auto;
+  height: auto;
+  padding: 3px;
+  align-self: end;
+  font-size: 14px;
+}
+.scene-object .reward-option strong small { margin: 0; }
+.scene-object .game-option > span:first-child { justify-content: center; gap: 4px; }
+.scene-object .game-option { justify-content: center; text-align: center; }
 .scene-object .game-tiers { margin: 4px 0 8px; }
 .scene-object .custom-story label { color: var(--ink); }
 .scene-object:not(.object-games) .input-error { color: #902c38; }
 
-.gambling-view .game-object { padding: 3px; }
-.game-object .gamble-screen {
-  flex: 0 0 auto;
-  gap: 8px;
-  padding: 10px;
-  overflow: visible;
-  border: 1px solid #b17b66;
-  border-radius: 6px;
-  background: #f4e2cc;
-  color: var(--ink);
-  box-shadow: inset 0 0 0 3px #fff5e8;
-}
 .game-object .gamble-actions { gap: 5px; }
 .game-object .gamble-actions :is(.secondary, .primary) { margin: 0; }
-.game-object .blackjack-actions { display: flex; gap: 8px; }
-.app-shell button:not(.vertical-word), .app-shell .baccarat-swipe { min-height: 44px; min-width: 44px; }
-.game-object .card-table button { min-width: 44px; }
+.app-shell button:not(.vertical-word) { min-height: 44px; min-width: 44px; }
 .game-object .generation-skeleton { min-height: 338px; }
-
-.app-shell > .alert {
-  position: absolute;
-  z-index: 3;
-  top: calc(var(--dialogue-edge) + 6px);
-  inset-inline: var(--scene-gutter);
-  width: auto;
-  max-width: 480px;
-  margin: 0 auto;
-}
+.gambling-view .generation-skeleton { min-height: 74px; margin-top: 3px; }
+.gambling-view .skeleton-paper { min-height: 65px; }
 
 @media (prefers-reduced-motion: reduce) {
-  .app-shell > main, .game-object, .scene-object { animation: none; }
+  .table-objects > main, .game-object, .scene-object { animation: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -286,3 +353,5 @@
     animation: none !important;
   }
 }
+
+.table-objects > .game-screen[hidden] { display: none; }

@@ -25,11 +25,34 @@ for (const kind of ['rps', 'card_guess', 'dice', 'slot', 'blackjack', 'baccarat'
   assert.equal(hasFinish(ui), false);
   assert.deepEqual(calls, []);
 });
+test('dealer objects put opposing hands across the table and expose physical controls', () => {
+  const klass = (ui, name) => ui.find(n => n.props.className === name);
+  const rps = play(fixture('rps')).ui;
+  assert.deepEqual(rps.all(n => /^rps-side /.test(n.props.className ?? '')).map(text), ['アノマ？', 'あなた？']);
+  assert.ok(klass(play(fixture('dice')).ui, 'dice-game'));
+  const guess = play(fixture('card_guess')).ui;
+  assert.equal(klass(guess, 'guess-board').props['data-dealing'], true);
+  assert.equal(guess.all(n => /guess-card playing-card/.test(n.props.className ?? '')).length, 3);
+  const slot = play(fixture('slot')).ui;
+  assert.ok(klass(slot, 'slot-machine'));
+  assert.ok(klass(slot, 'slot-lever'));
+  assert.equal(slot.all(n => n.props.className === 'reel-strip').length, 3);
+  for (const kind of ['blackjack', 'baccarat']) {
+    const ui = play(fixture(kind)).ui;
+    assert.ok(klass(ui, 'dealt-hands'));
+    assert.deepEqual(ui.all(n => n.props.className === 'card-hand').map(n => n.props['data-side']), ['banker', 'player']);
+  }
+  const baccarat = play(fixture('baccarat')).ui;
+  baccarat.click('バンカーの1枚目');
+  assert.ok(klass(baccarat, 'baccarat-zoom squeeze-back'));
+});
 for (const outcome of ['win', 'loss']) for (const skip of [false, true]) test(`slot: manual stops / explicit skip (${outcome}, skip=${skip})`, () => {
   const gamble = fixture('slot', outcome), snapshot = JSON.stringify(gamble);
   const { ui, calls } = play(gamble);
   if (skip) ui.click('演出をスキップ');
   else {
+    assert.equal(ui.find(n => n.type === 'button' && text(n) === 'STOP 2').props.disabled, true);
+    ui.click('レバーを引く');
     ui.click('STOP 2'); ui.tick(); assert.equal(hasFinish(ui), false);
     ui.click('STOP 1'); ui.tick(); assert.equal(hasFinish(ui), false);
     ui.click('STOP 3');
