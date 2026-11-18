@@ -4,8 +4,8 @@
   gap: 6px;
   margin: 12px 0;
   padding: 4px;
-  background: #f4eae8;
-  border: 1px solid var(--rule);
+  background: #120c0c;
+  border: 1px solid #6e4542;
 }
 .game-tiers button {
   min-height: 38px;
@@ -15,13 +15,13 @@
   font-family: var(--serif);
   font-size: 13px;
   font-weight: 800;
-  color: #5e4a48;
+  color: #cfb2ac;
 }
 .game-tiers button[aria-pressed=true] {
-  background: #fff;
-  color: var(--stamp);
-  border-color: var(--stamp);
-  box-shadow: 2px 2px 0 rgba(156, 46, 50, 0.18);
+  background: var(--stamp);
+  color: #fff;
+  border-color: #f3c6be;
+  box-shadow: 0 2px 10px rgba(214, 69, 75, 0.38);
 }
 .gamble-screen {
   display: flex;
@@ -30,24 +30,32 @@
   gap: 14px;
   width: 100%;
   padding: 18px 14px;
-  background: #fff;
-  border: 1.5px solid var(--ink);
-  box-shadow: inset 0 0 0 3px #fff, inset 0 0 0 4px var(--rule), 4px 5px 14px rgba(36, 29, 28, 0.08);
+  background:
+    radial-gradient(circle at 50% 42%, rgba(156, 46, 50, 0.22) 0%, rgba(20, 14, 14, 0.96) 72%),
+    linear-gradient(180deg, #1b1212 0%, #120c0c 100%);
+  color: #faefec;
+  border: 1.5px solid #c99d94;
+  box-shadow:
+    inset 0 0 0 3px #160f0f,
+    inset 0 0 0 4.5px var(--stamp),
+    0 14px 36px rgba(0, 0, 0, 0.68);
 }
 .gamble-screen .eyebrow {
   text-align: center;
   letter-spacing: .2em;
   font-family: var(--serif);
+  color: #f09296;
 }
 .gamble-screen h1 {
   text-align: center;
   font-size: clamp(22px, 6.5vw, 30px);
   padding-bottom: 8px;
-  border-bottom: 1px solid var(--rule);
+  color: #fff8f6;
+  border-bottom: 1px solid #6e4542;
 }
 .gamble-screen.motion-result h1 {
-  color: var(--stamp);
-  border-bottom-color: var(--stamp);
+  color: #ff7a80;
+  border-bottom-color: #d6454b;
 }
 .beginner-game { gap: 16px; }
 .rps-result, .rps-buttons { display: grid; gap: 10px; text-align: center; }
@@ -63,15 +71,15 @@
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
-  width: 28px;
-  height: 28px;
+  width: 30px;
+  height: 30px;
   display: grid;
   place-items: center;
-  border: 1px solid var(--stamp);
-  background: #fdf2f0;
-  color: var(--stamp);
+  border: 1.5px solid #f5d0c8;
+  background: var(--stamp);
+  color: #fff;
   font: 800 12px/1 var(--serif);
-  box-shadow: 2px 2px 0 rgba(156, 46, 50, 0.15);
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.55);
 }
 .rps-result > div {
   display: grid;
@@ -79,20 +87,21 @@
   gap: 6px;
   min-height: 128px;
   padding: 14px 10px;
-  background: linear-gradient(180deg, #ffffff 0%, #fbf5f4 100%);
+  background: linear-gradient(180deg, #fffdf9 0%, #f5e8e4 100%);
+  color: var(--ink);
   border: 1px solid var(--ink);
-  box-shadow: inset 0 0 0 2px #fff, inset 0 0 0 3px var(--rule), 3px 3px 0 #ead7d5;
+  box-shadow: inset 0 0 0 2px #fff, inset 0 0 0 3px var(--rule), 0 8px 20px rgba(0, 0, 0, 0.45);
 }
 .rps-result.rps-standby > div b {
   color: var(--stamp);
-  opacity: .55;
+  opacity: .65;
   font-family: var(--serif);
 }
 .rps-result.rps-win .rps-player,
 .rps-result.rps-loss .rps-opponent {
   border-color: var(--stamp);
   background: linear-gradient(180deg, #fff9f8 0%, #fdedea 100%);
-  box-shadow: inset 0 0 0 2px #fff, inset 0 0 0 3px var(--stamp), 3px 3px 0 rgba(156, 46, 50, 0.24);
+  box-shadow: inset 0 0 0 2px #fff, inset 0 0 0 3.5px var(--stamp), 0 0 24px rgba(214, 69, 75, 0.48);
 }
 .rps-result b { font-size: clamp(34px, 12vw, 50px); line-height: 1.1; }
 .rps-result span { font-size: 12.5px; font-family: var(--serif); font-weight: 700; color: #4a3a38; }
@@ -100,9 +109,10 @@
 .rps-buttons .secondary {
   margin: 0;
   padding: 6px 0;
-  border: 1px solid var(--ink);
-  background: #fff;
-  box-shadow: 2px 2px 0 var(--rule);
+  border: 1px solid #d5b2aa;
+  background: #fffdf9;
+  color: var(--ink);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.42);
   font-family: var(--serif);
   font-weight: 800;
 }
@@ -114,9 +124,9 @@
 .dice-game, .card-guess { display: grid; gap: 12px; }
 .dice-game {
   padding: 20px;
-  background: radial-gradient(circle at 50% 50%, #fff 0%, #faf1ef 100%);
-  border: 1px solid var(--rule);
-  box-shadow: inset 0 0 0 3px #fff, inset 0 0 0 4px #eedad7;
+  background: radial-gradient(circle at 50% 50%, #2b1818 0%, #150d0d 100%);
+  border: 1px solid #8a5a56;
+  box-shadow: inset 0 0 0 2px #160f0f, inset 0 0 0 3px var(--stamp);
 }
 .dice-face {
   justify-self: center;
@@ -124,23 +134,24 @@
   place-items: center;
   width: 108px;
   height: 108px;
-  background: #fff;
+  background: #fffdf9;
+  color: var(--ink);
   border: 1.5px solid var(--ink);
-  box-shadow: 4px 4px 0 var(--rule);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.55);
   font: 80px/1 "Apple Symbols", "Segoe UI Symbol", sans-serif;
 }
 .dice-face.dice-win {
   color: var(--stamp);
   border-color: var(--stamp);
-  box-shadow: 4px 4px 0 rgba(156, 46, 50, 0.28);
+  box-shadow: 0 0 26px rgba(214, 69, 75, 0.55);
 }
 .guess-board {
   width: min(100%, 360px);
   aspect-ratio: 2 / 1;
   position: relative;
   justify-self: center;
-  background: #faf3f2;
-  border: 1px dashed var(--rule);
+  background: radial-gradient(circle at 50% 50%, #271616 0%, #140c0c 100%);
+  border: 1px dashed #9e6a65;
 }
 .guess-card.playing-card {
   position: absolute; left: 2.166%; top: 6%; width: 29%; height: auto; aspect-ratio: 167 / 243;

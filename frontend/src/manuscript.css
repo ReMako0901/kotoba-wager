@@ -1,5 +1,5 @@
 :root {
-  background: #efe8e6;
+  background: #0e0a0a;
   color: #241d1c;
   --cell-size: 32px;
   --paper-rows: 10;
@@ -8,13 +8,15 @@
   --rule: #dec2c0;
   --serif: 'Hiragino Mincho ProN', 'Yu Mincho', 'Noto Serif JP', serif;
 }
-body { background: #efe8e6; }
+body { background: #0e0a0a; }
 .app-shell {
   max-width: 520px;
   min-height: 100dvh;
-  background: #fcf9f8;
-  box-shadow: 0 0 32px rgba(36, 29, 28, 0.08);
-  border-inline: 1px solid #e5d5d3;
+  padding: 0;
+  background: #161010;
+  color: #f6ebe8;
+  box-shadow: 0 0 48px rgba(0, 0, 0, 0.75);
+  border-inline: 1px solid #3c2625;
 }
 .story-board, .modal { background: #fff; }
 .masthead { height: 66px; border-bottom: 1px solid var(--ink); }
@@ -179,110 +181,22 @@ body { background: #efe8e6; }
   align-items: center;
   justify-content: space-between;
   flex-shrink: 0;
-  border-bottom: 1px solid #eadad8;
-}
-.title-mode > .navigation-bar::after,
-.opening-mode > .navigation-bar::after {
-  content: "― 稿 ―";
-  margin-inline: auto;
-  font: 600 11px/1 var(--serif);
-  letter-spacing: .35em;
-  color: #9e8280;
+  border-bottom: 0;
 }
 .navigation-bar .icon-button {
-  font-size: 13px;
-  font-weight: 700;
+  font-size: 11.5px;
+  font-weight: 800;
   padding: 0 10px;
   letter-spacing: .04em;
 }
 .navigation-bar .icon-button:first-child::before {
   content: "‹ ";
-  color: var(--stamp);
+  color: #e86267;
   font-weight: 900;
 }
 .navigation-bar .icon-button[aria-label="取引履歴"] {
-  font-size: 17px;
+  font-size: 15px;
   padding: 0 10px;
-}
-.title-screen {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: 18px;
-  padding: 16px 0 22px;
-}
-.title-folio {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  text-align: center;
-  position: relative;
-  padding: 28px 20px;
-  border: 1.5px solid var(--ink);
-  background:
-    radial-gradient(circle at 50% 45%, rgba(255, 255, 255, 0.94) 0%, rgba(252, 246, 245, 0.88) 100%),
-    repeating-linear-gradient(0deg, transparent 0 31px, rgba(222, 194, 192, 0.35) 31px 32px),
-    repeating-linear-gradient(90deg, transparent 0 31px, rgba(222, 194, 192, 0.35) 31px 32px);
-  background-color: #fff;
-  box-shadow: inset 0 0 0 4px #fff, inset 0 0 0 5px var(--rule), 5px 5px 0 rgba(156, 46, 50, 0.14);
-}
-.title-folio::before {
-  content: "◆ 言葉 × 賭博 × 改稿 ◆";
-  display: block;
-  margin-bottom: 18px;
-  padding: 3px 12px;
-  border: 1px solid var(--rule);
-  background: #fdf5f4;
-  color: var(--stamp);
-  font: 700 10px/1.4 var(--serif);
-  letter-spacing: .22em;
-}
-.title-folio::after {
-  content: "";
-  display: block;
-  width: 64px;
-  height: 3px;
-  margin-top: 22px;
-  border-block: 1px solid var(--stamp);
-}
-.title-screen h1 {
-  margin: 0;
-  font-size: clamp(27px, 7.8vw, 42px);
-  line-height: 1.28;
-  color: var(--ink);
-}
-.title-screen h1 span { display: block; }
-.title-screen h1 span:first-child {
-  color: var(--stamp);
-  letter-spacing: .08em;
-  font-size: .88em;
-  margin-bottom: 4px;
-}
-.title-screen h1 small {
-  display: inline-block;
-  font-size: 12px;
-  margin-top: 12px;
-  padding: 2px 10px;
-  border: 1px solid var(--stamp);
-  background: #fdf3f2;
-  color: var(--stamp);
-  letter-spacing: .12em;
-}
-.title-screen .intro {
-  margin: 20px 0 0;
-  padding: 8px 18px;
-  border-block: 1px solid var(--rule);
-  background: rgba(255, 255, 255, 0.85);
-  font: 600 13.5px/1.7 var(--serif);
-  letter-spacing: .08em;
-  color: var(--ink);
-}
-.title-actions {
-  display: grid;
-  gap: 10px;
 }
 .title-actions .secondary { margin-top: 0; }
 .choose-screen { padding-top: 8px; }
@@ -292,45 +206,61 @@ body { background: #efe8e6; }
   gap: 8px;
   padding-bottom: 10px;
   margin-bottom: 10px;
-  border-bottom: 1px solid var(--rule);
+  border-bottom: 1px solid #593836;
 }
 .choose-screen h1 {
   margin: 0;
   font-size: 21px;
+  color: #faefec;
   display: flex;
   align-items: center;
   gap: 8px;
 }
 .choose-screen h1::before {
-  content: "";
-  width: 4px;
-  height: 18px;
+  content: "選";
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
   background: var(--stamp);
-  display: inline-block;
+  border: 1px solid #f2c8c2;
+  color: #fff;
+  font-size: 11px;
 }
 .story-selection-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-bottom: 0; }
 .story-selection-actions .secondary { margin: 0; min-height: 40px; font-size: 12px; }
 .story-list {
   display: grid;
-  gap: 12px;
+  gap: 14px;
   padding: 2px 2px 18px 0;
 }
 .story-card {
   position: relative;
-  background: linear-gradient(180deg, #ffffff 0%, #fdfaf9 100%);
-  border: 1px solid var(--rule);
-  border-left: 4px solid var(--stamp);
-  box-shadow: 3px 3px 0 #eedcd9;
-  padding: 12px 14px;
+  background:
+    linear-gradient(180deg, #fffdf9 0%, #f8efec 100%),
+    repeating-linear-gradient(90deg, transparent 0 27px, rgba(156, 46, 50, 0.08) 27px 28px);
+  border: 1.5px solid #d5b2aa;
+  border-right: 6px solid var(--stamp);
+  box-shadow:
+    inset 0 0 0 2px #fff,
+    0 8px 20px rgba(0, 0, 0, 0.45);
+  color: var(--ink);
+  padding: 13px 16px 13px 14px;
   transition: transform 120ms ease, box-shadow 120ms ease, border-color 150ms ease;
 }
 .story-card:nth-child(even) {
-  border-left-color: var(--ink);
+  border-right-color: #3d2826;
+  transform: translateX(3px);
+}
+.story-card:nth-child(odd) {
+  transform: translateX(-2px);
 }
 .story-card:hover:not(:disabled),
 .story-card:focus-visible {
   border-color: var(--stamp);
-  box-shadow: 4px 4px 0 rgba(156, 46, 50, 0.22);
+  box-shadow:
+    inset 0 0 0 2px #fff,
+    0 10px 26px rgba(214, 69, 75, 0.35);
 }
 .story-card-top {
   display: flex;
@@ -358,12 +288,13 @@ body { background: #efe8e6; }
   margin: 0 0 6px;
   padding-bottom: 5px;
   border-bottom: 1px dashed var(--rule);
+  color: var(--ink);
 }
 .story-card .story-intro {
   margin: 0 0 6px;
   padding: 4px 8px;
   background: #faf3f2;
-  border-left: 2px solid var(--rule);
+  border-left: 2px solid var(--stamp);
   font-size: 11.5px;
   line-height: 1.65;
   color: #4a3a38;
@@ -372,25 +303,41 @@ body { background: #efe8e6; }
   font-size: 12.5px;
   line-height: 1.75;
   font-family: var(--serif);
+  color: var(--ink);
 }
 .modal {
-  border: 1.5px solid var(--ink);
+  width: min(100%, 520px);
+  max-height: calc(100dvh - 118px);
+  margin: auto auto 0;
+  border: 1.5px solid #d5b2aa;
   border-top: 4px solid var(--stamp);
-  padding: 20px 18px;
-  background: #fcf9f8;
-  box-shadow: inset 0 0 0 3px #fff, 0 18px 38px rgba(36, 29, 28, 0.26), 5px 5px 0 var(--ink);
+  padding: 18px 16px 22px;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(156, 46, 50, 0.16) 0%, transparent 60%),
+    linear-gradient(180deg, #1f1514 0%, #140e0e 100%);
+  color: #f8efec;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 235, 230, 0.25),
+    0 -14px 40px rgba(0, 0, 0, 0.72);
+}
+.modal::backdrop {
+  background: linear-gradient(180deg, rgba(10, 6, 6, 0.15) 0 110px, rgba(10, 6, 6, 0.78) 160px 100%);
 }
 .modal-heading {
   padding-bottom: 10px;
   margin-bottom: 4px;
-  border-bottom: 1px solid var(--rule);
+  border-bottom: 1px solid #593836;
+}
+.modal h2 {
+  color: #faefec;
 }
 .modal-heading .icon-button {
   width: 34px;
   height: 34px;
   min-height: 34px;
-  border: 1px solid var(--rule);
-  background: #fff;
+  border: 1px solid #7a4f4c;
+  background: #2b1d1c;
+  color: #faefec;
   font-size: 18px;
 }
 .reward-options {
@@ -406,16 +353,16 @@ body { background: #efe8e6; }
   gap: 12px;
   width: 100%;
   padding: 12px 14px;
-  background: #fff;
-  border: 1px solid var(--ink);
-  border-left: 4px solid var(--stamp);
-  box-shadow: 3px 3px 0 #edd9d7;
+  background: linear-gradient(90deg, #fffdf9 0%, #f8eeeb 100%);
+  border: 1px solid #d5b2aa;
+  border-left: 5px solid var(--stamp);
+  box-shadow: 0 5px 14px rgba(0, 0, 0, 0.42);
   text-align: left;
   transition: transform 120ms ease, box-shadow 120ms ease, background 150ms ease;
 }
 .reward-option:hover:not(:disabled) {
-  background: #fffafa;
-  box-shadow: 4px 4px 0 rgba(156, 46, 50, 0.25);
+  background: #ffffff;
+  box-shadow: 0 6px 18px rgba(214, 69, 75, 0.36);
 }
 .reward-option > span:first-child {
   display: grid;
@@ -457,10 +404,10 @@ body { background: #efe8e6; }
   background: #fdf4f3;
 }
 .custom-story { display: grid; gap: 8px; margin-top: 12px; }
-.custom-story label { font-size: 13px; }
-.custom-story textarea { width: 100%; padding: 10px; resize: vertical; border: 1px solid var(--rule); background: #fff; font: 16px/1.65 var(--serif); }
+.custom-story label { font-size: 13px; color: #f5e6e2; }
+.custom-story textarea { width: 100%; padding: 10px; resize: vertical; border: 1px solid #8a5a56; background: #fffdf9; color: var(--ink); font: 16px/1.65 var(--serif); }
 .custom-story > span { justify-self: end; }
-.input-error { color: var(--stamp); font-size: 13px; }
+.input-error { color: #ff8085; font-size: 13px; }
 .reward-option b { font-size: 18px; color: var(--ink); }
 .reward-option small { font-size: 12px; color: #574543; line-height: 1.45; }
 
@@ -494,27 +441,29 @@ body { background: #efe8e6; }
   display: inline-block;
   padding: 2px 8px;
   background: var(--stamp);
+  border: 1px solid #f2c8c2;
   color: #fff;
   font-size: 10.5px;
   font-weight: 800;
   letter-spacing: .08em;
 }
-.game-heading .story-title { min-width: 0; flex-shrink: 1; font-size: 18px; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.game-heading .story-title { min-width: 0; flex-shrink: 1; color: #faefec; font-size: 18px; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .edition-badge {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   padding: 2px 10px;
-  border: 1px solid var(--ink);
-  background: #fff;
+  border: 1px solid #d5b2aa;
+  background: #2b1d1c;
+  color: #faefec;
   font: 800 13px/1.35 var(--serif);
   letter-spacing: .04em;
 }
 .edition-badge.outcome-win {
-  border-color: var(--stamp);
+  border-color: #f5d0c8;
   background: var(--stamp);
   color: #fff;
-  box-shadow: 2px 2px 0 rgba(156, 46, 50, 0.25);
+  box-shadow: 0 0 14px rgba(214, 69, 75, 0.45);
 }
 .edition-badge.outcome-win::before {
   content: "祝";
@@ -528,8 +477,8 @@ body { background: #efe8e6; }
   line-height: 1;
 }
 .edition-badge.outcome-loss {
-  border-color: var(--ink);
-  background: var(--ink);
-  color: #fff;
-  box-shadow: 2px 2px 0 var(--rule);
+  border-color: #7c6765;
+  background: #140f0f;
+  color: #e6d5d2;
+  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.5);
 }

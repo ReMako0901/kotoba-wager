@@ -151,6 +151,10 @@ function AppContent(){
     ? session.story_progress : undefined;
   const shellMode = screen === 'game' && !ended ? ' playing' : screen === 'choose' ? ' choosing'
     : screen === 'title' ? ' title-mode' : screen === 'opening' ? ' opening-mode' : '';
+  const rewardModalOpen = !gambleMode && Boolean(ready && !resultMode && (choosingReward || !offer));
+  const gambleModalOpen = !gambleMode && Boolean(ready && !resultMode && !choosingReward && stakesReady && choosingGame);
+  const playSubMode = screen === 'game' && !ended ? (gambleMode ? ' gamble-view' : resultMode ? ' result-view' : ' wager-view') : '';
+  const modalOpenMode = screen === 'game' && (rewardModalOpen || gambleModalOpen || historyOpen) ? ' contract-modal-open' : '';
   const errorNotice = error && !customOpen && !choosingGame && <div className="alert" role="alert">{error}{screen === 'game' && session &&
     <button onClick={() => act(async () => accept(await api<Session>(`/sessions/${session.id}`)))}>状態を確認</button>}</div>;
   function returnToTitle() {
@@ -169,7 +173,7 @@ function AppContent(){
     });
   }
 
-  return <div className={`app-shell${shellMode}`}>
+  return <div className={`app-shell${shellMode}${playSubMode}${modalOpenMode}`}>
     <header className="navigation-bar">
       {screen !== 'title' && <>
       <button className="icon-button" aria-label="タイトルへ" disabled={busy} onClick={returnToTitle}>タイトルへ</button>
@@ -182,8 +186,8 @@ function AppContent(){
     {screen === 'game' && session && !ended && (!resultMode || !reaction) &&
       !(resultMode && session.story_progress && ['escapable', 'extension'].includes(session.story_progress.phase)) &&
       <ScenePublisher scene={gameScene({
-        rewardModal: !gambleMode && Boolean(ready && !resultMode && (choosingReward || !offer)),
-        gambleModal: !gambleMode && Boolean(ready && !resultMode && !choosingReward && stakesReady && choosingGame),
+        rewardModal: rewardModalOpen,
+        gambleModal: gambleModalOpen,
         gambling: gambleMode, game: last?.gamble?.kind,
         processing: Boolean(processing || busy || session.view === 'result'), selectedCount, stakesReady,
       })} /> }
