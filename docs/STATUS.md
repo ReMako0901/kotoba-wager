@@ -379,3 +379,13 @@ Google AI Proの月$10 Cloudクレジットは適格なGoogle Cloud・Gemini API
 - 検証：`timeout 40s node --test frontend/tests/*.test.cjs` を1回実行し10ファイルすべて成功（個別ケース数ではない）。`git diff --check`成功。ビルドはfrontendで `timeout 40s npx -y pnpm@latest run build` を1回試行、無出力のまま終了124。再試行なし、Muse側で確認が必要。
 - 未実施：閉眼素材の追加（Muse担当）、ブラウザで縦画面・短い画面・絞り操作・呼吸・瞬き・連続表情変更・素材欠落・動きの軽減設定の目視、実Gemini、既存pytest、Firestoreエミュレータ、公開配信確認。
 - コミット未実施（.git読み取り専用）。変更は作業ツリーに保持。push・デプロイなし。公開ソース・Pages・Cloud Run・Renderは今回未更新。
+
+## UI全面改修（2026-11-18、ローカル作業ツリー）
+
+- main、開始時 `98d4bdb`、開始時差分なし。ユーザー指示でpull省略。フロントエンドのみ。バックエンド・API契約・確率・強さ・抽選・保存・台詞・手動進行・つづき不在・メタ情報非表示は無変更。
+- タイトル・オープニング：100dvhフレーム内に原稿マス目透かしと二重枠を持つ表題紙（`.title-folio`）と下部アクション（`.title-actions`）を配置し、画面下半分の間延びを解消。
+- 物語選び：`.choose-header` で見出しと操作ボタンを整理し、`.story-card` に朱・墨の背表紙ライン、ジャンル小札、タイトル下の破線罫、導入の引用ボックス、紙束シャドウを付与して並びのリズムを作成。
+- 言葉選び・結果：`.game-hero` に机上マットの陰影を敷き、原稿シート（`.wager-paper-stack > .paper-stack`、`.manuscript-sheet`）に二重外枠と天地欄外（「【 原 稿 】」「【 改 稿 成 就 】」「【 喪 失 改 稿 】」）を追加して原稿の上下余白を原稿用紙の造形として統合。結果画面は勝敗別ビュー（`result-win-view` / `result-loss-view`）と版・勝敗バッジ（`.edition-badge.outcome-win` / `.outcome-loss`）で祝祭感と喪失感を演出し、下部バーの「どこが変わった？」トグルボタンと選択個数の完了点灯（`.stakes-ready`）を強化。
+- アノマステージ・モーダル・ギャンブル：ステージに二重下罫線・肖像額装・反応別（gain/loss/change）の色彩変化を追加。モーダルの報酬カードを朱印スタンプ風の必要個数バッジに刷新し、ギャンブル選択の難易度タブと種目ボタンを勝負札風に装飾。じゃんけんは手を選ぶ前から「あなた 対 アノマ」の対決盤面（`.rps-standby` → `.rps-settled`）を中央に常設し、サイコロ・カード当て・スロット・ブラックジャック・バカラも勝負盤として額装。
+- 検証：新規 `frontend/tests/ui-overhaul.test.cjs` を追加し、`timeout 40s node --test frontend/tests/*.test.cjs` で全14ファイル成功。`git diff --check` 成功。ビルドは frontend で `timeout 40s npx -y pnpm@latest run build` を1回試行、40秒無出力でタイムアウト終了、再試行なし。
+- 未実施：Muse側でのビルド確認、ブラウザ目視（390×844および縦640px等のスマホ縦画面）、実Gemini、既存pytest、Firestoreエミュレータ、公開配信確認。コミット未実施（.git読み取り専用）。push・デプロイなし。
