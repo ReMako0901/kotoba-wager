@@ -103,6 +103,7 @@ body { background: #0e0a0a; }
   border-right: 1px solid var(--paper-rule);
   border-bottom: 1px solid var(--paper-rule);
   background: #fff;
+  color: var(--ink);
   font: 500 calc(var(--cell-size) * .8)/1 var(--serif);
 }
 .ink-cell {
@@ -198,7 +199,7 @@ body { background: #0e0a0a; }
   font-size: 15px;
   padding: 0 10px;
 }
-.title-actions .secondary { margin-top: 0; }
+.title-actions .secondary { margin-top: 0; color: var(--ink); }
 .choose-screen { padding-top: 8px; }
 .choose-header {
   display: flex;

@@ -81,11 +81,11 @@ test('gambling actions stay in the footer and generation polling only reads the 
   ui.unmount();
 });
 
-test('the game reserves fixed rows and story selection scrolls its list', () => {
+test('the game centers its content on the stage and story selection scrolls its list', () => {
   const css = fs.readFileSync('frontend/src/layout.css', 'utf8');
   assert.match(css, /height: 100dvh;\s*overflow: hidden/);
-  assert.match(css, /grid-template-rows: 24px auto minmax\(0, 1fr\) 64px/);
   assert.match(css, /\.game-hero \{[^}]*align-items: safe center/);
-  assert.match(css, /\.action-bar \{[^}]*grid-row: 4/);
+  assert.match(css, /\.game-hero \{[^}]*min-height: 0/);
+  assert.match(css, /@media \(max-height: 560px\)\s*\{\s*\.game-hero \{ overflow-y: auto/);
   assert.match(css, /\.choosing \.story-list \{[^}]*overflow-y: auto/);
 });

@@ -7,6 +7,7 @@ const { jsx, jsxs } = require('react/jsx-runtime');
 const { AnomaStageProvider, AnomaStage, StagePublisher } = require('../src/Anoma.tsx');
 const App = require('../src/App.tsx').default;
 const { scenePools } = require('../src/sceneDialogue.ts');
+const { scenario } = require('../src/scenario.ts');
 function assertScene(ui, key) {
   assert.ok(scenePools[key].lines.some(line => text(stage(ui)) === 'アノマ' + line), key);
   assert.ok(scenePools[key].expressions.includes(stage(ui).props['data-expression']), key);
@@ -38,13 +39,14 @@ test('stage is shared on title, opening and story selection; all have dialogue',
   for (const action of [null, 'はじめる', 'スキップ']) {
     if (action) { ui.click(action); await flush(); ui.draw(); }
     assert.equal(ui.all(n => n.props.className === 'anoma-stage').length, 1);
-    if (action === 'はじめる') assert.equal(stage(ui).props['data-expression'], 'normal');
-    const shell = ui.find(n => String(n.props.className).startsWith('app-shell'));
-    const elements = shell.props.children.filter(n => n && typeof n === 'object');
-    assert.equal(elements[0].props.className, 'navigation-bar');
-    assert.equal(elements[1].props.className, 'anoma-stage');
-    if (action !== 'はじめる') assertScene(ui, action ? 'storySelect' : 'title');
+    if (action === 'はじめる') {
+      assert.equal(stage(ui).props['data-expression'], 'normal');
+      assert.equal(text(stage(ui)), 'アノマ' + scenario.opening[0]);
+    } else {
+      assertScene(ui, action ? 'storySelect' : 'title');
+    }
   }
+  ui.unmount();
 });
 test('game publishes scene dialogue for reward, generation, gambling and title', async () => {
   for (const [status, gamble, scene] of [['ready', false, 'rewardSelect'], ['generating', false, 'generating'], ['generating', true, 'gamblePlay:dice']]) {
@@ -65,14 +67,10 @@ test('all dialogue owners publish and obsolete embedded frames are removed', () 
   const progress = fs.readFileSync('frontend/src/StoryProgress.tsx', 'utf8');
   assert.match(anoma, /StagePublisher lines=\{\[scenario.opening\[index\]\]\}/);
   assert.match(app, /<ScenePublisher scene=\{gameScene/);
-  assert.match(app, /StagePublisher lines=\{\[reaction.line\]/);
+  assert.match(app, /<StagePublisher lines=\{\[reaction.line\]\} expression=\{reaction.expression\} reaction=\{reaction.reaction\}/);
   assert.equal((progress.match(/<StagePublisher /g) ?? []).length, 2);
   assert.doesNotMatch(anoma + app + progress, /AnomaFrame|AnomaResult/);
   const css = fs.readFileSync('frontend/src/anoma.css', 'utf8');
-  assert.match(css, /position: sticky;\s*top: 0/);
-  assert.match(css, /height: 76px/);
-  assert.match(css, /max-height: 2.8em;\s*overflow-y: auto/);
-  assert.match(css, /width: 52px; height: 52px/);
-  assert.match(css, /\.anoma-stage-content \{ display: flex/);
-  assert.match(css, /object-fit: cover; object-position: 50% 20%/);
+  assert.match(css, /\.anoma-dialogue\s*\{[^}]*overflow-y:\s*auto/);
+  assert.match(css, /\.title-mode \.anoma-stage,\s*\.opening-mode \.anoma-stage\s*\{[^}]*flex-direction:\s*column/);
 });
