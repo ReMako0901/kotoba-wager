@@ -18,7 +18,7 @@ body { background: #0e0a0a; }
   box-shadow: 0 0 48px rgba(0, 0, 0, 0.75);
   border-inline: 1px solid #3c2625;
 }
-.story-board, .modal { background: #fff; }
+.story-board { background: #fff; }
 .masthead { height: 66px; border-bottom: 1px solid var(--ink); }
 .wordmark { font: 800 21px/1.3 var(--serif); }
 .icon-button { border: 0; border-radius: 0; color: var(--ink); }
@@ -38,12 +38,12 @@ body { background: #0e0a0a; }
 }
 .chapter-line, .eyebrow { color: var(--stamp); }
 .story-title { font-size: 27px; }
-.story-card, .game-summary, .reward-option, .modal {
+.story-card, .game-summary, .reward-option {
   border-radius: 0;
   border: 1px solid var(--rule);
   box-shadow: none;
 }
-.story-card h2, .modal h2, .reward-option b { font-family: var(--serif); }
+.story-card h2 h2, .reward-option b { font-family: var(--serif); }
 .reward-option > span:first-child { flex: 1; }
 .primary {
   background: var(--stamp);
@@ -177,28 +177,6 @@ body { background: #0e0a0a; }
 }
 .playing-card[aria-pressed=true] { outline: 2px solid var(--stamp); outline-offset: 2px; }
 
-.navigation-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-shrink: 0;
-  border-bottom: 0;
-}
-.navigation-bar .icon-button {
-  font-size: 11.5px;
-  font-weight: 800;
-  padding: 0 10px;
-  letter-spacing: .04em;
-}
-.navigation-bar .icon-button:first-child::before {
-  content: "‹ ";
-  color: #e86267;
-  font-weight: 900;
-}
-.navigation-bar .icon-button[aria-label="取引履歴"] {
-  font-size: 15px;
-  padding: 0 10px;
-}
 .title-actions .secondary { margin-top: 0; color: var(--ink); }
 .choose-screen { padding-top: 8px; }
 .choose-header {
@@ -306,41 +284,6 @@ body { background: #0e0a0a; }
   font-family: var(--serif);
   color: var(--ink);
 }
-.modal {
-  width: min(100%, 520px);
-  max-height: calc(100dvh - 118px);
-  margin: auto auto 0;
-  border: 1.5px solid #d5b2aa;
-  border-top: 4px solid var(--stamp);
-  padding: 18px 16px 22px;
-  background:
-    radial-gradient(circle at 50% 0%, rgba(156, 46, 50, 0.16) 0%, transparent 60%),
-    linear-gradient(180deg, #1f1514 0%, #140e0e 100%);
-  color: #f8efec;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 235, 230, 0.25),
-    0 -14px 40px rgba(0, 0, 0, 0.72);
-}
-.modal::backdrop {
-  background: linear-gradient(180deg, rgba(10, 6, 6, 0.15) 0 110px, rgba(10, 6, 6, 0.78) 160px 100%);
-}
-.modal-heading {
-  padding-bottom: 10px;
-  margin-bottom: 4px;
-  border-bottom: 1px solid #593836;
-}
-.modal h2 {
-  color: #faefec;
-}
-.modal-heading .icon-button {
-  width: 34px;
-  height: 34px;
-  min-height: 34px;
-  border: 1px solid #7a4f4c;
-  background: #2b1d1c;
-  color: #faefec;
-  font-size: 18px;
-}
 .reward-options {
   display: grid;
   gap: 10px;
@@ -413,7 +356,6 @@ body { background: #0e0a0a; }
 .reward-option small { font-size: 12px; color: #574543; line-height: 1.45; }
 
 @media (max-height: 500px) {
-  .playing .navigation-bar .icon-button { height: 34px; min-height: 34px; }
   .playing .game-screen { gap: 5px; padding-block: 5px; }
   .playing .chapter-line { line-height: 1.2; }
   .playing .story-title { font-size: 20px; line-height: 1.2; }
@@ -429,7 +371,6 @@ body { background: #0e0a0a; }
 .vertical-word::after { width: 2px; background: var(--stamp); }
 .vertical-word[aria-pressed=true] .ink-cell { color: #fff; background: var(--ink); }
 .vertical-word[aria-pressed=true]::after { width: 3px; background: var(--stamp); }
-.navigation-bar .icon-button { width: auto; font-size: 13px; }
 
 .story-card .story-intro, .story-card p { display: block; max-height: none; overflow: visible; }
 .show-changes .result-change.rewritten { animation: none; background: #fff; color: var(--ink); font-weight: 800; box-shadow: inset -2px 0 var(--stamp); }

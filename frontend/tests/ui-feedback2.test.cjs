@@ -86,10 +86,10 @@ test('game hides intro, restores reward descriptions and opens only on selection
     assert.doesNotMatch(text(ui.tree), /展開系|表現系/);
     ui.click('出会い');
     assert.equal(ui.find(n => n.props.className === 'reward-summary'), undefined);
-    const bar = ui.find(n => n.props.className === 'action-bar wager-bar');
+    const bar = ui.find(n => n.props.className === 'paper-tabs wager-tabs');
     assert.match(text(bar), new RegExp(`出会い・${required_count}個 変更`));
     assert.match(text(bar), new RegExp(`0 / ${required_count}`));
-    const gameModal = () => ui.find(n => n.type === 'dialog' && text(n).includes('どのギャンブルにする？'));
+    const gameModal = () => ui.find(n => n.props.className === 'scene-object object-games');
     for (let i = 0; i < required_count; i++) {
       assert.equal(gameModal(), undefined);
       ui.click([...'猫犬鳥'][i]);

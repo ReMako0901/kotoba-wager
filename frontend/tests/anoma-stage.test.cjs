@@ -72,5 +72,5 @@ test('all dialogue owners publish and obsolete embedded frames are removed', () 
   assert.doesNotMatch(anoma + app + progress, /AnomaFrame|AnomaResult/);
   const css = fs.readFileSync('frontend/src/anoma.css', 'utf8');
   assert.match(css, /\.anoma-dialogue\s*\{[^}]*overflow-y:\s*auto/);
-  assert.match(css, /\.title-mode \.anoma-stage,\s*\.opening-mode \.anoma-stage\s*\{[^}]*flex-direction:\s*column/);
+  assert.match(css, /\.anoma-stage\s*\{[^}]*position:\s*absolute;[^}]*inset:\s*0/);
 });

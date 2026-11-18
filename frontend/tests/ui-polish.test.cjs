@@ -21,14 +21,14 @@ test('squeeze hint is visual only, unopened only and disabled for reduced motion
   assert.match(css, /@media \(prefers-reduced-motion: reduce\)\s*\{\s*\.baccarat-zoom\.squeeze-back::after \{ animation: none; display: none;/);
 });
 
-test('breathing uses the outer tile and closed eyes share the absolute image geometry', () => {
+test('breathing uses the full portrait and closed eyes share the absolute image geometry', () => {
   const css = fs.readFileSync('frontend/src/anoma.css', 'utf8');
-  assert.match(css, /\.anoma-portrait-tile\s*\{[^}]*animation: anoma-breathe 6s/);
-  assert.match(css, /translateY\(-1px\) scale\(1\.015\)/);
-  assert.match(css, /\.anoma-portrait img\s*\{[^}]*position: absolute; inset: 0;/);
+  assert.match(css, /\.anoma-portrait\s*\{[^}]*animation: anoma-breathe 6s/);
+  assert.match(css, /scale\(1\.014\)/);
+  assert.match(css, /\.anoma-portrait img\s*\{[^}]*position: absolute;\s*inset: 0;/);
   assert.match(css, /\.anoma-portrait-closed \{ visibility: hidden;/);
   const reduced = css.slice(css.indexOf('@media (prefers-reduced-motion: reduce)'));
-  assert.match(reduced, /\.anoma-portrait-tile \{ animation: none; transform: none;/);
+  assert.match(reduced, /\.anoma-portrait \{ animation: none; transform: none;/);
   assert.match(reduced, /\.anoma-portrait-closed \{ display: none;/);
 });
 

@@ -21,7 +21,7 @@ function gameApi(response) {
   return requests;
 }
 
-test('result metadata follows the paper and the action bar toggles the diff in place', async () => {
+test('the edition label follows the paper and its tab toggles the diff in place', async () => {
   const result = {
     ...session, view: 'result', version: 2, text: '犬が来た。',
     transactions: [{
@@ -35,7 +35,7 @@ test('result metadata follows the paper and the action bar toggles the diff in p
   await startStory(ui);
   const meta = () => text(ui.find(n => n.props.className === 'game-heading'));
   const paper = () => ui.find(n => n.type === 'article');
-  const bar = () => ui.find(n => n.props.className === 'action-bar result-bar');
+  const bar = () => ui.find(n => n.props.className === 'paper-tabs result-tabs');
   assert.match(meta(), /第2版・敗北/);
   assert.match(text(ui.find(n => n.props.className === 'result-meta')), /失った言葉 猫・紙に残る粉/);
   assert.equal(ui.find(n => n.props.className === 'paper-caption'), undefined);
@@ -54,7 +54,7 @@ test('result metadata follows the paper and the action bar toggles the diff in p
   ui.unmount();
 });
 
-test('gambling actions stay in the footer and generation polling only reads the active session', async () => {
+test('gambling actions stay with the tabletop object and generation polling only reads the active session', async () => {
   const transaction = {
     id: 'first', status: 'playing', stakes: ['猫'], offer: { title: '心の声' },
     gamble: { kind: 'dice', rounds: [], moves: [] },
@@ -66,26 +66,27 @@ test('gambling actions stay in the footer and generation polling only reads the 
     : url.endsWith('/sessions/played') ? { ...generating, status: 'awaiting_reveal' } : played);
   const ui = mount(App, {});
   await startStory(ui);
-  const bar = () => ui.find(n => n.props.className === 'action-bar gamble-bar');
-  const hero = ui.find(n => n.props.className === 'game-hero');
-  assert.ok(nodes(hero, n => n.props.className === 'dice-game').length);
-  assert.doesNotMatch(text(hero), /サイコロを振る/);
-  assert.match(text(bar()), /サイコロを振る/);
+  const table = () => ui.find(n => n.props['aria-label'] === '一発サイコロの進行');
+  const actions = () => ui.find(n => n.props.className === 'gamble-actions');
+  assert.ok(nodes(table(), n => n.props.className === 'dice-game').length);
+  assert.match(text(table()), /サイコロを振る/);
   assert.equal(requests.filter(([url]) => url.endsWith('/play')).length, 0);
   ui.click('サイコロを振る'); await flush(); ui.draw();
-  assert.equal(nodes(bar(), n => n.type === 'button')[0].props.disabled, true);
+  assert.equal(nodes(actions(), n => n.type === 'button')[0].props.disabled, true);
   ui.tick(); await flush(); ui.draw();
-  assert.equal(nodes(bar(), n => n.type === 'button')[0].props.disabled, false);
+  assert.equal(nodes(actions(), n => n.type === 'button')[0].props.disabled, false);
   assert.deepEqual(requests.filter(([url]) => url.endsWith('/sessions/played')), [['/api/sessions/played', 'GET']]);
   assert.equal(requests.filter(([url]) => url.endsWith('/finish')).length, 0);
   ui.unmount();
 });
 
-test('the game centers its content on the stage and story selection scrolls its list', () => {
+test('portrait and foreground objects share one viewport without bars or modal overlays', () => {
   const css = fs.readFileSync('frontend/src/layout.css', 'utf8');
-  assert.match(css, /height: 100dvh;\s*overflow: hidden/);
-  assert.match(css, /\.game-hero \{[^}]*align-items: safe center/);
-  assert.match(css, /\.game-hero \{[^}]*min-height: 0/);
-  assert.match(css, /@media \(max-height: 560px\)\s*\{\s*\.game-hero \{ overflow-y: auto/);
-  assert.match(css, /\.choosing \.story-list \{[^}]*overflow-y: auto/);
+  const app = fs.readFileSync('frontend/src/App.tsx', 'utf8');
+  const anoma = fs.readFileSync('frontend/src/Anoma.tsx', 'utf8');
+  assert.match(css, /height: 100dvh;[^}]*overflow: hidden/);
+  assert.match(css, /\.app-shell > :is\(main, \.scene-object\) \{[^}]*position: absolute/);
+  assert.match(css, /\.choose-screen \.story-list \{[^}]*overflow-y: auto/);
+  assert.match(css, /@media \(prefers-reduced-motion: reduce\)[^]*animation: none/);
+  assert.doesNotMatch(app + anoma + css, /<dialog|showModal|::backdrop|navigation-bar|action-bar|portrait-tile|grid-template-rows|createPortal/);
 });

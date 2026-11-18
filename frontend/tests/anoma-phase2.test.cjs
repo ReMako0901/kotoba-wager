@@ -61,12 +61,10 @@ test('failure of either layer hides the whole portrait and keeps the accessible 
   }
 });
 
-test('CSS provides square overlapping portraits, 900ms fade and immediate reduced motion', () => {
+test('CSS provides full-scene overlapping portraits, 900ms fade and immediate reduced motion', () => {
   const css = fs.readFileSync('frontend/src/anoma.css', 'utf8');
-  assert.match(css, /aspect-ratio:\s*1/);
-  assert.match(css, /\.anoma-portrait-tile\s*\{[^}]*width:\s*84px;\s*height:\s*84px/);
-  assert.match(css, /\.title-mode \.anoma-portrait-tile\s*\{[^}]*width:\s*148px;\s*height:\s*148px/);
-  assert.match(css, /\.anoma-portrait img\s*\{[^}]*position:\s*absolute/);
+  assert.match(css, /\.anoma-backdrop\s*\{[^}]*background: radial-gradient/);
+  assert.match(css, /\.anoma-portrait img\s*\{[^}]*position:\s*absolute[^}]*object-fit:\s*cover[^}]*object-position:\s*50% 10%/);
   assert.match(css, /animation:\s*anoma-expression-fade 900ms/);
   assert.match(css, /@media\s*\(prefers-reduced-motion:\s*reduce\)\s*\{\s*\.anoma-portrait-current\s*\{\s*animation:\s*none;\s*opacity:\s*1/);
   assert.match(css, /\.anoma-portrait-previous\s*\{\s*display:\s*none/);

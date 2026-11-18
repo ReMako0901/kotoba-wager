@@ -2,7 +2,6 @@
    All motion belongs to presentation. No animation gates a server request. */
 :root {
   --paper-white: #fff;
-  --motion-ink: var(--ink);
   --motion-rule: var(--rule);
   --space-1: 4px;
   --space-2: 8px;
@@ -17,8 +16,6 @@
   --motion-spring: 400ms;
 }
 .game-screen { gap: var(--space-3); }
-.modal { padding: var(--space-6) var(--space-4); }
-.modal h2 { font: 600 var(--type-heading)/1.5 var(--serif); }
 .game-option { font-size: var(--type-body); }
 
 .reward-options { gap: var(--space-3); }
@@ -62,15 +59,12 @@
 .loss-to-paper::after { content: ''; pointer-events: none; position: absolute; inset: 8% 12% 18%; background: radial-gradient(circle, var(--ink) 0 1px, transparent 1.6px) 0 0 / 9px 11px; animation: ink-to-dust 800ms ease-in both; }
 @keyframes ink-to-dust { from { opacity: .45; transform: translateY(-12px); } to { opacity: 0; transform: translateY(70px); } }
 @keyframes ink-fade { from { opacity: 0; } to { opacity: 1; } }
-.round-reveal { position: relative; }
-.round-reveal::after { content: ''; pointer-events: none; position: absolute; inset: 0; z-index: 5; background: var(--motion-ink); animation: round-ink 350ms ease-out both; }
-@keyframes round-ink { 0% { clip-path: circle(0 at 50% 50%); opacity: .4; } 65% { clip-path: circle(100% at 50% 50%); opacity: .12; } 100% { clip-path: circle(150% at 50% 50%); opacity: 0; } }
 .loading-bet { justify-content: center; }
 .loading-bet .spinner { flex-shrink: 0; }
-@media (max-height: 720px) { .game-screen { gap: var(--space-2); } .modal { padding: var(--space-4); } .saved-reveal { min-height: 120px; margin-block: var(--space-3); } }
+@media (max-height: 720px) { .game-screen { gap: var(--space-2); } .saved-reveal { min-height: 120px; margin-block: var(--space-3); } }
 @media (prefers-reduced-motion: reduce) {
-  .app-shell *, .app-shell *::before, .app-shell *::after, dialog *, dialog *::before, dialog *::after { animation: ink-fade 150ms ease-out both !important; animation-delay: 0ms !important; transition: opacity 150ms !important; }
-  .round-reveal::after, .loss-to-paper::after, .skeleton-paper::after { display: none; }
+  .app-shell *, .app-shell *::before, .app-shell *::after { animation: ink-fade 150ms ease-out both !important; animation-delay: 0ms !important; transition: opacity 150ms !important; }
+  .loss-to-paper::after, .skeleton-paper::after { display: none; }
   .loss-ink { display: none; }
 }
 @keyframes ink-fade { from { opacity: .85; } to { opacity: 1; } }

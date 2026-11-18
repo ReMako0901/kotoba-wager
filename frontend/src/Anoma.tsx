@@ -86,7 +86,7 @@ export function StagePublisher({ lines, expression, reaction }: StageContent) {
 export function AnomaStage() {
   const { lines, expression, reaction } = useContext(StageContext);
   return <aside className="anoma-stage" aria-label="アノマ" data-expression={expression} data-reaction={reaction ?? 'normal'}>
-    <div className="anoma-portrait-tile"><AnomaPortrait key={expression} expression={expression} /></div>
+    <div className="anoma-backdrop" aria-hidden="true"><AnomaPortrait key={expression} expression={expression} /></div>
     <div className="anoma-stage-content"><span className="anoma-name">アノマ</span>
       <div className="anoma-dialogue">{lines?.map((line, index) => <p key={index}>{line}</p>)}</div>
     </div>

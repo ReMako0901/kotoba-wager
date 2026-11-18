@@ -16,8 +16,7 @@ test('title folio and story selection header structure the entry screens without
   const ui = mount(App, {});
   await flush();
   ui.draw();
-  const shell = () => ui.find(n => String(n.props.className).startsWith('app-shell'));
-  assert.match(shell().props.className, /title-mode/);
+  assert.ok(ui.find(n => n.props.className === 'title-screen'));
   const folio = ui.find(n => n.props.className === 'title-folio');
   const actions = ui.find(n => n.props.className === 'title-actions');
   assert.ok(folio);
@@ -32,11 +31,11 @@ test('title folio and story selection header structure the entry screens without
   ui.click('はじめる');
   await flush();
   ui.draw();
-  assert.match(shell().props.className, /opening-mode/);
+  assert.ok(ui.find(n => n.props.className === 'opening-screen'));
   ui.click('スキップ');
   await flush();
   ui.draw();
-  assert.match(shell().props.className, /choosing/);
+  assert.ok(ui.find(n => n.props.className === 'choose-screen'));
   assert.ok(ui.find(n => n.props.className === 'choose-header'));
   ui.unmount();
 });
@@ -114,7 +113,7 @@ test('CSS defines manuscript header/footer framing, celebratory result styling a
   const beginnerCss = fs.readFileSync('frontend/src/beginner-games.css', 'utf8');
   assert.match(historyCss, /【 原 稿 】/);
   assert.match(historyCss, /【 改 稿 成 就 】/);
-  assert.match(layoutCss, /\.result-win-view > \.game-hero/);
+  assert.match(historyCss, /\.result-win-view \.manuscript-sheet/);
   assert.match(layoutCss, /\.stake-count\.stakes-ready/);
   assert.match(beginnerCss, /\.rps-result::after/);
   assert.match(beginnerCss, /\.dice-face\.dice-win/);
