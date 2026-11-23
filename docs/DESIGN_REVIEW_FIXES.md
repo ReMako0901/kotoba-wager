@@ -9,10 +9,16 @@
 
 - 現状 `--serif` は端末標準書体依存で、Androidでは汎用serifに落ちる。
 - 書体は **Shippori Mincho B1（しっぽり明朝B1）の 700／800** を採用する。
-  Google Fonts の配布 woff2（日本語サブセット、unicode-range 付き）を
-  `frontend/public/fonts/` に自己ホストし、`@font-face` は `font-display: swap`。
-- フォント名は `'Kotoba Serif'` とし、`--serif` の先頭に置く。後ろは現行の
-  Hiragino Mincho ProN／Yu Mincho／Noto Serif JP／serif を残す（読込失敗時の保険）。
+  フォント実体は Muse が供給済み：`frontend/src/assets/fonts/` に
+  `kotoba-serif-700.woff2`／`kotoba-serif-800.woff2`（各約1.07MB、4,018グリフ。
+  収録字は repo 全文から集めた漢字3,631字＋かな・記号・英数字類。収録外の字は
+  フォールバックの端末明朝で描かれる）と、ライセンス `OFL-ShipporiMinchoB1.txt`。
+  ネットワーク取得は不要（サンドボックスの制限回避のため供給済みのを使うこと）。
+- 新規 `frontend/src/fonts.css` に `@font-face`（family 名 `'Kotoba Serif'`、
+  weight 700／800、`font-display: swap`、src は相対 url）を書き、App.tsx の
+  import 先頭（tokens.css と並ぶ位置）で読み込む。
+- `--serif` の先頭に `'Kotoba Serif'` を置く。後ろは現行の Hiragino Mincho ProN／
+  Yu Mincho／Noto Serif JP／serif を残す（サブセット外の字や読込失敗時の保険）。
 - 自己ホストするのは見出しが使う 700／800 のみ。本文の端末明朝は現行のまま。
 
 ## 2. 紙画面の注釈コントラスト（P1-2）
@@ -79,8 +85,8 @@
 - `node --test frontend/tests/*.test.cjs` 全成功。
 - ビルド `timeout 40s npx -y pnpm@latest run build` を1回だけ試行し、結果を
   正直に記録する（従来から無出力タイムアウトの持病がある。再試行しない）。
-- `git diff --check` 成功。フォントのライセンス（Shippori Mincho B1 は
-  SIL Open Font License 1.1）を `frontend/public/fonts/LICENSE.txt` に同梱する。
+- `git diff --check` 成功。フォントのライセンスは供給済みの
+  `frontend/src/assets/fonts/OFL-ShipporiMinchoB1.txt` をそのまま同梱する。
 - 完了したら CURRENT_INSTRUCTIONS の状態、docs/STATUS.md、docs/CHANGELOG.md を
   実態に合わせて更新する。コミットは意味のある単位で分ける。push はしない
   （検証と push は Muse 担当）。
