@@ -4,7 +4,7 @@
 - Muse がローカルの `main` と `origin/main` の `75d5b4e` 一致を外側で確認済み。サンドボックスではプロキシに接続できず、`.git/FETCH_HEAD` も読み取り専用だったため、ユーザー指示により pull を省略した。
 - `node --test frontend/tests/*.test.cjs` は全14ファイル成功。`git diff --check` 成功。frontend で指定ビルド `timeout 40s npx -y pnpm@latest run build` を1回実行し、無出力で終了コード124。ビルド・型検査は未確認。
 - Muse 検証（2026-11-23）：テスト92件を再実行し全成功。ビルドは `npx tsc -b` と `npx vite build` を分けて実行し両方成功（pnpm経由の40秒無出力はラッパー側の問題で、コード側ではないことを確認）。vite preview でタイトル画面を393×681撮影し、新明朝（Kotoba Serif）の読み込み（document.fonts で800が有効）とレイアウト不変を確認。写真は repo 外 audit/design-fix-title.png。
-- 実Gemini・pytest・Firestoreエミュレータは今回の変更範囲外（フロント見た目のみ）のため未実施。公開配信（GitHub Pages）への反映は未実施で、別途ユーザーの判断を待つ。
+- 実Gemini・pytest・Firestoreエミュレータは今回の変更範囲外（フロント見た目のみ）のため未実施。公開配信（GitHub Pages）は push 時の workflow で自動反映される構成で、2026-11-23 12:25 の run 45105846090 が成功。Muse が配信中CSSのハッシュ一致とフォントファイルの200応答を確認済み。
 
 ## UIブラッシュアップ（2026-11-18）
 
