@@ -1,3 +1,11 @@
+## デザインレビュー改善7件（2026-11-23、ローカル実装済み）
+
+- 見出し明朝の自己ホスト、紙の注釈の可読性、トークン集約、フォーカス統一、Noto Sans JP の軽量化、アニメーションの停止条件、新画面の2案比較手順を実装した。
+- Muse がローカルの `main` と `origin/main` の `75d5b4e` 一致を外側で確認済み。サンドボックスではプロキシに接続できず、`.git/FETCH_HEAD` も読み取り専用だったため、ユーザー指示により pull を省略した。
+- `node --test frontend/tests/*.test.cjs` は全14ファイル成功。`git diff --check` 成功。frontend で指定ビルド `timeout 40s npx -y pnpm@latest run build` を1回実行し、無出力で終了コード124。ビルド・型検査は未確認。
+- Muse 検証（2026-11-23）：テスト92件を再実行し全成功。ビルドは `npx tsc -b` と `npx vite build` を分けて実行し両方成功（pnpm経由の40秒無出力はラッパー側の問題で、コード側ではないことを確認）。vite preview でタイトル画面を393×681撮影し、新明朝（Kotoba Serif）の読み込み（document.fonts で800が有効）とレイアウト不変を確認。写真は repo 外 audit/design-fix-title.png。
+- 実Gemini・pytest・Firestoreエミュレータは今回の変更範囲外（フロント見た目のみ）のため未実施。公開配信（GitHub Pages）への反映は未実施で、別途ユーザーの判断を待つ。
+
 ## UIブラッシュアップ（2026-11-18）
 
 ローカル作業ツリーに実装済み。今回のフロント変更の実行検証・撮影はMuse待ち。pytest・Firestoreエミュレータ・実Geminiは未実施。コミット・公開反映は未実施。
