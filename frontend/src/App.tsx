@@ -1,3 +1,5 @@
+import './tokens.css';
+import './fonts.css';
 import { ScenePublisher } from './ScenePublisher';
 import { gameScene } from './sceneDialogue';
 import { AnomaStageProvider, AnomaStage, StagePublisher, resultReaction, Opening } from './Anoma';
@@ -180,7 +182,7 @@ function AppContent(){
     });
   }
 
-  return <div className="app-shell">
+  return <div className="app-shell" data-screen={screen}>
     <AnomaStage portraitFocus={screen === 'title' || screen === 'opening' || Boolean(ended || decision)}>
       <div className="table-objects" ref={tabletop}>
       {screen === 'title' && <ScenePublisher scene="title" />}

@@ -30,6 +30,7 @@ export function BaccaratCard({ card, label, open, onOpen }: {
 }) {
   const [peeks, setPeeks] = useState<Peeks>({});
   const drag = useRef<Drag | undefined>(undefined);
+  const [showHint, setShowHint] = useState(true);
 
   function expose(next: Peeks) {
     if ((next.left ?? 0) + (next.right ?? 0) >= 97 ||
@@ -43,6 +44,7 @@ export function BaccaratCard({ card, label, open, onOpen }: {
 
   function startDrag(event: PointerEvent<HTMLDivElement>) {
     if (open || event.button !== 0 || drag.current) return;
+    setShowHint(false);
     const { width, height } = event.currentTarget.getBoundingClientRect();
     event.currentTarget.setPointerCapture(event.pointerId);
     drag.current = { id: event.pointerId, x: event.clientX, y: event.clientY, width, height, initial: peeks };
@@ -81,12 +83,14 @@ export function BaccaratCard({ card, label, open, onOpen }: {
     const edge = arrows[event.key];
     if (open || !edge) return;
     event.preventDefault();
+    setShowHint(false);
     expose({ ...peeks, [edge]: Math.min(100, (peeks[edge] ?? 0) + 15) });
   }
 
   return <section className="baccarat-stage" aria-label={label}>
     <div className={`baccarat-zoom ${open ? 'face-up' : 'squeeze-back'}`}
       role="img" aria-label={open ? `${card.suit}${card.rank}` : '伏せ札。上下左右にスワイプ、または矢印キーで絞る'}
+      data-hint={!open && showHint}
       tabIndex={open ? undefined : 0}
       onPointerDown={startDrag} onPointerMove={moveDrag}
       onPointerUp={endDrag} onPointerCancel={endDrag} onLostPointerCapture={endDrag} onKeyDown={keyPeek}>

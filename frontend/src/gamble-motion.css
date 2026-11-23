@@ -1,13 +1,10 @@
 /* Phase 4: pure white paper, Mincho headings, red rules; 4px spacing scale.
    All motion belongs to presentation. No animation gates a server request. */
 :root {
-  --paper-white: #fff;
-  --motion-rule: var(--rule);
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
   --space-4: 16px;
-  --space-6: 24px;
   --type-caption: 12px;
   --type-body: 14px;
   --type-heading: clamp(20px, 5.5vw, 24px);
@@ -29,23 +26,11 @@
 @keyframes reward-arrive { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
 .gamble-motion, .motion-result { display: flex; flex-direction: column; flex: 1; min-height: 0; gap: var(--space-3); }
 
-.saved-reveal { display: flex; justify-content: center; align-items: center; gap: var(--space-3); min-height: 180px; margin-block: var(--space-6); font: 32px var(--serif); }
-.saved-reveal > span { display: grid; place-items: center; min-width: 64px; min-height: 88px; border-block: 1px solid var(--motion-rule); }
-.saved-reveal .unrevealed { opacity: .3; }
-.saved-reveal .revealed { animation: ink-fade 250ms ease-out; font-size: 22px; }
-.saved-reveal .reveal-card { border: 1px solid var(--motion-rule); background: var(--paper-white); animation: turn-card 600ms ease-in-out infinite alternate; }
-.stage-1 .reveal-card:last-child { animation-delay: 120ms; }
-.rolling-die { animation: tumble 600ms ease-in-out infinite; font-size: 72px; }
-.hand-count { animation: hand-beat 600ms ease-in-out infinite; }
 .motion-result, .result-banner { animation: result-spring var(--motion-spring) both; }
-.near-pulse .saved-reveal { animation: near-pulse 600ms ease-in-out; }
 .near-pulse .slot-machine, .near-pulse .dealt-hands, .near-pulse .dice-game { animation: near-pulse 600ms ease-in-out; }
 .playing-card.face-up { animation: ink-fade 250ms ease-out; }
 .story-board > :not(.generation-skeleton) { animation: ink-fade var(--motion-fade) ease-out; }
 .ink-cell.marked { animation: ink-fade var(--motion-fade) ease-out; }
-@keyframes turn-card { from { transform: rotateY(-35deg); } to { transform: rotateY(35deg); } }
-@keyframes tumble { 50% { transform: translateY(-12px) rotate(90deg); } to { transform: rotate(180deg); } }
-@keyframes hand-beat { 50% { transform: translateY(-8px); } }
 @keyframes near-pulse { 50% { transform: scale(1.045); opacity: .5; } }
 @keyframes result-spring { 0% { opacity: 0; transform: translateY(16px) scale(.96); } 65% { opacity: 1; transform: translateY(-3px) scale(1.015); } 100% { transform: none; } }
 .generation-skeleton { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; min-height: 120px; flex: 1; overflow: hidden; }
@@ -61,11 +46,11 @@
 @keyframes ink-fade { from { opacity: 0; } to { opacity: 1; } }
 .loading-bet { justify-content: center; }
 .loading-bet .spinner { flex-shrink: 0; }
-@media (max-height: 720px) { .game-screen { gap: var(--space-2); } .saved-reveal { min-height: 120px; margin-block: var(--space-3); } }
+@media (max-height: 720px) { .game-screen { gap: var(--space-2); } }
 @media (prefers-reduced-motion: reduce) {
   .app-shell *, .app-shell *::before, .app-shell *::after { animation: ink-fade 150ms ease-out both !important; animation-delay: 0ms !important; transition: opacity 150ms !important; }
   .loss-to-paper::after { display: none; }
-  .skeleton-ink { animation: none; }
+  .app-shell :is(.spinner, .skeleton-ink, .paper-turn-arrow) { animation: none !important; }
   .loss-ink { display: none; }
 }
 @keyframes ink-fade { from { opacity: .85; } to { opacity: 1; } }

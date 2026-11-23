@@ -1,8 +1,8 @@
 .story-paper-stack{display:flex;flex-direction:column;flex:1;min-height:0;gap:8px}
 .paper-navigation{display:flex;align-items:center;justify-content:space-between;gap:4px;flex-shrink:0;font-size:11px}
 .paper-stack{position:relative;isolation:isolate;display:flex;flex-direction:column;flex:1;min-height:0;margin:0 12px 12px 0}
-.paper-underlay{position:absolute;inset:0;background:#fff;border:1px solid var(--rule);z-index:-1;pointer-events:none}
-.manuscript-sheet{display:flex;flex-direction:column;flex:1;min-height:0;background:#fff;border:1px solid var(--rule);transform-origin:right center;animation:paper-arrive 400ms ease-out both}
+.paper-underlay{position:absolute;inset:0;background:var(--paper-1);border:1px solid var(--rule);z-index:-1;pointer-events:none}
+.manuscript-sheet{display:flex;flex-direction:column;flex:1;min-height:0;background:var(--paper-1);border:1px solid var(--rule);transform-origin:right center;animation:paper-arrive 400ms ease-out both}
 .paper-caption{padding:8px 12px;font-family:var(--serif);font-size:13px;border-bottom:1px solid var(--rule);flex-shrink:0}
 .paper-result{animation:result-spring var(--motion-spring) both}
 
@@ -40,12 +40,12 @@
   border-top:1px solid var(--rule);
   border-bottom:2px double var(--rule);
 }
-.wager-paper-stack .paper-scroll{position:relative;background:#fff;padding-block:1px}
+.wager-paper-stack .paper-scroll{position:relative;background:var(--paper-1);padding-block:1px}
 @keyframes paper-arrive{from{opacity:0;transform:translateY(-12px) rotate(-2deg)}to{opacity:1;transform:none}}
 @media(prefers-reduced-motion:reduce){.manuscript-sheet,.page-back,.page-forward,.paper-result{animation:ink-fade 150ms both}}
 
 .paper-navigation{flex-wrap:wrap;justify-content:flex-start;color:var(--stamp)}
-.paper-preview{position:absolute;inset:0;display:flex;flex-direction:column;background:#fff;border:1px solid var(--rule);overflow:hidden;pointer-events:none}
+.paper-preview{position:absolute;inset:0;display:flex;flex-direction:column;background:var(--paper-1);border:1px solid var(--rule);overflow:hidden;pointer-events:none}
 .manuscript-sheet{
   position:relative;
   z-index:1;
@@ -76,7 +76,6 @@
 .paper-corner{position:absolute;width:48px;height:48px;z-index:3;touch-action:none;cursor:grab;background:linear-gradient(135deg,#f4e5e4 0 30%,transparent 31%);}
 .corner-older{bottom:0;right:0;rotate:180deg}
 .corner-newer{top:0;left:0}
-.paper-corner:focus-visible{outline:2px solid var(--stamp)}
 .paper-fade{opacity:0;transition:opacity 150ms}
 @media(prefers-reduced-motion:reduce){.paper-drag,.paper-finish,.paper-return{transform:none!important;transition:opacity 150ms}.manuscript-sheet{animation:ink-fade 150ms}}
 .paper-corner { width: 56px; height: 56px; background: linear-gradient(135deg,#dec2c0 0 28%,#9c2e3277 29% 32%,transparent 33%); filter: drop-shadow(2px 2px 2px #241d1c44); }
@@ -86,7 +85,8 @@
 .story-paper-stack, .paper-stack, .manuscript-sheet { min-height: min-content; flex-shrink: 0; min-width: 0; }
 
 /* The older corner is rotated; counter-rotate the glyph to keep its direction. */
-.paper-turn-arrow{position:absolute;top:2px;left:3px;font-size:20px;line-height:1;pointer-events:none;color:var(--stamp);animation:paper-turn-hint 1.6s ease-in-out infinite}
+.paper-turn-arrow{position:absolute;top:2px;left:3px;font-size:20px;line-height:1;pointer-events:none;color:var(--stamp);animation:paper-turn-hint 1.6s ease-in-out 3}
+:is(.paper-drag,.paper-finish,.paper-return) .paper-turn-arrow{animation-play-state:paused;visibility:hidden}
 .corner-older .paper-turn-arrow{rotate:180deg;--hint-step:-3px}
 @keyframes paper-turn-hint{0%,100%{transform:translate(0,0)}50%{transform:translate(var(--hint-step,3px),var(--hint-step,3px))}}
 @media(prefers-reduced-motion:reduce){.paper-turn-arrow{animation:none}}

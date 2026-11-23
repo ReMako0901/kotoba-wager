@@ -13,7 +13,7 @@
 }
 .baccarat-zoom.squeeze-back { cursor: grab; touch-action: none; background: var(--dealer-card-back); }
 .baccarat-zoom.squeeze-back:active { cursor: grabbing; }
-.baccarat-zoom.squeeze-back::after {
+.baccarat-zoom.squeeze-back[data-hint="true"]::after {
   content: '';
   position: absolute;
   right: 0;
@@ -24,14 +24,14 @@
   clip-path: polygon(100% 0, 0 100%, 100% 100%);
   transform-origin: bottom right;
   pointer-events: none;
-  animation: baccarat-corner-hint 3.6s ease-in-out infinite;
+  animation: baccarat-corner-hint 3.6s ease-in-out 3;
 }
 @keyframes baccarat-corner-hint {
   0%, 65%, 100% { transform: scale(0); opacity: 0; }
   80% { transform: scale(1) translate(-2px, -2px); opacity: .85; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .baccarat-zoom.squeeze-back::after { animation: none; display: none; }
+  .baccarat-zoom.squeeze-back[data-hint="true"]::after { display: none; }
 }
 .baccarat-face { display: block; width: 100%; height: 100%; object-fit: fill; }
 .baccarat-peek {

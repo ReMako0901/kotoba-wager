@@ -6,8 +6,9 @@ const { paperRows, paperPositions, focusFirstChange } = require('../src/Manuscri
 
 test('CSS owns ten fixed rows and one cell size; paper only scrolls horizontally', () => {
   const css = fs.readFileSync('frontend/src/manuscript.css', 'utf8');
-  assert.deepEqual(css.match(/--paper-rows\s*:[^;]+/g), ['--paper-rows: 10']);
-  assert.deepEqual(css.match(/--cell-size\s*:[^;]+/g), ['--cell-size: 32px']);
+  const tokens = fs.readFileSync('frontend/src/tokens.css', 'utf8');
+  assert.deepEqual((tokens + css).match(/--paper-rows\s*:[^;]+/g), ['--paper-rows: 10']);
+  assert.deepEqual((tokens + css).match(/--cell-size\s*:[^;]+/g), ['--cell-size: 32px']);
   const scroll = css.match(/\.paper-scroll\s*\{([^}]+)\}/)[1];
   assert.match(scroll, /overflow-x: auto/);
   assert.match(scroll, /overflow-y: hidden/);

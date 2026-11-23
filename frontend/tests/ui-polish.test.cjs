@@ -16,14 +16,14 @@ test('squeeze hint is visual only, unopened only and disabled for reduced motion
   const css = fs.readFileSync('frontend/src/baccarat.css', 'utf8');
   assert.ok(!source.includes('上下左右にスワイプして絞る'));
   assert.ok(source.includes('伏せ札。上下左右にスワイプ、または矢印キーで絞る'));
-  assert.match(css, /\.baccarat-zoom\.squeeze-back::after\s*\{[^}]*pointer-events: none;[^}]*animation: baccarat-corner-hint/);
+  assert.match(css, /\.baccarat-zoom\.squeeze-back\[data-hint="true"\]::after\s*\{[^}]*pointer-events: none;[^}]*animation: baccarat-corner-hint 3\.6s ease-in-out 3/);
   assert.match(css, /@keyframes baccarat-corner-hint/);
-  assert.match(css, /@media \(prefers-reduced-motion: reduce\)\s*\{\s*\.baccarat-zoom\.squeeze-back::after \{ animation: none; display: none;/);
+  assert.match(css, /@media \(prefers-reduced-motion: reduce\)\s*\{\s*\.baccarat-zoom\.squeeze-back\[data-hint="true"\]::after \{ display: none;/);
 });
 
 test('breathing uses the full portrait and closed eyes share the absolute image geometry', () => {
   const css = fs.readFileSync('frontend/src/anoma.css', 'utf8');
-  assert.match(css, /\.anoma-portrait\s*\{[^}]*animation: anoma-breathe 6s/);
+  assert.match(css, /\.app-shell:not\(\[data-screen="game"\]\) \.anoma-portrait\s*\{[^}]*animation: anoma-breathe 6s/);
   assert.match(css, /scale\(1\.014\)/);
   assert.match(css, /\.anoma-portrait img\s*\{[^}]*position: absolute;\s*inset: 0;/);
   assert.match(css, /\.anoma-portrait-closed \{ visibility: hidden;/);

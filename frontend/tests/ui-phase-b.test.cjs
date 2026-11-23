@@ -34,7 +34,7 @@ test('corner arrows share the existing direction bounds and accessible drag cont
   assert.match(paper, /filter\(direction => index \+ direction >= 0 && index \+ direction < versions.length\)/);
   assert.match(paper, /className="paper-turn-arrow" aria-hidden="true">\{direction === -1 \? '↖' : '↘'\}/);
   assert.match(paper, /aria-label=\{direction === -1 \? '右下の角を左上へドラッグして前の版へ' : '左上の角を右下へドラッグして次の版へ'\}/);
-  assert.match(css, /animation:paper-turn-hint 1\.6s ease-in-out infinite/);
+  assert.match(css, /animation:paper-turn-hint 1\.6s ease-in-out 3/);
   assert.match(css, /@keyframes paper-turn-hint.*translate\(/);
   assert.match(css, /\.corner-older \.paper-turn-arrow\{rotate:180deg;--hint-step:-3px\}/);
   assert.match(css, /@media\(prefers-reduced-motion:reduce\)\{\.paper-turn-arrow\{animation:none\}\}/);

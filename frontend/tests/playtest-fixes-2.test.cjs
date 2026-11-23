@@ -108,7 +108,7 @@ test('round reset, help copy, history availability and fixed cell definition rem
   assert.match(app, /customCount < MIN_STORY \|\| customCount > MAX_STORY/);
   assert.doesNotMatch(app, /disabled=\{gambleMode\}|33％|％〜/);
   assert.match(app, /setPaperIndex\(versions.length - 1\)/);
-  assert.match(source('manuscript.css'), /--cell-size: 32px/);
+  assert.match(source('tokens.css'), /--cell-size: 32px/);
   assert.doesNotMatch(source('Manuscript.tsx'), /MAX_ROWS|rows = 9/);
 });
 test('gamble tier resets to beginner after a new version and history opens during a gamble', async () => {

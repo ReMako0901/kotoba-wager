@@ -1,0 +1,20 @@
+:root {
+  --cell-size: 32px;
+  --paper-rows: 10;
+  --ink: #241d1c;
+  --stamp: #9c2e32;
+  --rule: #dec2c0;
+  --body-serif: 'Hiragino Mincho ProN', 'Yu Mincho', 'Noto Serif JP', serif;
+  --serif: 'Kotoba Serif', var(--body-serif);
+  --paper-1: #fff;
+  --paper-2: #fff6e7;
+  --paper-3: #e7d3b2;
+  --table-1: #22463b;
+  --table-2: #102d26;
+  --paper-note: #595959;
+  --brass: linear-gradient(115deg, #f4dd9b, #bf9955 40%, #e0c180 62%, #a47a40);
+  --paper: linear-gradient(115deg, #fff8e9, #f4e6cb 68%, var(--paper-3));
+  --contact: 1px 3px 3px #06141080, 3px 8px 12px #06141050;
+  --weave: repeating-linear-gradient(40deg, #fff8d008 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(130deg, #02170e20 0 1px, transparent 1px 3px);
+}

@@ -1,12 +1,7 @@
 /* Light falls from the dealer's left. All finishes stay inside the table. */
 .dealer-table {
-  --brass: linear-gradient(115deg, #f4dd9b, #bf9955 40%, #e0c180 62%, #a47a40);
-  --paper: linear-gradient(115deg, #fff8e9, #f4e6cb 68%, #e7d3b2);
-  --contact: 1px 3px 3px #06141080, 3px 8px 12px #06141050;
-  --weave: repeating-linear-gradient(40deg, #fff8d008 0 1px, transparent 1px 3px),
-    repeating-linear-gradient(130deg, #02170e20 0 1px, transparent 1px 3px);
   border-image: repeating-linear-gradient(2deg, #543125, #976647 2px, #623e2d 4px, #795138 7px) 8;
-  background: var(--weave), radial-gradient(ellipse at 30% 22%, #396054, #22463b 57%, #102d26);
+  background: var(--weave), radial-gradient(ellipse at 30% 22%, #396054, var(--table-1) 57%, var(--table-2));
   box-shadow: inset 0 1px #ebc08c, inset 0 5px 10px #071a15bb, inset 0 -1px #c39160;
 }
 .table-objects { scrollbar-color: #aa9162 #19372d; }
@@ -16,11 +11,7 @@
   text-shadow: 0 1px #ffe8ac;
   box-shadow: inset 0 1px #fff0be, 1px 2px 3px #1c1516aa;
 }
-.dealer-table :is(button, textarea, summary):focus-visible {
-  outline: 3px solid #186e90;
-  box-shadow: 0 0 0 5px #fff1c9;
-  outline-offset: 0;
-}
+.edition-badge { color: #16110e; }
 .dealer-table button:not(:disabled):active { translate: 0 1px; }
 .title-folio {
   padding: clamp(16px, 3.2dvh, 24px);
@@ -61,6 +52,7 @@
   border-radius: 3px;
 }
 .scene-object .reward-option strong { background: var(--brass); color: #39271e; }
+.scene-object .reward-option strong small { color: #16110e; }
 .scene-object .game-option {
   background: linear-gradient(135deg, #345955, #182f31);
   box-shadow: inset 0 0 0 2px #193435, inset 0 0 0 3px #b39359, 1px 3px #826c49, var(--contact);
@@ -214,7 +206,8 @@
 @keyframes reel-settle { from { translate: 0 -22%; } 65% { translate: 0 5%; } }
 @keyframes seal-contact { from { opacity: 0; scale: 1.4; } 64% { opacity: 1; scale: .96; } }
 @media (prefers-reduced-motion: reduce) {
-  .dealer-table button:not(:disabled):active { translate: none; }
+  .edition-badge { color: #16110e; }
+.dealer-table button:not(:disabled):active { translate: none; }
   .slot-lever:disabled { rotate: none; }
 }
 
@@ -244,7 +237,7 @@
 .anoma-stage:has(.story-paper-stack) { grid-template-rows: clamp(94px, 14dvh, 180px) minmax(0, 1fr); }
 .anoma-stage:has(.choose-screen) { grid-template-rows: clamp(118px, 18dvh, 170px) minmax(0, 1fr); }
 .game-heading .story-title { font-size: 13.5px; }
-.game-heading .chapter-line { font-size: 10px; }
+.game-heading .chapter-line { font-size: 11px; }
 .edition-badge { font-size: 11px; padding: 1px 7px; }
 .game-object .manuscript-sheet:has(.paper-stamp) { padding-top: 16px; }
 .paper-stamp { top: 0; left: 50px; }
@@ -266,4 +259,17 @@
   .story-card { padding: 7px 10px 7px 9px; }
   .story-card h2 { font-size: 15px; }
   .choose-screen h1 { font-size: 18px; margin-bottom: 3px; }
+}
+
+.app-shell :is(button, textarea, summary, [tabindex]):focus-visible {
+  outline: 3px solid #186e90;
+  box-shadow: 0 0 0 5px #fff1c9;
+  outline-offset: 0;
+}
+
+/* Keep the ring inside the word so it does not cover adjacent manuscript cells. */
+.app-shell .vertical-word:focus-visible {
+  z-index: 1;
+  outline-offset: -1px;
+  box-shadow: none;
 }

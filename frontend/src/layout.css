@@ -97,7 +97,7 @@ html, body { background: #100b13; }
 }
 
 .title-folio h1 small { font-size: 11px; }
-.title-folio .intro { margin: 0; font: 13px/1.5 var(--serif); }
+.title-folio .intro { margin: 0; font: 13px/1.5 var(--body-serif); }
 .title-actions, .story-selection-actions { display: flex; gap: 8px; }
 .title-actions button, .story-selection-actions button { width: auto; flex: 1; margin: 0; }
 .title-actions .primary { white-space: nowrap; }
@@ -167,7 +167,7 @@ html, body { background: #100b13; }
   padding: 3px 8px;
   border: 1px solid #cc9e8f;
   border-radius: 3px 3px 0 0;
-  background: #fff6e7;
+  background: var(--paper-2);
   color: var(--ink);
 }
 
@@ -228,7 +228,7 @@ html, body { background: #100b13; }
   padding: 4px 7px;
   border: 1px solid #cc9e8f;
   border-radius: 0 0 3px 3px;
-  background: #fff6e7;
+  background: var(--paper-2);
   color: var(--ink);
   box-shadow: 2px 3px 0 #100b1377;
   font: 700 12px/1.35 var(--serif);

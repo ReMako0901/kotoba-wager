@@ -25,6 +25,9 @@
 
 .anoma-portrait {
   transform-origin: center;
+}
+
+.app-shell:not([data-screen="game"]) .anoma-portrait {
   animation: anoma-breathe 6s ease-in-out infinite;
 }
 
@@ -78,7 +81,7 @@
     inset 0 0 0 3px #2c171e,
     inset 0 0 0 4px rgba(201, 162, 77, .55),
     0 6px 16px rgba(0, 0, 0, .5);
-  font-family: var(--serif);
+  font-family: var(--body-serif);
 }
 
 .anoma-stage-content::before {
