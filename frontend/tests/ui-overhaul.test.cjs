@@ -21,11 +21,10 @@ test('title folio and story selection header structure the entry screens without
   const actions = ui.find(n => n.props.className === 'title-actions');
   assert.ok(folio);
   assert.ok(actions);
-  assert.match(text(folio), /ギャンブル.*ライティングメーカー.*言葉を賭けて、物語を書き換える/);
+  assert.match(text(folio), /ギャンブル.*ライティングメーカー/);
   const actionButtons = nodes(actions, n => n.type === 'button');
-  assert.equal(actionButtons.length, 2);
+  assert.equal(actionButtons.length, 1);
   assert.match(text(actionButtons[0]), /はじめる/);
-  assert.equal(text(actionButtons[1]), '遊び方');
   assert.doesNotMatch(text(ui.tree), /つづき/);
 
   ui.click('はじめる');
@@ -109,14 +108,9 @@ test('stake counter lights up on readiness and result screen applies win/loss ce
   winUi.unmount();
 });
 
-test('CSS defines manuscript header/footer framing, celebratory result styling and arena layout', () => {
-  const historyCss = fs.readFileSync('frontend/src/history.css', 'utf8');
-  const layoutCss = fs.readFileSync('frontend/src/layout.css', 'utf8');
-  const beginnerCss = fs.readFileSync('frontend/src/beginner-games.css', 'utf8');
-  assert.match(historyCss, /【 原 稿 】/);
-  assert.match(historyCss, /【 改 稿 成 就 】/);
-  assert.match(historyCss, /\.result-win-view \.manuscript-sheet/);
-  assert.match(layoutCss, /\.stake-count\.stakes-ready/);
-  assert.match(beginnerCss, /\.rps-result::after/);
-  assert.match(beginnerCss, /\.dice-face\.dice-win i/);
+test('notebook pages use reward notes, ruled pages and physical dice', () => {
+  const sheet = name => fs.readFileSync('frontend/src/' + name, 'utf8');
+  assert.match(sheet('notebook.css'), /\.object-rewards \.reward-option/);
+  assert.match(sheet('notebook-paper.css'), /\.ink-cell[^}]+var\(--paper-rule\)/s);
+  assert.match(sheet('notebook-games.css'), /\.dice-face i/);
 });

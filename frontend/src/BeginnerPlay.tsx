@@ -2,7 +2,6 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { CardFace } from './BaccaratCard';
 import type { CardMove, DiceMove, Gamble, HandMove } from './types';
-import './beginner-games.css';
 
 type Props = {
   gamble: Gamble;

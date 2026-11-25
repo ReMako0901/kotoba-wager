@@ -112,7 +112,6 @@ export function StoryHistory({ session, pageIndex, onPageChange }: { session: Se
   return <div className="history-body">
     <StoryPaperStack key={`${session.id}-${session.version}`} session={session} dust={dust} pageIndex={pageIndex} onPageChange={onPageChange}
       losses={session.transactions.filter(tx => tx.status === 'committed' && tx.outcome === 'loss')} />
-    <h3>失われた設定</h3><p>{session.lost_concepts.map(c => c.label).join('・') || 'まだなし'}</p>
     <p className="quiet">プレイ {session.transactions.filter(tx => tx.status === 'committed').length}回</p>
   </div>;
 }

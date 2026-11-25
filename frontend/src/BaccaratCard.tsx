@@ -1,7 +1,6 @@
 import { useRef, useState } from 'react';
 import type { KeyboardEvent, PointerEvent } from 'react';
 import type { PlayingCard } from './types';
-import './baccarat.css';
 
 const suitCodes: Record<string, string> = { '♣': 'C', '♦': 'D', '♥': 'H', '♠': 'S' };
 

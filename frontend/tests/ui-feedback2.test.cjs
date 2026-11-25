@@ -68,7 +68,7 @@ test('new faces use named open/closed assets and missing assets preserve dialogu
   }
 });
 
-test('game hides intro, restores reward descriptions and opens only on selection completion', async () => {
+test('game hides intro, omits reward descriptions and opens only on selection completion', async () => {
   for (const required_count of [1, 2, 3]) {
     const session = { id: 'saved', betting_mode: 'count-v1', status: 'ready', view: 'select', version: 1,
       title: '長い物語のタイトル', intro: 'ゲーム画面では隠す導入', text: '猫犬鳥月', transactions: [], lost_concepts: [], usage: {},
@@ -82,7 +82,7 @@ test('game hides intro, restores reward descriptions and opens only on selection
     const ui = mount(App, {}); await flush(); ui.draw();
     await startStory(ui);
     assert.doesNotMatch(text(ui.tree), /ゲーム画面では隠す導入/);
-    assert.match(text(ui.tree), /新しい相手に出会う/);
+    assert.doesNotMatch(text(ui.tree), /新しい相手に出会う/);
     assert.doesNotMatch(text(ui.tree), /展開系|表現系/);
     ui.click('出会い');
     assert.equal(ui.find(n => n.props.className === 'reward-summary'), undefined);
@@ -112,7 +112,7 @@ test('game hides intro, restores reward descriptions and opens only on selection
   const app = fs.readFileSync('frontend/src/App.tsx', 'utf8');
   assert.match(app, /story\.intro/); // Story selection card keeps its intro.
   assert.doesNotMatch(app, /session\.intro/);
-  const css = fs.readFileSync('frontend/src/manuscript.css', 'utf8');
+  const css = fs.readFileSync('frontend/src/notebook.css', 'utf8');
   assert.match(css, /\.game-heading \{[^}]*display: flex/);
   assert.match(css, /\.game-heading \.story-title \{[^}]*min-width: 0[^}]*white-space: nowrap[^}]*text-overflow: ellipsis/);
 });

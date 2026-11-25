@@ -1,0 +1,122 @@
+:root {
+  --cell-size: 32px;
+  --paper-rows: 10;
+  --ink: #382c25;
+  --stamp: #863d3c;
+  --rule: #c9bba0;
+  --paper: #fbf5e5;
+  --serif: 'Kotoba Serif', 'Yu Mincho', serif;
+  --body-serif: 'Yu Mincho', 'Hiragino Mincho ProN', serif;
+  --shadow: 1px 3px 6px #44301f30;
+  --leather: repeating-linear-gradient(103deg,#fff1 0 .5px,transparent .5px 4px), linear-gradient(110deg,#573727,#714b36 50%,#543626);
+  color: var(--ink); background: #342b27; font-family: var(--body-serif);
+}
+* { box-sizing: border-box; }
+body, h1, h2, h3, p, dl, dd { margin: 0; }
+h1,h2,h3,button { font-family: var(--serif); }
+h1,h2 { font-size: clamp(20px, 4vw, 26px); line-height: 1.4; }
+button { cursor: pointer; font-size: 14px; color: inherit; padding: 7px 11px; border: 1px solid var(--rule); border-radius: 3px; background: var(--paper); }
+button:disabled { cursor: default; color: #82776b; }
+button:focus-visible, [tabindex]:focus-visible, textarea:focus-visible { outline: 2px solid var(--stamp); outline-offset: 2px; }
+[hidden] { display: none !important; }
+.app-shell { position: relative; max-width: 640px; height: 100dvh; margin: auto; padding: 10px; background: var(--leather); border-radius: 9px; box-shadow: 3px 4px 22px #18100b88; }
+.app-shell::before { content: ''; position: absolute; inset: 4px; border: 1px dashed #d2ad88; border-radius: 6px; pointer-events: none; }
+.anoma-stage { position: relative; height: 100%; display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 8px; padding: 12px 16px 8px; background: linear-gradient(90deg,#cfbfa0,transparent 11px),var(--paper); border-radius: 2px 6px 6px 2px; box-shadow: inset -3px 0 #e0d2b9; }
+.anoma-stage::after { content: ''; position: absolute; top: -4px; right: 11px; width: 11px; height: 37px; background: var(--stamp); clip-path: polygon(0 0,100% 0,100% 100%,50% 84%,0 100%); }
+.page-margin { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 15px; padding: 2px 12px 6px 2px; }
+.anoma-photo { position: relative; width: clamp(74px,14dvh,134px); aspect-ratio: .91; padding: 4px 4px 9px; background: #fffdfa; transform: rotate(-3deg); box-shadow: var(--shadow); }
+.anoma-photo::after { content: ''; position: absolute; width: 35%; height: 9px; left: 31%; top: -4px; transform: rotate(7deg); background: #ddc79ebf; }
+.anoma-portrait { position: relative; width: 100%; height: 100%; overflow: hidden; filter: grayscale(1); }
+.anoma-portrait img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+.anoma-dialogue { font: 500 clamp(14px,2.2dvh,17px)/1.55 var(--body-serif); letter-spacing: .035em; }
+.app-shell:not([data-screen="game"]) .anoma-portrait {
+  animation: anoma-breathe 6s ease-in-out infinite;
+}
+
+@keyframes anoma-breathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.014); }
+}
+
+.anoma-portrait-current { opacity: 0; }
+.anoma-portrait-fade { animation: anoma-expression-fade 900ms ease-in-out both; }
+@keyframes anoma-expression-fade { from { opacity: 0; } to { opacity: 1; } }
+.anoma-portrait-talk { opacity: 0; }
+.anoma-portrait-speaking { animation: anoma-talk 320ms steps(1, end) infinite; }
+.anoma-portrait-talk[data-ready="false"] { visibility: hidden; }
+@keyframes anoma-talk {
+  0% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.anoma-portrait-closed { visibility: hidden; }
+.anoma-portrait-closed.anoma-portrait-blinking { visibility: visible; }
+
+@media (prefers-reduced-motion: reduce) {
+  .anoma-portrait-current { animation: none; opacity: 1; }
+  .anoma-portrait-previous { display: none; }
+  .anoma-portrait { animation: none; transform: none; }
+  .anoma-portrait-closed, .anoma-portrait-talk { display: none; }
+}
+
+.notebook-body { overflow: clip; display: flex; flex-direction: column; justify-content: center; min-width: 0; position: relative; gap: 6px; }
+.page-links { margin-top: auto; display: flex; justify-content: space-between; border-top: 1px solid var(--rule); }
+.notebook-body > :is(main,section):first-of-type { margin-block: auto; }
+.scene-link,.text-button { background: transparent; border: 0; font-size: 12px; color: #694d40; }
+.primary,.game-tiers [aria-pressed=true] { background: var(--stamp); color: #fff7e7; border-color: var(--stamp); }
+.primary:disabled { background: #e6ddcb; border-color: var(--rule); }
+.app-shell[data-screen=title] .anoma-stage { background: var(--leather); color: #f6e4c8; }
+.app-shell[data-screen=title] .anoma-stage::after { width: 12px; height: 100%; right: 6px; top: 0; clip-path: none; background: repeating-linear-gradient(0deg,#30231f 0 2px,#40312a 2px 3px); box-shadow: -2px 1px 4px #281a1680; }
+.title-folio { padding: 22px 18px 44px; }
+.title-folio h1 { font-size: clamp(25px,6.6vw,40px); line-height: 1.65; color: #e5ccb0; text-shadow: 0 -1px 1px #301a10,0 1px #916b4e; }
+.title-folio h1 span,.title-folio h1 small { display: block; }
+.title-folio small { font-size: 14px; letter-spacing: .16em; }
+.title-actions { margin-top: 32px; }
+.title-actions button { padding-inline: 26px; background: #f6e8ce; color: var(--ink); border: 0; }
+.choose-header,.object-heading,.game-heading { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.choose-header { flex-wrap: wrap; }
+.story-selection-actions { display: flex; gap: 4px; }
+.story-selection-actions button { font-size: 12px; }
+.story-list { display: grid; margin-top: 8px; }
+.story-card { position: relative; text-align: left; padding: 8px 40px 8px 2px; border: 0; border-top: 1px solid var(--rule); border-radius: 0; background: transparent; }
+.story-card h2 { font-size: 17px; }
+.story-card p { font-size: 13px; line-height: 1.48; }
+.story-card .story-intro { font-size: 11px; color: #665749; }
+.story-card-top { position: absolute; right: 0; top: 9px; writing-mode: vertical-rl; background: #ddcba8; padding: 5px 3px; border-radius: 0 4px 4px 0; font-size: 10px; }
+.story-card:nth-child(2) .story-card-top { background: #d0d4bb; }
+.story-card:nth-child(3) .story-card-top { background: #e7c7b5; }
+.scene-object,.game-screen,.choose-screen { width: 100%; min-width: 0; }
+.object-heading { margin-bottom: 13px; }
+.reward-options,.custom-story,.opening-narration,.ending-screen { display: grid; gap: 9px; }
+.reward-option { display: flex; align-items: center; justify-content: space-between; gap: 10px; text-align: left; }
+.object-rewards .reward-option { position: relative; padding: 18px 15px; border: 0; border-top: 7px solid #ddcb9b; background: #f7edcc; box-shadow: var(--shadow); }
+.object-rewards .reward-option:nth-child(2) { background: #ebecd8; border-color: #c8cdac; }
+.object-rewards .reward-option:nth-child(3) { background: #f4e0cf; border-color: #dbbda8; }
+.reward-option small { display: block; font-size: 12px; font-weight: normal; }
+.reward-option strong { white-space: nowrap; text-align: center; }
+.reward-option b { font-size: 17px; }
+.game-tiers { display: flex; gap: 3px; margin-bottom: 12px; }
+.game-tiers button { border-radius: 5px 5px 0 0; }
+.game-option { background: transparent; border: 0; border-bottom: 1px solid var(--rule); border-radius: 0; padding: 16px 4px; }
+.game-option::after { content: '›'; color: var(--stamp); }
+.custom-story textarea { resize: none; width: 100%; font: inherit; background: #fffcf1; border: 1px solid var(--rule); padding: 6px; }
+.input-error,.alert,.api-error { color: var(--stamp); font-size: 13px; }
+.game-heading { justify-content: flex-start; font-size: 12px; margin-bottom: 5px; }
+.chapter-line { flex-shrink: 0; }
+.game-heading .story-title { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 18px; }
+.paper-tabs,.story-decision,.story-counts { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+.paper-tabs button,.story-decision button { font-size: 12px; }
+.reward-change { max-width: 100%; }
+.stake-count { font-size: 13px; }
+.stake-count.stakes-ready { color: var(--stamp); font-weight: bold; }
+.story-counts { justify-content: space-between; border-block: 1px solid var(--rule); padding-block: 3px; font-size: 12px; }
+.story-counts div { display: flex; gap: 3px; }
+.story-decision { margin-bottom: 4px; }
+.opening-narration { line-height: 1.7; margin-bottom: 14px; }
+.history-body { font-size: 13px; }
+@media (max-height: 720px) {
+  .app-shell[data-screen=game] .page-margin { padding-bottom: 2px; }
+  .app-shell[data-screen=game] .anoma-photo { width: 78px; }
+  .app-shell[data-screen=game] .anoma-dialogue { font-size: 13px; line-height: 1.42; }
+  .story-list { margin-top: 5px; }
+}

@@ -40,7 +40,7 @@ test('stage is shared on title, opening and story selection; all have dialogue',
   for (const action of [null, 'はじめる', 'スキップ']) {
     if (action) { ui.click(action); await flush(); ui.draw(); }
     assert.equal(ui.all(n => n.props.className === 'anoma-stage').length, 1);
-    const portrait = ui.find(n => n.props.className === 'anoma-backdrop');
+    const portrait = ui.find(n => n.props.className === 'anoma-photo');
     assert.equal(portrait.props['data-focus'], action === 'スキップ' ? 'table' : 'portrait');
     if (action === 'はじめる') {
       assert.equal(stage(ui).props['data-expression'], 'normal');
@@ -73,7 +73,7 @@ test('all dialogue owners publish and obsolete embedded frames are removed', () 
   assert.match(app, /<StagePublisher lines=\{\[reaction.line\]\} expression=\{reaction.expression\} reaction=\{reaction.reaction\}/);
   assert.equal((progress.match(/<StagePublisher /g) ?? []).length, 2);
   assert.doesNotMatch(anoma + app + progress, /AnomaFrame|AnomaResult/);
-  const css = fs.readFileSync('frontend/src/anoma.css', 'utf8');
-  assert.match(css, /\.anoma-dialogue\s*\{[^}]*overflow-y:\s*auto/);
-  assert.match(css, /\.anoma-stage\s*\{[^}]*grid-template-rows:\s*clamp\(130px, 21dvh, 200px\) minmax\(0, 1fr\)/);
+  const css = fs.readFileSync('frontend/src/notebook.css', 'utf8');
+  assert.match(css, /\.anoma-dialogue\s*\{[^}]*font: 500/);
+  assert.match(css, /\.anoma-stage\s*\{[^}]*grid-template-rows:\s*auto minmax\(0, 1fr\)/);
 });
