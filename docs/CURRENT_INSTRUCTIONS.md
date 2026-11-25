@@ -22,6 +22,9 @@
   C案は rebuild-c ブランチの docs/UI_REBUILD_C.md。
 - **作業ブランチ**： rebuild-a / rebuild-c（作業ツリー repo-a / repo-c）。main の公開版は現行のまま。
 - **状態**： 2026-11-25、ユーザーがC案（手帳）を選び、main へマージ・push 済み。
+  続けて同日、ユーザーが「全ての画面遷移を滑らかなアニメーションで」と指示。
+  仕様 docs/UI_MOTION.md を motion-c ブランチ（ツリー repo-motion）で Codex Astra が実装中。
+  作業メモは同ブランチの docs/WORKLOG_MOTION.md。検証・統合は Muse 担当。
   Muse 検証：両案ともフロントテスト92件全成功、ビルド成功、実Geminiで結果画面まで完走、
   393×681で主ループ全画面の溢れ0、全6種目の盤面を撮影確認、デスクトップ1280×800でも構成維持、
   バックエンド・台詞・表情プールに差分なし。A案は rebuild-a ブランチに未採用のまま保存。
