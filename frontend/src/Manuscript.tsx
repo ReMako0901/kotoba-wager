@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { Transaction, Unit } from './types';
-import { addPaperDust, PaperDust, sampleDustSize } from './PaperDust';
-import type { Dust, DustProps } from './PaperDust';
+import { PaperDust } from './PaperDust';
+import type { DustProps } from './PaperDust';
 import { manuscriptChanges } from './manuscriptChanges';
 
 // CSS owns the geometry; the fallback also permits non-DOM rendering.
@@ -116,130 +116,64 @@ export function WagerManuscript(props: {
   return <Paper {...props} />;
 }
 
-function animateInk(canvas: HTMLCanvasElement, frame: HTMLElement, dust: Dust, id: string, complete: () => void) {
-  const ctx = canvas.getContext('2d');
-  const mask = document.createElement('canvas');
-  mask.width = mask.height = 64;
-  const sample = mask.getContext('2d', {willReadFrequently: true});
-  const paper = frame.querySelector<HTMLElement>('.vertical-paper');
+function animateInk(frame: HTMLElement, complete: () => void) {
   const scroll = frame.querySelector<HTMLElement>('.paper-scroll');
-  const marks = [...frame.querySelectorAll<HTMLElement>('.marked')];
-  if (!ctx || !sample || !paper || !scroll || !marks.length) {
-    complete();
-    return () => {};
-  }
+  const photo = frame.closest('.anoma-stage')?.querySelector('.anoma-photo');
+  const marks = [...frame.querySelectorAll<HTMLElement>('.marked-glyph')];
+  if (!scroll || !photo || !marks.length) { complete(); return; }
 
   const viewport = scroll.getBoundingClientRect();
-  const visible = (cell: HTMLElement) => {
-    const rect = cell.getBoundingClientRect();
-    return rect.right > viewport.left && rect.left < viewport.right;
-  };
-  if (!marks.some(visible)) {
-    const rect = marks[0].getBoundingClientRect();
-    scroll.scrollLeft += rect.left - viewport.left - (viewport.width - rect.width) / 2;
+  const visible = (rect: DOMRect) => rect.right > viewport.left && rect.left < viewport.right;
+  if (!marks.some(mark => visible(mark.getBoundingClientRect()))) {
+    const first = marks[0].getBoundingClientRect();
+    scroll.scrollLeft += (first.left + first.right - viewport.left - viewport.right) / 2;
   }
 
-  const bounds = frame.getBoundingClientRect();
-  const paperBounds = paper.getBoundingClientRect();
-  const paperStyle = getComputedStyle(paper);
-  // The settled canvas is inset inside the paper border.
-  const paperRight = paperBounds.right - parseFloat(paperStyle.borderRightWidth);
-  const paperBottom = paperBounds.bottom - parseFloat(paperStyle.borderBottomWidth);
-  const floor = paperBounds.bottom - bounds.top - 3;
-  const left = Math.max(viewport.left, paperBounds.left) - bounds.left;
-  const right = Math.min(viewport.right, paperRight) - bounds.left;
-  const scale = Math.min(2, window.devicePixelRatio || 1);
-  canvas.width = Math.round(bounds.width * scale);
-  canvas.height = Math.round(bounds.height * scale);
-  ctx.scale(scale, scale);
-
-  const groups = marks.map((cell, index) => {
-    const rect = cell.getBoundingClientRect();
-    sample.clearRect(0, 0, 64, 64);
-    sample.textAlign = 'center';
-    sample.textBaseline = 'middle';
-    for (const glyph of cell.querySelectorAll('.marked-glyph')) {
-      const font = getComputedStyle(glyph);
-      const glyphBounds = glyph.getBoundingClientRect();
-      const dy = glyphBounds.top + glyphBounds.height / 2 - rect.top - rect.height / 2;
-      sample.font = `${font.fontWeight} ${Math.min(56, parseFloat(font.fontSize) * 2)}px ${font.fontFamily}`;
-      sample.fillText(glyph.textContent ?? '', 32, 32 + dy * 2);
-    }
-    const alpha = sample.getImageData(0, 0, 64, 64).data;
-    const points: { x: number; y: number; opacity: number }[] = [];
-    for (let y = 1; y < 64; y += 2) {
-      for (let x = 1; x < 64; x += 2) {
-        const opacity = alpha[(y * 64 + x) * 4 + 3] / 255;
-        if (opacity > .27) points.push({ x: (x - 32) / 2, y: (y - 32) / 2, opacity });
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const layer = document.createElement('div');
+  layer.className = 'loss-fragments';
+  layer.setAttribute('aria-hidden', 'true');
+  layer.inert = true;
+  const target = photo.getBoundingClientRect();
+  for (const glyph of marks) {
+    const rect = glyph.getBoundingClientRect();
+    if (!visible(rect)) continue;
+    const font = getComputedStyle(glyph);
+    // Clip copies of the actual glyph so the pieces begin as its ink strokes.
+    const divisions = reduced ? 1 : 3;
+    for (let row = 0; row < divisions; row++) {
+      for (let col = 0; col < divisions; col++) {
+        const piece = document.createElement('span');
+        piece.className = 'ink-glyph';
+        piece.textContent = glyph.textContent;
+        Object.assign(piece.style, {
+          left: rect.left + 'px', top: rect.top + 'px', font: font.font,
+          width: rect.width + 'px', height: rect.height + 'px',
+          clipPath: `inset(${row * 100 / divisions}% ${(divisions-col-1) * 100 / divisions}% ${(divisions-row-1) * 100 / divisions}% ${col * 100 / divisions}%)`,
+        });
+        piece.style.setProperty('--burst-x', ((col - 1) * 9) + 'px');
+        piece.style.setProperty('--burst-y', ((row - 1) * 9) + 'px');
+        piece.style.setProperty('--flight-x', (target.left + target.width / 2 - rect.left - rect.width / 2) + 'px');
+        piece.style.setProperty('--flight-y', (target.top + target.height / 2 - rect.top - rect.height / 2) + 'px');
+        layer.append(piece);
       }
     }
-    // Some fonts provide no drawable outline for a glyph. The cell still sheds ink.
-    if (!points.length) {
-      for (let i = 0; i < 36; i++) points.push({x: (Math.random() - .5) * 15, y: (Math.random() - .5) * 15, opacity: .8});
-    }
-    const delay = Math.min(index, 7) * 52;
-    const grains = visible(cell) ? points.map(point => {
-      const x = rect.left - bounds.left + rect.width / 2 + point.x;
-      const y = rect.top - bounds.top + rect.height / 2 + point.y;
-      const drift = (Math.random() - .5) * 42;
-      const pointSize = sampleDustSize();
-      return {
-        x, y, opacity: point.opacity, dx: Math.max(left, Math.min(right - pointSize, x + drift)) - x,
-        targetY: floor - 10 * (1 - Math.abs(drift) / 21) * Math.random() ** 2,
-        delay: delay + Math.random() * 115,
-        duration: 550 + Math.sqrt(Math.max(0, floor - y)) * 35 + Math.random() * 230,
-        size: pointSize,
-      };
-    }) : [];
-    return {cell, delay, grains};
-  });
-
-  const started = performance.now();
-  let request = 0;
-  let pause = 0;
-  function draw(now: number) {
-    const elapsed = now - started;
-    ctx!.clearRect(0, 0, bounds.width, bounds.height);
-    let moving = false;
-    for (const {cell, delay, grains} of groups) {
-      if (elapsed >= delay) cell.classList.add('crumbled');
-      for (const grain of grains) {
-        const t = Math.min(1, (elapsed - grain.delay) / grain.duration);
-        if (t < 1) moving = true;
-        if (t < 0) continue;
-        const x = grain.x + grain.dx * t + Math.sin(t * 7) * 4 * (1 - t);
-        const y = grain.y + (grain.targetY - grain.y) * t ** 1.65;
-        ctx!.fillStyle = `rgba(52,38,35,${grain.opacity * (.85 - .3 * t)})`;
-        const size = 1.05 + (grain.size - 1.05) * t;
-        ctx!.fillRect(x, y, size, size);
-      }
-    }
-    if (moving) request = requestAnimationFrame(draw);
-    else pause = window.setTimeout(() => {
-      const landing = groups.flatMap(({grains}) => grains.map(grain => ({
-        fromRight: paperRight - (bounds.left + grain.x + grain.dx),
-        fromBottom: paperBottom - (bounds.top + grain.targetY),
-        size: grain.size,
-        opacity: grain.opacity * .55,
-      })));
-      addPaperDust(dust, id, landing);
-      complete();
-    }, 220);
   }
-  request = requestAnimationFrame(draw);
+  if (!layer.childElementCount) { complete(); return; }
+  frame.classList.add('shedding-ink');
+  document.body.append(layer);
+  layer.lastElementChild!.addEventListener('animationend', complete, { once: true });
   return () => {
-    cancelAnimationFrame(request);
-    window.clearTimeout(pause);
-    groups.forEach(({cell}) => cell.classList.remove('crumbled'));
+    frame.classList.remove('shedding-ink');
+    layer.remove();
   };
 }
 
 export function LossManuscript({ transaction, text, dust, losses, highlight = false }: {transaction: Transaction; text: string; highlight?: boolean} & DustProps) {
-  const [playing, setPlaying] = useState(() => !highlight && !window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  const [playing, setPlaying] = useState(() => !highlight);
   const changes = useMemo(() => manuscriptChanges(transaction.before, text), [transaction.before, text]);
   const previousLosses = useMemo(() => losses.filter(loss => loss.id !== transaction.id), [losses, transaction.id]);
   const frame = useRef<HTMLDivElement>(null);
-  const canvas = useRef<HTMLCanvasElement>(null);
   const marked = new Set<number>();
   for (const unit of transaction.selected_units ?? []) {
     for (let i = unit.start; i < unit.end; i++) marked.add(i);
@@ -256,31 +190,20 @@ export function LossManuscript({ transaction, text, dust, losses, highlight = fa
     if (highlight) { setPlaying(false); return; }
     if (!playing) return;
     let stop: (() => void) | undefined;
-    let cancelled = false;
-    let fallback = 0;
     const preview = window.setTimeout(() => {
-      function start() {
-        if (cancelled || stop || !frame.current || !canvas.current) return;
-        window.clearTimeout(fallback);
-        stop = animateInk(canvas.current, frame.current, dust, transaction.id, () => setPlaying(false));
-      }
-      fallback = window.setTimeout(start, 400);
-      void document.fonts.ready.then(start, start);
-    }, 240);
+      if (frame.current) stop = animateInk(frame.current, () => setPlaying(false));
+    }, window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 430);
     return () => {
-      cancelled = true;
       window.clearTimeout(preview);
-      window.clearTimeout(fallback);
       stop?.();
     };
-  }, [playing, highlight, dust, transaction.id]);
+  }, [playing, highlight, transaction.id]);
 
   return <>
     <p className="sr-only">{text}</p>
     <div className="paper-frame" ref={frame}>
       <Paper text={playing ? transaction.before : text} marked={playing ? marked : undefined}
         changes={playing ? undefined : changes} dust={dust} losses={playing ? previousLosses : losses} />
-      {playing && <canvas className="ink-overlay" ref={canvas} aria-hidden="true" />}
     </div>
   </>;
 }

@@ -22,7 +22,7 @@ test('Phase B removes the specified display text and metadata', () => {
 test('retains required content, errors, stage, manual actions and readiness UI', () => {
   const app = source('App.tsx'), play = source('GamblePlay.tsx');
   for (const value of ['<AnomaStage portraitFocus=', '<AnomaStageProvider>', 'custom-story-intro', 'custom-story-text',
-    '{customCount} / {MAX_STORY}文字', '第{round}章', 'selectedCount', '!stakesReady || busy || !games.length']) assert.ok(app.includes(value), value);
+    '{customCount} / {MAX_STORY}文字', '第{round}章', 'selectedCount', 'stakesReady && !wasStakesReady.current && selectable']) assert.ok(app.includes(value), value);
   for (const value of ['この結果を物語へ', 'spinner', 'disabled={busy || (!prepared && !error)}',
     'props.error', 'role="alert"', 'STOP', 'HIT', 'STAND', '勝利', '敗北', 'label="アノマ"', 'バンカー', 'プレイヤー']) assert.ok(play.includes(value), value);
   assert.ok(source('BeginnerPlay.tsx').includes('<span>アノマ</span>'));

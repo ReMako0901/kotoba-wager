@@ -1,3 +1,4 @@
+import { retainExit } from './notebookMotion';
 import { createContext, useContext, useEffect, useLayoutEffect, useState, type ReactNode } from 'react';
 import type { Transaction } from './types';
 import { chooseLine, openingNarration, reactionKinds, reactionTrigger, scenario, expressionForTrigger, storyExpressions, type AnomaExpression, type ReactionKind } from './scenario';
@@ -107,7 +108,7 @@ export function AnomaStage({ portraitFocus = false, children }: { portraitFocus?
       <aside className="anoma-photo" data-focus={portraitFocus || Boolean(reaction && speaking) ? 'portrait' : 'table'} aria-label="アノマ">
         <AnomaPortrait key={expression} expression={expression} speaking={speaking} />
       </aside>
-      <div className="anoma-dialogue" aria-live="polite">{lines?.map((line, index) => <p key={index}>{line}</p>)}</div>
+      <div className="anoma-dialogue" aria-live="polite"><div key={JSON.stringify(lines ?? [])} className="dialogue-lines" ref={retainExit}>{lines?.map((line, index) => <p key={index}>{line}</p>)}</div></div>
     </header>
     {children}
   </div>;
