@@ -1,0 +1,1404 @@
+/* ============================================================================
+ * 生成待ち汎用クラス (.generation-skeleton / .skeleton-ink / .spinner)
+ * 外側の画面および完了部品の双方で使用される
+ * ========================================================================== */
+
+.spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid #c9bba088;
+  border-top-color: var(--stamp, #863d3c);
+  border-right-color: #b89146;
+  border-radius: 50%;
+  animation: folio-spin 820ms linear infinite;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+@keyframes folio-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.generation-skeleton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 6px 10px;
+  color: var(--ink, #382c25);
+  font-size: 12px;
+}
+
+.skeleton-ink {
+  position: relative;
+  width: min(72%, 210px);
+  height: 2px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: linear-gradient(90deg, #dfd2b8, #c9b180, #dfd2b8);
+}
+
+.skeleton-ink::after {
+  content: '';
+  display: block;
+  width: 55%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    #b68938,
+    #f6df9d,
+    var(--ink, #382c25),
+    transparent
+  );
+  animation: folio-gold-ink 1.35s ease-in-out infinite;
+}
+
+@keyframes folio-gold-ink {
+  from {
+    transform: translateX(-110%);
+  }
+  to {
+    transform: translateX(210%);
+  }
+}
+
+/* ============================================================================
+ * ゲーム部全体枠 (.folio-gamble) — 革の手帳の開いたページ上の遊び
+ * 393×681 CSS px でも縦スクロール無しに収まるコンパクトな紙面構成
+ * ========================================================================== */
+
+.gambling-view,
+.gambling-view .game-object {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.folio-gamble {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  max-height: 476px;
+  min-height: 0;
+  margin-block: auto;
+  padding: 6px 4px 6px 26px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  background:
+    repeating-linear-gradient(
+      0deg,
+      transparent 0 27px,
+      #d8cab045 27px 28px
+    );
+  border-left: 1px dashed #cbbba0;
+}
+
+/* ページ左端に挟まれた縦書きの栞タグ（種目名） */
+.folio-ear-tag {
+  position: absolute;
+  left: 0;
+  top: 10px;
+  writing-mode: vertical-rl;
+  text-orientation: upright;
+  padding: 7px 3px;
+  background: linear-gradient(180deg, #efe2c4, #dfd0ae);
+  border: 1px solid #bfae8e;
+  border-left: 2px solid var(--stamp, #863d3c);
+  border-radius: 0 4px 4px 0;
+  box-shadow: 1px 2px 4px #3c281722;
+  font-family: var(--serif);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  color: var(--ink, #382c25);
+  z-index: 2;
+  pointer-events: none;
+}
+
+.folio-gamble-canvas {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+/* 手書きの余白メモ・キャプション */
+.folio-note-caption {
+  display: inline-block;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: #745e4d;
+  border-bottom: 1px dotted #bda98c;
+  padding-bottom: 1px;
+}
+
+.folio-scribble {
+  font-size: 12px;
+  line-height: 1.4;
+  color: #554336;
+}
+
+.folio-ink-total {
+  font-family: var(--serif);
+  font-size: 13px;
+  color: var(--ink, #382c25);
+  background: #f5ebd499;
+  padding: 1px 7px;
+  border-bottom: 1.5px solid #967e63;
+}
+
+.folio-ink-total strong {
+  font-size: 16px;
+  color: #261b14;
+}
+
+.folio-ink-total.is-bust strong,
+.is-red-ink {
+  color: var(--stamp, #863d3c);
+}
+
+/* ============================================================================
+ * 共通トランプ札 (.folio-card)
+ * ========================================================================== */
+
+.folio-card {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: clamp(58px, 16.5vw, 76px);
+  aspect-ratio: 5 / 7;
+  border-radius: 5px;
+  background: #fffdf8;
+  border: 1px solid #b5a388;
+  box-shadow: 1px 3px 7px #2d1e1233;
+  user-select: none;
+  overflow: hidden;
+  transition: transform 200ms ease, box-shadow 200ms ease;
+}
+
+.folio-card.is-highlighted {
+  border-color: var(--stamp, #863d3c);
+  box-shadow: 0 0 0 1.5px var(--stamp, #863d3c), 2px 5px 10px #3a1d1738;
+}
+
+.folio-card-face {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fffdf8;
+}
+
+.folio-card-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.folio-card-corner {
+  position: absolute;
+  top: 2px;
+  left: 3px;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  padding: 1px 2px;
+  border-radius: 2px;
+  background: #fffdf8d9;
+  color: #241d1c;
+  pointer-events: none;
+}
+
+.folio-card.is-red .folio-card-corner {
+  color: #9c2e32;
+}
+
+.folio-card-back {
+  width: 100%;
+  height: 100%;
+  padding: 4px;
+  background: #f5ebd6;
+  display: flex;
+}
+
+.folio-card-back-pattern {
+  flex: 1;
+  border: 1px solid #863d3c88;
+  border-radius: 3px;
+  background:
+    radial-gradient(circle at 50% 50%, #bf995555 0 22%, transparent 23%),
+    repeating-linear-gradient(
+      45deg,
+      #733534 0 2px,
+      #f3e6cb 2px 5px
+    ),
+    repeating-linear-gradient(
+      -45deg,
+      #733534 0 2px,
+      #f3e6cb 2px 5px
+    );
+  background-blend-mode: multiply;
+}
+
+.folio-card-badge {
+  position: absolute;
+  bottom: 3px;
+  right: 3px;
+  padding: 1px 5px;
+  font-size: 10px;
+  font-family: var(--serif);
+  background: var(--stamp, #863d3c);
+  color: #fff8ea;
+  border-radius: 2px;
+  box-shadow: 0 1px 3px #0004;
+}
+
+/* ============================================================================
+ * 共通完了部品 (.folio-outcome-slip) — 封蝋印と物語へ進む栞紙片
+ * ========================================================================== */
+
+.folio-outcome-slip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 10px;
+  margin-top: auto;
+  background: linear-gradient(110deg, #f8eed6, #efe0bf);
+  border: 1px solid #c6b291;
+  border-left: 3px solid var(--stamp, #863d3c);
+  border-radius: 3px;
+  box-shadow: 1px 3px 8px #33211424;
+  animation: folio-slip-appear 240ms ease-out both;
+}
+
+.folio-outcome-slip.is-loss {
+  border-left-color: #463a33;
+  background: linear-gradient(110deg, #efe7d6, #e2d6c1);
+}
+
+.folio-outcome-slip.is-tie {
+  border-left-color: #8f7239;
+}
+
+@keyframes folio-slip-appear {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.folio-wax-seal {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 48px;
+  height: 48px;
+  padding: 3px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #ad3b3e, #732325 75%);
+  color: #fdf3df;
+  box-shadow:
+    inset 0 1px 2px #ffdede66,
+    1px 2px 5px #38151245;
+  transform: rotate(-5deg);
+  flex-shrink: 0;
+}
+
+.folio-wax-seal.is-loss {
+  background: radial-gradient(circle at 35% 30%, #5b4c43, #332924 78%);
+  color: #efe4d2;
+}
+
+.folio-wax-seal.is-tie {
+  background: radial-gradient(circle at 35% 30%, #a5823d, #6d5220 78%);
+  color: #fff6e3;
+}
+
+.folio-seal-ring {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  border: 1px dashed #fdf3df88;
+  border-radius: 50%;
+  font-family: var(--serif);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.folio-slip-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.folio-slip-body .generation-skeleton {
+  width: 100%;
+  justify-content: flex-end;
+  padding: 2px 0;
+}
+
+.folio-slip-error {
+  font-size: 11px;
+  color: var(--stamp, #863d3c);
+  text-align: right;
+}
+
+.folio-story-turn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 3px;
+  box-shadow: 1px 2px 4px #2a190e26;
+}
+
+/* ============================================================================
+ * 1. じゃんけん (.folio-rps)
+ * ========================================================================== */
+
+.folio-rps {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.folio-rps-top {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+}
+
+.folio-opponent-tag {
+  padding: 6px 10px;
+  background: #f6ebd4;
+  border: 1px solid #cbb899;
+  border-top: 4px solid #b59b72;
+  border-radius: 2px;
+  box-shadow: 1px 2px 5px #3827181f;
+  transform: rotate(-1.5deg);
+  min-width: 96px;
+  text-align: center;
+}
+
+.folio-opponent-hand {
+  margin-top: 3px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  font-family: var(--serif);
+}
+
+.folio-opponent-hand .folio-rps-glyph {
+  width: 34px;
+  height: 34px;
+  color: var(--stamp, #863d3c);
+}
+
+.folio-opponent-hand.is-waiting {
+  color: #826f5c;
+  padding: 4px 0;
+}
+
+.folio-mystery-mark {
+  font-size: 20px;
+  line-height: 1.1;
+  font-family: var(--serif);
+}
+
+.folio-margin-tally {
+  padding: 4px 6px;
+  font-size: 12px;
+}
+
+.folio-tally-list {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  max-height: 66px;
+  overflow-y: auto;
+  display: grid;
+  gap: 2px;
+}
+
+.folio-tally-list li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  color: #4f3e31;
+}
+
+.folio-tally-list li b {
+  color: var(--stamp, #863d3c);
+}
+
+.folio-tie-prompt {
+  margin-top: 3px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--stamp, #863d3c);
+}
+
+.folio-rps-ring {
+  position: relative;
+  margin-block: auto;
+  padding: 6px 2px 8px;
+}
+
+.folio-rps-diagram {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  color: #b7a283;
+  pointer-events: none;
+}
+
+.folio-rps-fan {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.folio-rps-slip {
+  position: relative;
+  width: clamp(82px, 24vw, 104px);
+  padding: 10px 6px 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  background: linear-gradient(160deg, #fffdf6, #f2e4c6);
+  border: 1px solid #bfa988;
+  border-radius: 4px;
+  box-shadow: 1px 4px 9px #2e1e1129;
+  transform: rotate(var(--slip-angle, 0deg));
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+}
+
+.folio-rps-slip:not(:disabled):hover,
+.folio-rps-slip:not(:disabled):focus-visible {
+  transform: rotate(var(--slip-angle, 0deg)) translateY(-5px);
+  border-color: var(--stamp, #863d3c);
+  box-shadow: 2px 7px 14px #2e1e113d;
+}
+
+.folio-rps-slip.is-chosen {
+  border-color: var(--stamp, #863d3c);
+  border-width: 1.5px;
+  background: linear-gradient(160deg, #fffaf0, #f5dec2);
+}
+
+.folio-slip-pin {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #f0d797, #9a7338);
+  box-shadow: 0 1px 2px #0005;
+}
+
+.folio-slip-motif {
+  font-size: 11px;
+  color: #7c6551;
+  letter-spacing: 0.1em;
+}
+
+.folio-rps-glyph {
+  width: 40px;
+  height: 40px;
+  color: #382c25;
+}
+
+.folio-slip-name {
+  font-size: 14px;
+  letter-spacing: 0.05em;
+}
+
+/* ============================================================================
+ * 2. 一発サイコロ (.folio-dice)
+ * ========================================================================== */
+
+.folio-dice {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.folio-dice-notes {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.folio-dice-tray-wrap {
+  position: relative;
+  margin: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.folio-dice-tray {
+  position: relative;
+  width: clamp(168px, 44vw, 200px);
+  aspect-ratio: 1;
+  padding: 0;
+  border: 0;
+  background: radial-gradient(circle, #f6ebd2 0%, transparent 72%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #6b533e;
+}
+
+.folio-dice-tray.is-interactive:hover .folio-die-cube,
+.folio-dice-tray.is-interactive:focus-visible .folio-die-cube {
+  transform: rotate(-6deg) scale(1.05);
+}
+
+.folio-octagon-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.folio-die-cube {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  padding: 9px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  place-items: center;
+  background: linear-gradient(135deg, #fffdf7, #efe1c4 70%, #dac49d);
+  border: 1.5px solid #8a7356;
+  border-radius: 12px;
+  box-shadow:
+    inset 1px 1px 0 #fff,
+    2px 6px 12px #2c1d103d;
+  transform: rotate(-4deg);
+  transition: transform 200ms ease;
+}
+
+.folio-die-cube.is-rolling {
+  animation: folio-die-tumble 280ms ease-in-out infinite alternate;
+}
+
+@keyframes folio-die-tumble {
+  0% {
+    transform: translate(-6px, -4px) rotate(-18deg) scale(0.96);
+  }
+  50% {
+    transform: translate(7px, 3px) rotate(14deg) scale(1.04);
+  }
+  100% {
+    transform: translate(-4px, 5px) rotate(-8deg) scale(0.98);
+  }
+}
+
+.folio-die-cell {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+}
+
+.folio-die-cell.has-pip {
+  background: radial-gradient(circle at 35% 35%, #3d3028, #1a120e);
+  box-shadow: inset 0 1px 1px #0008;
+}
+
+.folio-die-cell.is-ace-pip {
+  width: 16px;
+  height: 16px;
+  background: radial-gradient(circle at 35% 35%, #b8373a, #7d1f22);
+}
+
+.folio-tray-inscription {
+  position: relative;
+  font-family: var(--serif);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--stamp, #863d3c);
+  background: #fbf3e1;
+  padding: 2px 10px;
+  border: 1px solid #c9b08e;
+  border-radius: 12px;
+  box-shadow: 0 2px 4px #311f1022;
+}
+
+.folio-dice-margin-memo {
+  position: absolute;
+  right: -36px;
+  bottom: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 4px 8px;
+  background: #f7ecd4;
+  border: 1px solid #c5b190;
+  transform: rotate(5deg);
+  font-family: var(--serif);
+}
+
+.folio-dice-margin-memo span {
+  font-size: 10px;
+  color: #6f5a47;
+}
+
+.folio-dice-margin-memo strong {
+  font-size: 20px;
+  color: var(--stamp, #863d3c);
+  line-height: 1.1;
+}
+
+/* ============================================================================
+ * 3. カード当て (.folio-guess)
+ * ========================================================================== */
+
+.folio-guess {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.folio-guess-margin {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.folio-target-memo {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 2px 8px;
+  background: #f5ead2;
+  border: 1px solid #cbb89a;
+}
+
+.folio-target-memo strong {
+  font-size: 15px;
+  font-family: var(--serif);
+}
+
+.folio-guess-stage {
+  position: relative;
+  margin-block: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.folio-guess-pins {
+  width: min(100%, 306px);
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  text-align: center;
+  font-size: 11px;
+  color: #6d5846;
+}
+
+.folio-pin-label::before {
+  content: '● ';
+  color: #b28c46;
+  font-size: 9px;
+}
+
+.folio-guess-track {
+  position: relative;
+  width: min(100%, 306px);
+  height: 126px;
+}
+
+.folio-guess-card-slot {
+  position: absolute;
+  top: 4px;
+  left: 0;
+  width: 33.333%;
+  display: flex;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  transform: translate3d(calc(var(--slot-pos, 0) * 100%), 0, 0);
+  transition: transform 320ms cubic-bezier(0.24, 0.78, 0.24, 1);
+}
+
+.folio-guess-card-slot .folio-card {
+  width: clamp(66px, 19vw, 80px);
+}
+
+.folio-guess-card-slot.is-selectable {
+  cursor: pointer;
+}
+
+.folio-guess-card-slot.is-selectable:hover .folio-card,
+.folio-guess-card-slot.is-selectable:focus-visible .folio-card {
+  transform: translateY(-6px);
+  border-color: var(--stamp, #863d3c);
+  box-shadow: 0 6px 14px #311e1040;
+}
+
+.folio-wax-ribbon {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  background: linear-gradient(110deg, #8e3537, #6e2325);
+  color: #fdf3e1;
+  border: 1px solid #591a1c;
+  border-radius: 18px;
+  box-shadow: 1px 3px 8px #33131144;
+  font-size: 13px;
+}
+
+.folio-ribbon-seal {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #d7b26d;
+  color: #362214;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* ============================================================================
+ * 4. スロット (.folio-slot) — 真鍮の三連覗き窓と右脇の引き手
+ * ========================================================================== */
+
+.folio-slot {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.folio-slot-notes {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.folio-slot-mechanica {
+  margin-block: auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.folio-slot-windows {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+  padding: 10px 8px;
+  background: linear-gradient(145deg, #e7d6b5, #d5be96);
+  border: 2px solid #9d7d47;
+  border-radius: 6px;
+  box-shadow:
+    inset 0 1px 0 #fff8e6,
+    1px 4px 10px #2b1d1130;
+}
+
+.folio-reel-column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.folio-reel-index {
+  font-family: var(--serif);
+  font-size: 11px;
+  color: #5e472d;
+}
+
+.folio-reel-window {
+  position: relative;
+  width: 100%;
+  padding: 6px 4px 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  background: #fffdf7;
+  border: 1.5px solid #8c6e3d;
+  border-radius: 4px;
+  box-shadow: inset 0 2px 5px #2e1f0e29;
+  overflow: hidden;
+}
+
+.folio-reel-column.is-spinning .folio-reel-window {
+  border-color: var(--stamp, #863d3c);
+  box-shadow:
+    inset 0 2px 5px #2e1f0e29,
+    0 0 0 1.5px #863d3c44;
+}
+
+.folio-reel-strip {
+  height: 70px;
+  width: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  animation: folio-reel-roll 340ms linear infinite;
+}
+
+@keyframes folio-reel-roll {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-50%);
+  }
+}
+
+.folio-reel-cell {
+  height: 70px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.folio-reel-cell img {
+  width: 46px;
+  height: 46px;
+  object-fit: contain;
+}
+
+.folio-reel-cell small {
+  font-size: 10px;
+  color: #5d4a3b;
+}
+
+.folio-reel-latch {
+  width: 100%;
+  padding: 3px 2px;
+  text-align: center;
+  font-family: var(--serif);
+  font-size: 11.5px;
+  font-weight: 700;
+  border-radius: 2px;
+  background: #ece0c8;
+  color: #5a4838;
+}
+
+.folio-reel-column.is-spinning .folio-reel-latch {
+  background: var(--stamp, #863d3c);
+  color: #fff7e8;
+}
+
+.folio-reel-column.is-locked .folio-reel-latch {
+  background: #d7c39c;
+  color: #2f2219;
+}
+
+/* 右脇の真鍮レバー */
+.folio-slot-lever {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 6px;
+  background: linear-gradient(135deg, #f3e4c3, #d9c093);
+  border: 1.5px solid #96753e;
+  border-radius: 6px;
+  box-shadow: 1px 3px 7px #2b1b0e2e;
+}
+
+.folio-lever-shaft {
+  position: relative;
+  width: 10px;
+  height: 64px;
+  border-radius: 5px;
+  background: linear-gradient(90deg, #8b6c39, #e5ca87, #7a5c2c);
+  display: flex;
+  justify-content: center;
+}
+
+.folio-lever-knob {
+  position: absolute;
+  top: -4px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #b73d3f, #6b1d1f);
+  border: 1px solid #4d1315;
+  box-shadow: 0 2px 4px #0006;
+  transition: transform 180ms ease;
+}
+
+.folio-slot-lever.is-pulling .folio-lever-knob,
+.folio-slot-lever:not(:disabled):active .folio-lever-knob {
+  transform: translateY(38px);
+}
+
+.folio-slot-lever.is-pulled .folio-lever-knob {
+  transform: translateY(18px);
+  background: radial-gradient(circle at 35% 30%, #8b7b6b, #4c4138);
+}
+
+.folio-lever-label {
+  writing-mode: vertical-rl;
+  font-family: var(--serif);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink, #382c25);
+}
+
+/* ============================================================================
+ * 5. ブラックジャック (.folio-bj) — 斜め対角の手札と山札・栞リボン
+ * ========================================================================== */
+
+.folio-bj {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 5px;
+}
+
+.folio-bj-dealer {
+  align-self: flex-start;
+  width: 92%;
+  padding: 4px 8px;
+  background: #f5ebd580;
+  border-left: 2px solid #9e876a;
+}
+
+.folio-bj-player {
+  align-self: flex-end;
+  width: 94%;
+  padding: 4px 8px;
+  background: #f7eed9b3;
+  border-right: 2px solid var(--stamp, #863d3c);
+}
+
+.folio-hand-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.folio-card-spread {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.folio-bj .folio-card {
+  width: clamp(50px, 14vw, 64px);
+}
+
+.folio-bj-desk-props {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 2px 0;
+}
+
+.folio-draw-shoe {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: linear-gradient(135deg, #fbf2de, #e6d3b0);
+  border: 1.5px solid #9b825f;
+  border-radius: 4px;
+  box-shadow:
+    3px 3px 0 #cbb693,
+    1px 4px 8px #2e1d102b;
+  transform: rotate(-2deg);
+}
+
+.folio-draw-shoe.is-ready {
+  border-color: #6b4c35;
+}
+
+.folio-shoe-stack {
+  width: 18px;
+  height: 24px;
+  border-radius: 2px;
+  border: 1px solid #733534;
+  background: repeating-linear-gradient(
+    45deg,
+    #733534 0 2px,
+    #f3e6cb 2px 4px
+  );
+  box-shadow: 2px 2px 0 #b8a17e;
+}
+
+.folio-shoe-text,
+.folio-bookmark-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.15;
+}
+
+.folio-shoe-text strong,
+.folio-bookmark-text strong {
+  font-size: 12.5px;
+}
+
+.folio-shoe-text small,
+.folio-bookmark-text small {
+  font-size: 9.5px;
+  letter-spacing: 0.08em;
+  opacity: 0.85;
+}
+
+.folio-stand-bookmark {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px 6px 10px;
+  background: linear-gradient(110deg, #913638, #742527);
+  color: #fff6e5;
+  border: 1px solid #591a1c;
+  border-radius: 3px 0 0 3px;
+  box-shadow: 1px 3px 7px #33131138;
+  transform: rotate(1.5deg);
+}
+
+.folio-stand-bookmark:disabled {
+  background: #d8cbb6;
+  border-color: #b8a890;
+  color: #7d6f60;
+}
+
+/* ============================================================================
+ * 6. バカラ (.folio-baccarat) — 左右の配札とルーペ絞り台
+ * ========================================================================== */
+
+.folio-baccarat {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 5px;
+}
+
+.folio-baccarat-board {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.folio-baccarat-side {
+  padding: 5px 6px;
+  background: #f6ecd588;
+  border: 1px solid #d1bfa1;
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.folio-side-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.folio-side-header .folio-note-caption {
+  font-size: 10px;
+}
+
+.folio-side-header .folio-ink-total {
+  font-size: 11.5px;
+  padding: 0 5px;
+}
+
+.folio-side-header .folio-ink-total strong {
+  font-size: 14px;
+}
+
+.folio-baccarat-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 68px;
+}
+
+.folio-baccarat-card-btn {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.folio-baccarat-card-btn .folio-card {
+  width: clamp(42px, 11.8vw, 52px);
+}
+
+.folio-baccarat-card-btn.is-selected .folio-card {
+  transform: translateY(-3px);
+}
+
+.folio-banker-batch-btn {
+  align-self: center;
+  padding: 2px 8px;
+  font-size: 10.5px;
+  background: #efe1c4;
+  border: 1px solid #b59d78;
+  border-radius: 10px;
+  color: #493728;
+}
+
+/* 絞り（スクイーズ）台紙 */
+.folio-squeeze-mat {
+  padding: 6px 8px;
+  background:
+    radial-gradient(circle at 50% 50%, #fbf3e2, #ead9b9);
+  border: 1px solid #bfa987;
+  border-radius: 5px;
+  box-shadow: inset 0 1px 4px #3c29171f;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.folio-squeeze-guide {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.folio-squeeze-target {
+  font-family: var(--serif);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--stamp, #863d3c);
+}
+
+.folio-squeeze-workarea {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.folio-squeeze-card {
+  position: relative;
+  width: 96px;
+  height: 124px;
+  border-radius: 6px;
+  border: 1.5px solid #967d5c;
+  background: #fffdf8;
+  box-shadow: 2px 5px 12px #2a1b0e38;
+  overflow: hidden;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.folio-squeeze-card:active {
+  cursor: grabbing;
+}
+
+.folio-squeeze-underlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+}
+
+.folio-squeeze-underlay img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.folio-squeeze-peek {
+  position: absolute;
+  bottom: 3px;
+  left: 4px;
+  right: 4px;
+  text-align: center;
+  font-size: 10.5px;
+  font-weight: 700;
+  background: #fffdf8e6;
+  border-radius: 2px;
+  color: #241d1c;
+}
+
+.folio-squeeze-peek.is-red {
+  color: #9c2e32;
+}
+
+.folio-squeeze-cover {
+  position: absolute;
+  inset: 0;
+  background:
+    repeating-linear-gradient(
+      45deg,
+      #733534 0 3px,
+      #f3e6cb 3px 6px
+    );
+  border-bottom: 3px solid #d8c39e;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 8px;
+  transform: translateY(calc(-1 * var(--peel-pct, 0%)));
+  transition: transform 70ms linear;
+  box-shadow: 0 6px 12px #1f130a44;
+}
+
+.folio-squeeze-corner-hint {
+  padding: 2px 6px;
+  font-size: 10px;
+  font-family: var(--serif);
+  background: #fbf2dfd9;
+  color: #382c25;
+  border: 1px solid #b69e7c;
+  border-radius: 2px;
+}
+
+.folio-flip-direct-btn {
+  padding: 7px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  background: #fbf2de;
+  border: 1px solid #ad9572;
+  box-shadow: 1px 2px 5px #2e1d0f22;
+}
+
+/* ============================================================================
+ * 小画面 (max-height: 720px / 393×681 基準) 調整および Reduced Motion
+ * ========================================================================== */
+
+@media (max-height: 720px) {
+  .folio-gamble {
+    padding-top: 3px;
+    padding-bottom: 3px;
+  }
+
+  .folio-outcome-slip {
+    padding: 4px 8px;
+  }
+
+  .folio-wax-seal {
+    min-width: 42px;
+    height: 42px;
+  }
+
+  .folio-seal-ring {
+    font-size: 12px;
+  }
+
+  .folio-squeeze-card {
+    width: 84px;
+    height: 108px;
+  }
+
+  .folio-guess-track {
+    height: 112px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation-duration: 2.4s;
+  }
+
+  .skeleton-ink::after {
+    animation: none;
+    width: 100%;
+    opacity: 0.45;
+  }
+
+  .folio-die-cube.is-rolling,
+  .folio-reel-strip {
+    animation: none;
+  }
+
+  .folio-guess-card-slot {
+    transition: opacity 90ms linear;
+  }
+
+  .folio-outcome-slip {
+    animation: none;
+  }
+}
+
+.story-board .generation-skeleton {
+  min-height: 200px;
+  height: 100%;
+  flex-direction: column;
+  gap: 12px;
+}

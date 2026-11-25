@@ -1,7 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { Transaction, Unit } from './types';
-import { PaperDust } from './PaperDust';
-import type { DustProps } from './PaperDust';
 import { manuscriptChanges } from './manuscriptChanges';
 
 // CSS owns the geometry; the fallback also permits non-DOM rendering.
@@ -31,7 +29,7 @@ export function focusFirstChange(paper: HTMLElement) {
   scroll.scrollLeft += (bounds.left + bounds.right - viewport.left - viewport.right) / 2;
 }
 
-function Paper({text, units, selected, disabled, onToggle, marked, changes, dust, losses}: {
+function Paper({text, units, selected, disabled, onToggle, marked, changes}: {
   text: string;
   units?: Unit[];
   selected?: string[];
@@ -39,7 +37,7 @@ function Paper({text, units, selected, disabled, onToggle, marked, changes, dust
   onToggle?: (id: string) => void;
   marked?: Set<number>;
   changes?: ReturnType<typeof manuscriptChanges>;
-} & DustProps) {
+}) {
   const paper = useRef<HTMLDivElement>(null);
   const rows = paperRows();
   useLayoutEffect(() => {
@@ -101,18 +99,18 @@ function Paper({text, units, selected, disabled, onToggle, marked, changes, dust
       style={{gridRow: i % rows + 1, gridColumn: Math.floor(i / rows) + 1}} />);
   }
   return <div className="paper-scroll" aria-hidden={units ? undefined : true}>
-    <div className="vertical-paper" ref={paper}>{content}<PaperDust dust={dust} losses={losses} /></div>
+    <div className="vertical-paper" ref={paper}>{content}</div>
   </div>;
 }
 
-export function Manuscript({text, before, ...dustProps}: {text: string; before?: string} & DustProps) {
+export function Manuscript({text, before}: {text: string; before?: string}) {
   const changes = useMemo(() => before === undefined ? undefined : manuscriptChanges(before, text), [before, text]);
-  return <><p className="sr-only">{text}</p><Paper text={text} changes={changes} {...dustProps} /></>;
+  return <><p className="sr-only">{text}</p><Paper text={text} changes={changes} /></>;
 }
 
 export function WagerManuscript(props: {
   text: string; units: Unit[]; selected: string[]; disabled: boolean; onToggle: (id: string) => void;
-} & DustProps) {
+}) {
   return <Paper {...props} />;
 }
 
@@ -169,10 +167,9 @@ function animateInk(frame: HTMLElement, complete: () => void) {
   };
 }
 
-export function LossManuscript({ transaction, text, dust, losses, highlight = false }: {transaction: Transaction; text: string; highlight?: boolean} & DustProps) {
+export function LossManuscript({ transaction, text, highlight = false }: {transaction: Transaction; text: string; highlight?: boolean}) {
   const [playing, setPlaying] = useState(() => !highlight);
   const changes = useMemo(() => manuscriptChanges(transaction.before, text), [transaction.before, text]);
-  const previousLosses = useMemo(() => losses.filter(loss => loss.id !== transaction.id), [losses, transaction.id]);
   const frame = useRef<HTMLDivElement>(null);
   const marked = new Set<number>();
   for (const unit of transaction.selected_units ?? []) {
@@ -203,7 +200,7 @@ export function LossManuscript({ transaction, text, dust, losses, highlight = fa
     <p className="sr-only">{text}</p>
     <div className="paper-frame" ref={frame}>
       <Paper text={playing ? transaction.before : text} marked={playing ? marked : undefined}
-        changes={playing ? undefined : changes} dust={dust} losses={playing ? previousLosses : losses} />
+        changes={playing ? undefined : changes} />
     </div>
   </>;
 }

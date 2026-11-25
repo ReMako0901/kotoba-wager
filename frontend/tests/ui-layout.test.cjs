@@ -67,14 +67,15 @@ test('gambling actions stay with the tabletop object and generation polling only
     : url.endsWith('/sessions/played') ? { ...generating, status: 'awaiting_reveal' } : played);
   const ui = mount(App, {});
   await startStory(ui);
-  const table = () => ui.find(n => n.props['aria-label'] === '一発サイコロの進行');
-  const actions = () => ui.find(n => n.props.className === 'gamble-actions');
-  assert.ok(nodes(table(), n => n.props.className === 'dice-game').length);
-  assert.match(text(table()), /サイコロを振る/);
+  const table = () => ui.find(n => n.props['aria-label'] === '一発サイコロ');
+  const actions = () => ui.find(n => n.props.className?.startsWith('folio-outcome-slip'));
+  assert.ok(nodes(table(), n => n.props.className === 'folio-dice').length);
+  assert.match(text(table()), /賽を振る/);
   assert.equal(requests.filter(([url]) => url.endsWith('/play')).length, 0);
-  ui.click('サイコロを振る'); await flush(); ui.draw();
-  assert.equal(nodes(actions(), n => n.type === 'button')[0].props.disabled, true);
-  ui.tick(); await flush(); ui.draw();
+  ui.click('賽を振る'); await flush(); ui.draw();
+  // 新UIでは賽の転がり演出が終わってから完了部品が出るため、タイマを進めて出現を待つ
+  for (let i = 0; i < 12 && !actions(); i++) { ui.tick(); await flush(); ui.draw(); }
+  assert.ok(actions());
   assert.equal(nodes(actions(), n => n.type === 'button')[0].props.disabled, false);
   assert.deepEqual(requests.filter(([url]) => url.endsWith('/sessions/played')), [['/api/sessions/played', 'GET']]);
   assert.equal(requests.filter(([url]) => url.endsWith('/finish')).length, 0);
