@@ -6,7 +6,7 @@ const path = require('node:path');
 const { mount, text } = require('./component-harness.cjs');
 const { Manuscript, WagerManuscript, paperRows } = require('../src/Manuscript.tsx');
 const { StoryPaperStack, StoryHistory } = require('../src/StoryHistory.tsx');
-const { GenerationSkeleton } = require('../src/GambleMotion.tsx');
+const { GenerationSkeleton } = require('../src/GenerationSkeleton.tsx');
 const App = require('../src/App.tsx').default;
 const source = name => fs.readFileSync(path.join(__dirname, '../src', name), 'utf8');
 const tx = { id: 'tx', status: 'committed', source_version: 1, before: '猫が来た。', after: '犬が来た。', stakes: ['猫'], offer: { title: '出会い' }, outcome: 'win' };

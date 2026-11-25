@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const source = name => fs.readFileSync(`frontend/src/${name}`, 'utf8');
 
 test('Phase B removes the specified display text and metadata', () => {
-  const all = ['App.tsx', 'GamblePlay.tsx', 'BeginnerPlay.tsx', 'StoryHistory.tsx', 'StoryProgress.tsx', 'gamblePresentation.ts', 'GambleMotion.tsx'].map(source).join('\n');
+  const all = ['App.tsx', 'games/FreshGamble.tsx', 'games/cards.tsx', 'StoryHistory.tsx', 'StoryProgress.tsx', 'GenerationSkeleton.tsx'].map(source).join('\n');
   for (const phrase of ['勝率', '変化の形', 'changeShapes', 'option.description', 'o.family',
     '物語の準備ができた', '物語を準備しています', '準備完了。', '物語も準備中', '赤線の言葉をタップ', 'REGは大きく', '報酬は得られず',
     '裏向きのカードを選ぶ', '表のカードを覚えて', 'シャッフル中…', '当たりのカードを選ぶ',
@@ -20,13 +20,13 @@ test('Phase B removes the specified display text and metadata', () => {
 });
 
 test('retains required content, errors, stage, manual actions and readiness UI', () => {
-  const app = source('App.tsx'), play = source('GamblePlay.tsx');
+  const app = source('App.tsx'), play = source('games/FreshGamble.tsx');
   for (const value of ['<AnomaStage portraitFocus=', '<AnomaStageProvider>', 'custom-story-intro', 'custom-story-text',
     '{customCount} / {MAX_STORY}文字', '第{round}章', 'selectedCount', 'stakesReady && !wasStakesReady.current && selectable']) assert.ok(app.includes(value), value);
-  for (const value of ['この結果を物語へ', 'spinner', 'disabled={busy || (!prepared && !error)}',
-    'props.error', 'role="alert"', 'STOP', 'HIT', 'STAND', '勝利', '敗北', 'label="アノマ"', 'バンカー', 'プレイヤー']) assert.ok(play.includes(value), value);
-  assert.ok(source('BeginnerPlay.tsx').includes('<span>アノマ</span>'));
-  assert.ok(source('gamblePresentation.ts').includes('export function isNearMiss'));
+  for (const value of ['この結果を物語へ', 'spinner', 'prepared || Boolean(error)',
+    'disabled={!canPress}', 'error={error}', 'role="alert"', '止める', 'HIT', 'STAND', '勝利', '敗北', 'アノマ（親）', 'バンカー', 'プレイヤー']) assert.ok(play.includes(value), value);
+  assert.ok(play.includes('アノマの札'));
+  assert.ok(source('GenerationSkeleton.tsx').includes('generation-skeleton'));
 });
 
 test('corner arrows share the existing direction bounds and accessible drag controls', () => {
