@@ -52,7 +52,7 @@ for (const outcome of ['win', 'loss']) for (const skip of [false, true]) test(`s
   if (skip) ui.click('演出をスキップ');
   else {
     assert.equal(ui.find(n => n.type === 'button' && text(n) === 'STOP 2').props.disabled, true);
-    ui.click('レバーを引く');
+    ui.click('字輪を回す');
     ui.click('STOP 2'); ui.tick(); assert.equal(hasFinish(ui), false);
     ui.click('STOP 1'); ui.tick(); assert.equal(hasFinish(ui), false);
     ui.click('STOP 3');

@@ -91,9 +91,6 @@ export function StoryPaperStack({ session, dust, losses, result = false, pageInd
             onLostPointerCapture={event => { if (pointer.current) end(event, true); }}>
             <span className="paper-turn-arrow" aria-hidden="true">{direction === -1 ? '↖' : '↘'}</span>
           </div>)}
-        {result && transaction && <strong className={`paper-stamp stamp-${transaction.outcome}`}>
-          {transaction.outcome === 'win' ? '勝利' : '敗北'}
-        </strong>}
         {!result && <header className="paper-caption">
           <p>{transaction ? `第${current.round}ラウンド · ${transaction.outcome === 'win' ? '勝利' : '敗北'}` : '最初の物語'}</p>
         </header>}
@@ -102,6 +99,12 @@ export function StoryPaperStack({ session, dust, losses, result = false, pageInd
             ? <LossManuscript transaction={transaction} highlight={highlight} text={current.text} dust={dust} losses={pageLosses} />
             : <Manuscript text={current.text} before={latest ? transaction?.before : undefined} dust={dust} losses={pageLosses} />}
         </div>
+        {result && <footer className="colophon">
+          <span className="edition-badge" aria-live="polite">第{current.version}版</span>
+          {transaction && <strong className={`paper-stamp stamp-${transaction.outcome}`}>
+            {transaction.outcome === 'win' ? '勝利' : '敗北'}
+          </strong>}
+        </footer>}
       </article>
     </PaperLayers>
   </section>;
@@ -112,7 +115,6 @@ export function StoryHistory({ session, pageIndex, onPageChange }: { session: Se
   return <div className="history-body">
     <StoryPaperStack key={`${session.id}-${session.version}`} session={session} dust={dust} pageIndex={pageIndex} onPageChange={onPageChange}
       losses={session.transactions.filter(tx => tx.status === 'committed' && tx.outcome === 'loss')} />
-    <h3>失われた設定</h3><p>{session.lost_concepts.map(c => c.label).join('・') || 'まだなし'}</p>
     <p className="quiet">プレイ {session.transactions.filter(tx => tx.status === 'committed').length}回</p>
   </div>;
 }

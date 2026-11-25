@@ -112,7 +112,7 @@ test('game hides intro, restores reward descriptions and opens only on selection
   const app = fs.readFileSync('frontend/src/App.tsx', 'utf8');
   assert.match(app, /story\.intro/); // Story selection card keeps its intro.
   assert.doesNotMatch(app, /session\.intro/);
-  const css = fs.readFileSync('frontend/src/manuscript.css', 'utf8');
+  const css = fs.readFileSync('frontend/src/book.css', 'utf8');
   assert.match(css, /\.game-heading \{[^}]*display: flex/);
   assert.match(css, /\.game-heading \.story-title \{[^}]*min-width: 0[^}]*white-space: nowrap[^}]*text-overflow: ellipsis/);
 });

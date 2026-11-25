@@ -72,10 +72,10 @@ for (const outcome of ['win', 'loss']) test(`${outcome}: latest manuscript is on
   assert.ok(text(ui.tree).includes(outcome === 'win' ? '勝利' : '敗北'));
   assert.equal(JSON.stringify(s), snapshot);
 });
-test('history retains losses and counts plays instead of generation stats, initial and legacy pages remain readable', () => {
+test('history omits loss summaries and counts plays instead of generation stats, initial and legacy pages remain readable', () => {
   const s = { ...session([tx(1, '最初。', '中間。')]), lost_concepts: [{ label: '鍵の意味' }], api_calls: 3 };
   const ui = mount(StoryHistory, { session: s });
-  assert.match(text(ui.tree), /鍵の意味/); assert.match(text(ui.tree), /プレイ 1回/);
+  assert.doesNotMatch(text(ui.tree), /鍵の意味/); assert.match(text(ui.tree), /プレイ 1回/);
   swipe(ui, -1); assert.match(text(ui.tree), /最初。/);
   const initial = mount(StoryPaperStack, paperProps({ ...session([]), version: 1 }));
   assert.equal(initial.all(n => n.props?.className === 'paper-underlay').length, 0);
@@ -120,7 +120,7 @@ test('diagonal release threshold, wrong direction, cancellation and reduced moti
 });
 test('one fixed cell definition serves every manuscript state and skeleton', () => {
   const dir = path.resolve(__dirname, '../src');
-  const css = fs.readdirSync(dir).filter(f => f.endsWith('.css')).map(f => fs.readFileSync(path.join(dir, f), 'utf8')).join('\n');
+  const css = fs.readdirSync(dir).filter(f => /^book.*\.css$/.test(f)).map(f => fs.readFileSync(path.join(dir, f), 'utf8')).join('\n');
   assert.deepEqual(css.match(/--cell-size\s*:[^;]+/g), ['--cell-size: 32px']);
   assert.match(css, /grid-template-rows: repeat\(var\(--paper-rows\), var\(--cell-size\)\)/);
   assert.doesNotMatch(css, /100cqh|transparent 0 23px/);

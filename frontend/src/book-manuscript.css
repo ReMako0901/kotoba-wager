@@ -1,0 +1,103 @@
+/* The renderer reads the root row count to map source offsets to squares. */
+:root {
+  --cell-size: 32px;
+  --paper-rows: 10;
+}
+.paper-frame { position: relative; }
+.paper-scroll {
+  direction: rtl;
+  overflow-x: auto;
+  overflow-y: hidden;
+  min-height: calc(var(--paper-rows) * var(--cell-size) + 2px);
+  scrollbar-width: thin;
+}
+.vertical-paper {
+  position: relative;
+  --paper-rule: var(--rule);
+  display: grid;
+  grid-template-rows: repeat(var(--paper-rows), var(--cell-size));
+  grid-auto-columns: var(--cell-size);
+  width: max-content;
+  margin-inline: auto;
+  border-right: 1px solid var(--paper-rule);
+  border-bottom: 1px solid var(--paper-rule);
+  background: var(--leaf);
+  color: var(--ink);
+  font: 500 calc(var(--cell-size) * .8)/1 var(--serif);
+}
+.ink-cell {
+  display: grid;
+  place-items: center;
+  width: var(--cell-size);
+  height: var(--cell-size);
+  box-shadow: inset 1px 0 var(--paper-rule), inset 0 1px var(--paper-rule);
+}
+.ink-glyph { direction: ltr; writing-mode: vertical-rl; text-orientation: upright; white-space: pre; }
+.result-change { animation-duration: 1.4s; animation-timing-function: ease-out; }
+.result-change.rewritten { animation-name: result-rewrite; }
+.result-change.cut-before { animation-name: result-cut-before; }
+.result-change.cut-after { animation-name: result-cut-after; }
+@keyframes result-rewrite {
+  0%, 28% { background-color: #fff; box-shadow: inset -2px 0 var(--stamp); }
+  100% { background-color: transparent; }
+}
+@keyframes result-cut-before {
+  0%, 28% { box-shadow: 0 -2px var(--stamp); }
+  100% { box-shadow: 0 -2px transparent; }
+}
+@keyframes result-cut-after {
+  0%, 28% { box-shadow: 0 2px var(--stamp); }
+  100% { box-shadow: 0 2px transparent; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .result-change { animation-timing-function: steps(1, end); }
+}
+.vertical-run, .vertical-word { display: grid; grid-auto-rows: var(--cell-size); }
+.vertical-word {
+  margin: 0; padding: 0; border: 0; border-radius: 0; min-height: 0;
+  background: var(--leaf); color: var(--ink); font: inherit;
+}
+.vertical-word { position: relative; }
+.vertical-word::after {
+  content: "";
+  position: absolute;
+  inset: 5px 0 5px auto;
+  width: 2px;
+  background: var(--stamp);
+  pointer-events: none;
+}
+.vertical-word[aria-pressed=true] .ink-cell { color: white; background: var(--ink); }
+.ink-cell.marked { color: var(--stamp); background: #fbf4f3; }
+.vertical-word:disabled { opacity: 1; }
+.paper-dust, .ink-overlay { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.ink-cell.crumbled .marked-glyph { visibility: hidden; }
+.ink-cell.crumbled { background: #fff; transition: background .3s ease; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.show-changes .result-change.rewritten { animation: none; background: #fff; color: var(--ink); font-weight: 800; box-shadow: inset -2px 0 var(--stamp); }
+.show-changes .result-change.cut-before { animation: none; box-shadow: 0 -2px var(--stamp); }
+.show-changes .result-change.cut-after { animation: none; box-shadow: 0 2px var(--stamp); }
+
+
+.paper-stack { position: relative; isolation: isolate; min-width: 0; }
+.paper-underlay { position: absolute; inset: 0; z-index: -1; border-bottom: 1px solid var(--rule); }
+.manuscript-sheet, .paper-preview { background: var(--leaf); position: relative; }
+.paper-preview { position: absolute; inset: 0; pointer-events: none; }
+.colophon { display: flex; align-items: center; justify-content: center; gap: 8px; padding-top: 2px; }
+.paper-stamp { border: 1px solid; color: var(--stamp); padding-inline: 5px; font-size: 12px; }
+.paper-caption, .paper-navigation { font-size: 12px; color: var(--stamp); }
+.paper-corner { position: absolute; z-index: 2; width: 44px; height: 44px; cursor: grab; touch-action: none; background: linear-gradient(135deg,#ddd7c6 0 38%,transparent 39%); }
+.corner-older { bottom: 0; right: 0; rotate: 180deg; }
+.corner-newer { top: 0; left: 0; }
+.paper-finish, .paper-return { transition: transform 240ms ease-out; }
+.paper-fade { opacity: 0; }
+@media (prefers-reduced-motion: reduce) {
+  .paper-drag, .paper-finish, .paper-return { transform: none !important; transition: opacity 150ms; }
+}
+.paper-turn-arrow{position:absolute;top:2px;left:3px;font-size:20px;line-height:1;pointer-events:none;color:var(--stamp);animation:paper-turn-hint 1.6s ease-in-out 3}
+:is(.paper-drag,.paper-finish,.paper-return) .paper-turn-arrow{animation-play-state:paused;visibility:hidden}
+.corner-older .paper-turn-arrow{rotate:180deg;--hint-step:-3px}
+@keyframes paper-turn-hint{0%,100%{transform:translate(0,0)}50%{transform:translate(var(--hint-step,3px),var(--hint-step,3px))}}
+@media(prefers-reduced-motion:reduce){.paper-turn-arrow{animation:none}}
+
+/* Keep the moving corner and sheet within the printed page. */
+.story-paper-stack { overflow: clip; padding-block: 2px; }

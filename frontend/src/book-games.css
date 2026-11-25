@@ -1,0 +1,112 @@
+.gamble-screen { display: grid; gap: 14px; text-align: center; }
+.gamble-screen h1, .slot-marquee, .eyebrow { font-size: 22px; }
+.gamble-actions, .blackjack-actions, .rps-buttons, .slot-stops, .slot-reels {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.gamble-actions { flex-wrap: wrap; }
+.slot-machine { display: grid; justify-items: center; gap: 12px; }
+.slot-reels, .slot-stops { width: min(100%, 340px); display: grid; grid-template-columns: repeat(3, 1fr); }
+.slot-reel {
+  height: 64px;
+  overflow: hidden;
+  line-height: 64px;
+  font-size: 28px;
+  border-block: 2px solid var(--ink);
+  background: #f1eee5;
+}
+.reel-strip span { display: block; }
+.rolling .reel-strip { animation: turn-type .48s linear infinite; }
+@keyframes turn-type { to { transform: translateY(-75%); } }
+.slot-lever { color: var(--stamp); border-color: currentColor; }
+.rps-result { display: flex; justify-content: space-evenly; padding-block: 20px; border-block: 1px solid var(--rule); }
+.rps-side { display: grid; font-size: 13px; }
+.rps-side b { font-size: 42px; }
+.rps-side b, .rps-buttons span { filter: grayscale(1); }
+.dice-game { display: grid; place-items: center; padding: 24px; }
+.dice-face {
+  width: 86px;
+  aspect-ratio: 1;
+  display: grid;
+  grid-template: repeat(3, 1fr) / repeat(3, 1fr);
+  padding: 12px;
+  gap: 4px;
+  border: 1px solid var(--ink);
+  border-radius: 10px;
+  background: #fffefa;
+  box-shadow: 3px 5px 0 #d9d4c8;
+  rotate: -5deg;
+}
+.dice-face i { border-radius: 50%; background: var(--ink); }
+.guess-board { position: relative; width: min(100%, 320px); height: 132px; margin: 16px auto; }
+.playing-card, .baccarat-zoom {
+  position: relative;
+  overflow: hidden;
+  border-radius: 3px;
+  border: 1px solid var(--ink);
+  background: white;
+  padding: 0;
+}
+.playing-card.face-down, .squeeze-back {
+  background: repeating-linear-gradient(45deg, #eeeade 0 3px, #d3ccbc 3px 4px);
+}
+.face-down .baccarat-face { visibility: hidden; }
+.playing-card.face-down span { position: absolute; inset: 0; display: grid; place-items: center; }
+.guess-card { position: absolute; left: 2%; top: 0; width: 29%; height: 100%; }
+.guess-card:disabled { opacity: 1; }
+.guess-selected, .playing-card[aria-pressed=true] { outline: 2px solid var(--stamp); }
+.dealt-hands { display: grid; gap: 10px; }
+.card-hand { border-top: 1px solid var(--rule); padding-top: 4px; }
+.hand-heading { display: flex; justify-content: space-between; align-items: baseline; font-size: 13px; }
+.hand-heading b { font-size: 17px; }
+.playing-cards { display: flex; justify-content: center; gap: 3px; }
+.playing-cards .playing-card { width: 44px; height: 60px; min-width: 0; }
+.baccarat-deal { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; }
+.baccarat-stage { align-self: center; display: grid; justify-items: center; gap: 4px; }
+.baccarat-zoom { width: clamp(95px, 28vw, 144px); aspect-ratio: 5 / 7; touch-action: none; }
+.baccarat-face { display: block; width: 100%; height: 100%; filter: grayscale(1); }
+.generation-skeleton { display: flex; align-items: center; justify-content: center; min-height: 20px; gap: 8px; }
+.skeleton-ink { width: 48px; height: 2px; background: var(--ink); }
+.spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid var(--rule); border-top-color: var(--stamp); border-radius: 50%; animation: ink-spin 1s linear infinite; }
+@keyframes ink-spin { to { transform: rotate(1turn); } }
+@media (prefers-reduced-motion: reduce) {
+  .rolling .reel-strip, .spinner { animation: none; }
+}
+.baccarat-zoom.squeeze-back[data-hint="true"]::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 20px;
+  height: 20px;
+  background: linear-gradient(135deg, #ddd, #fff);
+  clip-path: polygon(100% 0, 0 100%, 100% 100%);
+  transform-origin: bottom right;
+  pointer-events: none;
+  animation: baccarat-corner-hint 3.6s ease-in-out 3;
+}
+@keyframes baccarat-corner-hint {
+  0%, 65%, 100% { transform: scale(0); opacity: 0; }
+  80% { transform: scale(1) translate(-2px, -2px); opacity: .85; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .baccarat-zoom.squeeze-back[data-hint="true"]::after { display: none; }
+}
+.baccarat-peek {
+  position: absolute;
+  inset: 0;
+  background: #fff;
+  pointer-events: none;
+}
+.baccarat-peek::before, .baccarat-peek::after {
+  /* Hide only the two corner indices during the peek. */
+  content: '';
+  position: absolute;
+  width: 18.5%;
+  height: 33%;
+  background: #fff;
+}
+.baccarat-peek::before { top: 2px; left: 2px; }
+.baccarat-peek::after { right: 2px; bottom: 2px; }

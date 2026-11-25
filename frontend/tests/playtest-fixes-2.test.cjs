@@ -12,7 +12,7 @@ const source = name => fs.readFileSync(path.join(__dirname, '../src', name), 'ut
 const tx = { id: 'tx', status: 'committed', source_version: 1, before: '猫が来た。', after: '犬が来た。', stakes: ['猫'], offer: { title: '出会い' }, outcome: 'win' };
 const session = { id: 'saved', betting_mode: 'count-v1', status: 'ready', view: 'result', version: 2, text: tx.after, transactions: [tx], offers: [], lost_concepts: [], title: '物語', model: 'PRIVATE_MODEL', usage: { input: 999, output: 999 } };
 const flush = () => new Promise(resolve => setImmediate(resolve));
-test('title always contains subtitle and help and ignores legacy saves', async () => {
+test('title shows only the title and start action and ignores legacy saves', async () => {
   const stored = new Map([
     ['story-wager-session-count-v1', 'saved'],
     ['story-wager-selection-count-v1-saved-2', '{"units":["old"],"offer":"old"}'],
@@ -32,17 +32,16 @@ test('title always contains subtitle and help and ignores legacy saves', async (
     return { ok: true, json: async () => url.endsWith('/games') ? { games: [] } : drawStories(url) ?? ready };
   };
   const ui = mount(App, {}); await flush(); ui.draw();
-  assert.match(text(ui.tree), /言葉を賭けて、物語を書き換える/);
+  assert.match(text(ui.tree), /ライティングメーカー/);
   assert.doesNotMatch(text(ui.tree), /つづきから|つづきを確認できませんでした/);
-  ui.click('遊び方'); assert.match(text(ui.tree), /勝てば報酬/);
-  ui.click('閉じる');
+  assert.doesNotMatch(text(ui.tree), /遊び方|勝てば報酬/);
   await startStory(ui);
   ui.click('新しい報酬');
   ui.click('猫');
   ui.click('閉じる');
   ui.click('タイトルへ');
   assert.doesNotMatch(text(ui.tree), /つづきから|進行は残っています/);
-  assert.match(text(ui.tree), /遊び方/);
+  assert.match(text(ui.tree), /はじめる/);
   assert.deepEqual(storageCalls, []);
   assert.equal(requests.some(url => url.endsWith('/sessions/saved')), false);
 });
@@ -103,12 +102,12 @@ test('round reset, help copy, history availability and fixed cell definition rem
   const app = source('App.tsx');
   assert.match(app, /setGameTier\('beginner'\)/);
   assert.doesNotMatch(app, /赤線の言葉をタップ/);
-  assert.match(app, /赤線の言葉を賭けてギャンブルへ/);
+  assert.doesNotMatch(app, /赤線の言葉を賭けてギャンブルへ/);
   assert.doesNotMatch(app, /あと\{MIN_STORY - customCount\}文字/);
   assert.match(app, /customCount < MIN_STORY \|\| customCount > MAX_STORY/);
   assert.doesNotMatch(app, /disabled=\{gambleMode\}|33％|％〜/);
   assert.match(app, /setPaperIndex\(versions.length - 1\)/);
-  assert.match(source('tokens.css'), /--cell-size: 32px/);
+  assert.match(source('book-manuscript.css'), /--cell-size: 32px/);
   assert.doesNotMatch(source('Manuscript.tsx'), /MAX_ROWS|rows = 9/);
 });
 test('gamble tier resets to beginner after a new version and history opens during a gamble', async () => {

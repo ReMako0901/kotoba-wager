@@ -54,12 +54,6 @@ function Finish({ busy, error, prepared, onFinish, renderActions }: PlayProps) {
   </>;
 }
 
-const slotSymbols: Record<string, { file: string; label: string }> = {
-  ベル: { file: 'bell.png', label: 'ベル' },
-  スイカ: { file: 'watermelon.png', label: 'スイカ' },
-  REG: { file: 'bar.png?v=2', label: 'BAR' },
-  BIG: { file: 'seven.png', label: '7' },
-};
 
 function SlotPlay(props: PlayProps) {
   const [spinning, setSpinning] = useState(false);
@@ -71,20 +65,16 @@ function SlotPlay(props: PlayProps) {
     <div className="slot-machine">
       <div className="slot-marquee">スロット</div>
       <div className="slot-reels">{props.gamble.reels!.map((symbol, i) => {
-        const artwork = slotSymbols[symbol];
         return <div className={`slot-reel${spinning && !stopped[i] ? ' rolling' : ''}`} key={i}
-          aria-label={stopped[i] ? artwork?.label ?? symbol : undefined}>
-          {stopped[i] ? artwork
-            ? <img className="slot-symbol" src={`${import.meta.env.BASE_URL}slot-symbols/${artwork.file}`}
-                alt={artwork.label} draggable={false} />
-            : symbol : <div className="reel-strip" aria-hidden="true"><span>BAR</span><span>7</span><span>◆</span><span>BAR</span></div>}
+          aria-label={stopped[i] ? symbol : undefined}>
+          {stopped[i] ? symbol : <div className="reel-strip" aria-hidden="true"><span>ベル</span><span>REG</span><span>スイカ</span><span>ベル</span></div>}
         </div>;
       })}</div>
       <div className="slot-stops">{stopped.map((stop, i) =>
         <button key={i} disabled={!spinning || stop || props.busy}
           onClick={() => setStopped(current => current.map((value, index) => value || index === i))}>STOP {i + 1}</button>)}</div>
-      {!complete && <button className="slot-lever" type="button" aria-label="レバーを引く"
-        disabled={spinning || props.busy} onClick={() => setSpinning(true)}><span aria-hidden="true" /></button>}
+      {!complete && <button className="slot-lever" type="button" aria-label="字輪を回す"
+        disabled={spinning || props.busy} onClick={() => setSpinning(true)}>字輪を回す</button>}
     </div>
     {complete ? <Finish {...props} /> : (props.renderActions ?? inlineActions)(<button className="text-button" onClick={() => setStopped([true, true, true])}>演出をスキップ</button>)}
   </section>;
