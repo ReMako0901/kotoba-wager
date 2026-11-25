@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode, type PointerEvent } from 'react';
 import type { Session } from './types';
-import type { DustProps } from './PaperDust';
 import { LossManuscript, Manuscript } from './Manuscript';
 import { storyVersions } from './storyVersions';
 
@@ -18,7 +17,7 @@ export function PaperLayers({ count, children }: { count: number; children: Reac
   </div>;
 }
 
-export function StoryPaperStack({ session, dust, losses, result = false, pageIndex, onPageChange, highlight = false }: { session: Session; result?: boolean; pageIndex?: number; onPageChange?: (index: number) => void; highlight?: boolean } & DustProps) {
+export function StoryPaperStack({ session, result = false, pageIndex, onPageChange, highlight = false }: { session: Session; result?: boolean; pageIndex?: number; onPageChange?: (index: number) => void; highlight?: boolean }) {
   const versions = storyVersions(session);
   const [localIndex, setLocalIndex] = useState(versions.length - 1);
   const index = Math.min(pageIndex ?? localIndex, versions.length - 1);
@@ -57,7 +56,6 @@ export function StoryPaperStack({ session, dust, losses, result = false, pageInd
   const current = versions[index];
   const latest = index === versions.length - 1;
   const transaction = current.transaction;
-  const pageLosses = losses.filter(loss => versions.slice(0, index + 1).some(v => v.transaction?.id === loss.id));
   const preview = drag ? versions[index + drag.direction] : undefined;
   const movingStyle = drag && !reduced ? {
     transform: `translate(${drag.x}px, ${drag.y}px) rotate(${drag.x / 18}deg)`,
@@ -71,7 +69,7 @@ export function StoryPaperStack({ session, dust, losses, result = false, pageInd
         {!result && <header className="paper-caption">
           <p>{preview.transaction ? `第${preview.round}ラウンド · ${preview.transaction.outcome === 'win' ? '勝利' : '敗北'}` : '最初の物語'}</p>
         </header>}
-        <div className="story-board"><Manuscript text={preview.text} dust={{ grains: new Map() }} losses={[]} /></div>
+        <div className="story-board"><Manuscript text={preview.text} /></div>
       </div>}
       <article key={current.version} style={movingStyle}
         className={`manuscript-sheet${highlight && latest ? ' show-changes' : ''}${drag ? ` paper-${drag.phase}` : ''}${reduced && drag?.phase === 'finish' ? ' paper-fade' : ''}`}
@@ -99,8 +97,8 @@ export function StoryPaperStack({ session, dust, losses, result = false, pageInd
         </header>}
         <div className="story-board">
           {result && latest && transaction?.outcome === 'loss'
-            ? <LossManuscript transaction={transaction} highlight={highlight} text={current.text} dust={dust} losses={pageLosses} />
-            : <Manuscript text={current.text} before={latest ? transaction?.before : undefined} dust={dust} losses={pageLosses} />}
+            ? <LossManuscript transaction={transaction} highlight={highlight} text={current.text} />
+            : <Manuscript text={current.text} before={latest ? transaction?.before : undefined} />}
         </div>
       </article>
     </PaperLayers>
@@ -108,10 +106,8 @@ export function StoryPaperStack({ session, dust, losses, result = false, pageInd
 }
 
 export function StoryHistory({ session, pageIndex, onPageChange }: { session: Session; pageIndex?: number; onPageChange?: (index: number) => void }) {
-  const [dust] = useState(() => ({ grains: new Map() }));
   return <div className="history-body">
-    <StoryPaperStack key={`${session.id}-${session.version}`} session={session} dust={dust} pageIndex={pageIndex} onPageChange={onPageChange}
-      losses={session.transactions.filter(tx => tx.status === 'committed' && tx.outcome === 'loss')} />
+    <StoryPaperStack key={`${session.id}-${session.version}`} session={session} pageIndex={pageIndex} onPageChange={onPageChange} />
     <p className="quiet">プレイ {session.transactions.filter(tx => tx.status === 'committed').length}回</p>
   </div>;
 }

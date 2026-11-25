@@ -1,7 +1,6 @@
 import './fonts.css';
 import './notebook.css';
 import './notebook-paper.css';
-import './notebook-games.css';
 import './notebook-motion.css';
 import { retainExit } from './notebookMotion';
 import { ScenePublisher } from './ScenePublisher';
@@ -11,11 +10,10 @@ import { NormalEnding, StoryCounts, StoryDecision } from './StoryProgress';
 import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react';
 import { api } from './api';
 import type { Story, Session, GameKind, GameOption } from './types';
-import { GamblePlay } from './GamblePlay';
+import { FreshGamble } from './games/FreshGamble';
 import { Manuscript, WagerManuscript } from './Manuscript';
-import { usePaperDust } from './PaperDust';
 import { PaperLayers, StoryPaperStack, StoryHistory } from './StoryHistory';
-import { GenerationSkeleton } from './GambleMotion';
+import { GenerationSkeleton } from './GenerationSkeleton';
 import { storyVersions } from './storyVersions';
 
 function requestId() {
@@ -47,9 +45,7 @@ function AppContent(){
   const [session,setSession]=useState<Session>();
   const [paperIndex,setPaperIndex]=useState<number>();
   const [highlight,setHighlight]=useState(false);
-  const dust = usePaperDust(session?.id);
   const transactions = session?.transactions;
-  const losses = useMemo(() => transactions?.filter(tx => tx.status === 'committed' && tx.outcome === 'loss') ?? [], [transactions]);
   const [customOpen, setCustomOpen] = useState(false);
   const [customText, setCustomText] = useState('');
   const [customIntro, setCustomIntro] = useState('');
@@ -250,17 +246,17 @@ function AppContent(){
           {resultMode && decision && <div className="result-meta">
             <StoryCounts totals={decision.totals} />
           </div>}
-            {gambleMode && last?.gamble ? <GamblePlay key={last.id} gamble={last.gamble} busy={busy} error={session.error} prepared={session.status === 'awaiting_reveal'}
+            {gambleMode && last?.gamble ? <FreshGamble key={last.id} gamble={last.gamble} busy={busy} error={session.error} prepared={session.status === 'awaiting_reveal'}
               onMove={(attempt, choice) => act(async () => accept(await api<Session>(`/sessions/${session.id}/transactions/${last.id}/play`, { attempt, choice })))}
               onFinish={() => act(async () => accept(await api<Session>(`/sessions/${session.id}/transactions/${last.id}/finish`, {})))} />
             : resultMode ?
-              <StoryPaperStack session={session} dust={dust} losses={losses} result pageIndex={paperIndex} onPageChange={setPaperIndex} highlight={highlight} />
+              <StoryPaperStack session={session} result pageIndex={paperIndex} onPageChange={setPaperIndex} highlight={highlight} />
             : <>
               <section className={`story-board wager-paper-stack${processing ? ' is-processing' : ''}`} aria-label="賭ける言葉を選ぶ">
                 {processing ? <GenerationSkeleton /> : <PaperLayers count={round}>{session.analysis ?
                   <WagerManuscript text={session.text} units={units} selected={selected}
-                    disabled={!ready || !offer || busy || choosingReward || choosingGame} onToggle={toggle} dust={dust} losses={losses} />
-                  : <Manuscript text={session.text} dust={dust} losses={losses} />}
+                    disabled={!ready || !offer || busy || choosingReward || choosingGame} onToggle={toggle} />
+                  : <Manuscript text={session.text} />}
                 </PaperLayers>}
               </section>
               {session.status === 'error' && <div className="api-error" role="alert"><p>{session.error}</p></div>}
