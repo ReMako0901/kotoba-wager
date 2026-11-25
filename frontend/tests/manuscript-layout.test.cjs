@@ -5,8 +5,8 @@ require('./component-harness.cjs');
 const { paperRows, paperPositions, focusFirstChange } = require('../src/Manuscript.tsx');
 
 test('CSS owns ten fixed rows and one cell size; paper only scrolls horizontally', () => {
-  const css = fs.readFileSync('frontend/src/manuscript.css', 'utf8');
-  const tokens = fs.readFileSync('frontend/src/tokens.css', 'utf8');
+  const css = fs.readFileSync('frontend/src/notebook-paper.css', 'utf8');
+  const tokens = fs.readFileSync('frontend/src/notebook.css', 'utf8');
   assert.deepEqual((tokens + css).match(/--paper-rows\s*:[^;]+/g), ['--paper-rows: 10']);
   assert.deepEqual((tokens + css).match(/--cell-size\s*:[^;]+/g), ['--cell-size: 32px']);
   const scroll = css.match(/\.paper-scroll\s*\{([^}]+)\}/)[1];

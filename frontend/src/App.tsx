@@ -1,24 +1,20 @@
-import './tokens.css';
 import './fonts.css';
+import './notebook.css';
+import './notebook-paper.css';
+import './notebook-games.css';
 import { ScenePublisher } from './ScenePublisher';
 import { gameScene } from './sceneDialogue';
 import { AnomaStageProvider, AnomaStage, StagePublisher, resultReaction, Opening } from './Anoma';
 import { NormalEnding, StoryCounts, StoryDecision } from './StoryProgress';
-import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react';
 import { api } from './api';
 import type { Story, Session, GameKind, GameOption } from './types';
 import { GamblePlay } from './GamblePlay';
-import './style.css';
-import './manuscript.css';
 import { Manuscript, WagerManuscript } from './Manuscript';
 import { usePaperDust } from './PaperDust';
 import { PaperLayers, StoryPaperStack, StoryHistory } from './StoryHistory';
-import './history.css';
-import './gamble-motion.css';
 import { GenerationSkeleton } from './GambleMotion';
 import { storyVersions } from './storyVersions';
-import './layout.css';
-import './table-finish.css';
 
 function requestId() {
   const b=crypto.getRandomValues(new Uint8Array(16)); b[6]=(b[6]&15)|64; b[8]=(b[8]&63)|128;
@@ -47,7 +43,6 @@ export default function App() {
 function AppContent(){
   const [screen,setScreen]=useState<'title'|'opening'|'choose'|'game'>('title');
   const [session,setSession]=useState<Session>();
-  const [helpOpen,setHelpOpen]=useState(false);
   const [paperIndex,setPaperIndex]=useState<number>();
   const [highlight,setHighlight]=useState(false);
   const dust = usePaperDust(session?.id);
@@ -153,16 +148,10 @@ function AppContent(){
   const ended = session?.story_progress?.phase === 'ended';
   const versions = resultMode && session ? storyVersions(session) : undefined;
   const currentVersion = versions?.[Math.min(paperIndex ?? versions.length - 1, versions.length - 1)];
-  const loss = currentVersion?.transaction?.outcome === 'loss' ? currentVersion.transaction : undefined;
-  const lossInfo = loss ? `失った言葉 ${loss.stakes.join('・')}・紙に残る粉` : '';
   const decision = resultMode && session?.story_progress && ['escapable', 'extension'].includes(session.story_progress.phase)
     ? session.story_progress : undefined;
   const rewardModalOpen = !gambleMode && Boolean(ready && !resultMode && (choosingReward || !offer));
   const gambleModalOpen = !gambleMode && Boolean(ready && !resultMode && !choosingReward && stakesReady && choosingGame);
-  const tabletop = useRef<HTMLDivElement>(null);
-  useLayoutEffect(() => {
-    if (tabletop.current) tabletop.current.scrollTop = 0;
-  }, [screen, helpOpen, customOpen, historyOpen, rewardModalOpen, gambleModalOpen, gambleMode, resultMode]);
   const errorNotice = error && !customOpen && !choosingGame && <div className="alert" role="alert">{error}{screen === 'game' && session &&
     <button onClick={() => act(async () => accept(await api<Session>(`/sessions/${session.id}`)))}>状態を確認</button>}</div>;
   function returnToTitle() {
@@ -184,7 +173,7 @@ function AppContent(){
 
   return <div className="app-shell" data-screen={screen}>
     <AnomaStage portraitFocus={screen === 'title' || screen === 'opening' || Boolean(ended || decision)}>
-      <div className="table-objects" ref={tabletop}>
+      <div className="notebook-body">
       {screen === 'title' && <ScenePublisher scene="title" />}
       {screen === 'choose' && <ScenePublisher scene="storySelect" />}
       {screen === 'game' && session && !ended && (!resultMode || !reaction) &&
@@ -198,18 +187,15 @@ function AppContent(){
 
       {screen === 'game' && resultMode && !ended && !decision && reaction &&
         <StagePublisher lines={[reaction.line]} expression={reaction.expression} reaction={reaction.reaction} />}
-      {screen === 'title' && !helpOpen && <main className="title-screen">
+      {screen === 'title' && <main className="title-screen">
         <div className="title-folio">
           <h1><span>ギャンブル</span><span>ライティングメーカー</span><small>(仮称)</small></h1>
-          <p className="intro">言葉を賭けて、物語を書き換える</p>
           <div className="title-actions">
             <button className="primary" disabled={busy} onClick={() => setScreen('opening')}>はじめる <span>→</span></button>
-            <button className="secondary" onClick={() => setHelpOpen(true)}>遊び方</button>
           </div>
         </div>
       </main>}
       {screen === 'opening' && <Opening busy={busy} onComplete={() => void reroll(true)} />}
-      {helpOpen && <SceneObject kind="help" title="遊び方" onClose={() => setHelpOpen(false)}><p>報酬を選び、赤線の言葉を賭けてギャンブルへ。勝てば報酬を得て、負けると賭けた言葉の意味が消えます。</p></SceneObject>}
       {screen === 'choose' && !customOpen && <main className="choose-screen">
         <div className="choose-header">
           <h1>物語を選ぶ</h1>
@@ -220,7 +206,7 @@ function AppContent(){
         </div>
         <div className="story-list">{choices.map(story => <button key={story.id} className="story-card" disabled={busy}
           onClick={() => act(async () => accept(await api<Session>('/sessions', { story_id: story.id, request_id: requestId() })))}>
-          <div className="story-card-top"><span>{story.genre}</span><b>この物語ではじめる →</b></div>
+          <div className="story-card-top"><span>{story.genre}</span></div>
           <h2>{story.title}</h2>{story.intro && <p className="story-intro">{story.intro}</p>}<p>{story.text}</p>
         </button>)}</div>
       </main>}
@@ -249,9 +235,8 @@ function AppContent(){
               <h1 className="story-title" title={session.title}>{session.title}</h1>
             </>}
           </div>}
-          {resultMode && (loss || decision) && <div className="result-meta">
-            {loss && <span className="meta-loss" title={lossInfo}>{lossInfo}</span>}
-            {decision && <StoryCounts totals={decision.totals} />}
+          {resultMode && decision && <div className="result-meta">
+            <StoryCounts totals={decision.totals} />
           </div>}
             {gambleMode && last?.gamble ? <GamblePlay key={last.id} gamble={last.gamble} busy={busy} error={session.error} prepared={session.status === 'awaiting_reveal'}
               onMove={(attempt, choice) => act(async () => accept(await api<Session>(`/sessions/${session.id}/transactions/${last.id}/play`, { attempt, choice })))}
@@ -304,7 +289,7 @@ function AppContent(){
               setChoosingReward(false);
               action.current = undefined;
             }}>
-              <span><b>{reward.title}</b><small>{reward.description}</small></span>
+              <b>{reward.title}</b>
               <strong>{reward.required_count}<small>個</small></strong>
             </button>)}</div>
           </SceneObject>}
@@ -324,7 +309,7 @@ function AppContent(){
       </main>}
       {screen === 'game' && session && historyOpen && <SceneObject kind="history" title="物語の変遷" onClose={() => setHistoryOpen(false)}><StoryHistory session={session} pageIndex={paperIndex} onPageChange={setPaperIndex} /></SceneObject>}
       {errorNotice}
-      {screen !== 'title' && <div className="table-links">
+      {screen !== 'title' && <div className="page-links">
       <button className="scene-link title-link" aria-label="タイトルへ" disabled={busy} onClick={returnToTitle}>‹ タイトルへ</button>
       {screen === 'game' && !ended && <button className="scene-link history-link" aria-label="取引履歴" aria-expanded={historyOpen} disabled={busy}
         onClick={() => setHistoryOpen(!historyOpen)}>取引履歴</button>}

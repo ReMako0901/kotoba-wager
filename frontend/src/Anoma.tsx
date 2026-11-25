@@ -1,7 +1,6 @@
 import { createContext, useContext, useEffect, useLayoutEffect, useState, type ReactNode } from 'react';
 import type { Transaction } from './types';
 import { chooseLine, openingNarration, reactionKinds, reactionTrigger, scenario, expressionForTrigger, storyExpressions, type AnomaExpression, type ReactionKind } from './scenario';
-import './anoma.css';
 
 // Presentation memory only: no session storage or game state changes.
 let previousExpression: AnomaExpression | undefined;
@@ -104,15 +103,13 @@ export function AnomaStage({ portraitFocus = false, children }: { portraitFocus?
     return () => window.clearTimeout(timer);
   }, [lines]);
   return <div className="anoma-stage" data-expression={expression} data-reaction={reaction ?? 'normal'}>
-    <aside className="anoma-backdrop" data-focus={portraitFocus || Boolean(reaction && speaking) ? 'portrait' : 'table'} aria-label="アノマ">
-      <AnomaPortrait key={expression} expression={expression} speaking={speaking} />
-    </aside>
-    <div className="dealer-table">
-      <div className="anoma-stage-content">
-        <div className="anoma-dialogue" aria-live="polite">{lines?.map((line, index) => <p key={index}>{line}</p>)}</div>
-      </div>
-      {children}
-    </div>
+    <header className="page-margin">
+      <aside className="anoma-photo" data-focus={portraitFocus || Boolean(reaction && speaking) ? 'portrait' : 'table'} aria-label="アノマ">
+        <AnomaPortrait key={expression} expression={expression} speaking={speaking} />
+      </aside>
+      <div className="anoma-dialogue" aria-live="polite">{lines?.map((line, index) => <p key={index}>{line}</p>)}</div>
+    </header>
+    {children}
   </div>;
 }
 

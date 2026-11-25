@@ -38,7 +38,7 @@ test('the edition label follows the paper and its tab toggles the diff in place'
   const bar = () => ui.find(n => n.props.className === 'paper-tabs result-tabs');
   assert.match(meta(), /第2版/);
   assert.equal(text(ui.find(n => n.props.className === 'paper-stamp stamp-loss')), '敗北');
-  assert.match(text(ui.find(n => n.props.className === 'result-meta')), /失った言葉 猫・紙に残る粉/);
+  assert.doesNotMatch(text(ui.tree), /紙に残る粉/);
   assert.equal(ui.find(n => n.props.className === 'paper-caption'), undefined);
   assert.match(text(bar()), /どこが変わった？.*次は何をねらう？/);
   const page = paper().key;
@@ -81,18 +81,12 @@ test('gambling actions stay with the tabletop object and generation polling only
   ui.unmount();
 });
 
-test('portrait and foreground objects share one viewport without bars or modal overlays', () => {
-  const css = fs.readFileSync('frontend/src/layout.css', 'utf8');
+test('photo and dialogue occupy the page margin above the controls', () => {
+  const css = fs.readFileSync('frontend/src/notebook.css', 'utf8');
   const app = fs.readFileSync('frontend/src/App.tsx', 'utf8');
   const anoma = fs.readFileSync('frontend/src/Anoma.tsx', 'utf8');
-  assert.match(css, /height: 100dvh;[^}]*overflow: hidden/);
-  assert.match(css, /\.app-shell \{[^}]*max-width: 480px;[^}]*margin: 0 auto/);
-  assert.match(css, /\.dealer-table \{[^}]*overflow: hidden;[^}]*border-top:[^}]*border-bottom:/);
-  assert.match(css, /\.table-objects \{[^}]*overflow-y: auto/);
-  assert.match(app, /<AnomaStage[^>]*>\s*<div className="table-objects"/);
-  assert.match(anoma, /<aside className="anoma-backdrop"[^]*?<\/aside>\s*<div className="dealer-table">/);
-  assert.match(app, /!rewardModalOpen && !gambleModalOpen && <div className="game-object"/);
-  assert.match(css, /\.choose-screen \.story-list \{[^}]*overflow-y: auto/);
-  assert.match(css, /@media \(prefers-reduced-motion: reduce\)[^]*animation: none/);
-  assert.doesNotMatch(app + anoma + css, /<dialog|showModal|::backdrop|navigation-bar|action-bar|portrait-tile|createPortal/);
+  assert.match(css, /height: 100dvh/);
+  assert.match(anoma, /<header className="page-margin">[^]*anoma-photo[^]*anoma-dialogue[^]*<\/header>\s*\{children\}/);
+  assert.doesNotMatch(css, /overflow-y:\s*(auto|scroll)|blur\(/);
+  assert.doesNotMatch(app, /import '[^']*(?:layout|table-finish|anoma)\.css'/);
 });

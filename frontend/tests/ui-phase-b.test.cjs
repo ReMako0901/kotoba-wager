@@ -21,7 +21,7 @@ test('Phase B removes the specified display text and metadata', () => {
 
 test('retains required content, errors, stage, manual actions and readiness UI', () => {
   const app = source('App.tsx'), play = source('GamblePlay.tsx');
-  for (const value of ['<AnomaStage portraitFocus=', '<AnomaStageProvider>', '遊び方', 'custom-story-intro', 'custom-story-text',
+  for (const value of ['<AnomaStage portraitFocus=', '<AnomaStageProvider>', 'custom-story-intro', 'custom-story-text',
     '{customCount} / {MAX_STORY}文字', '第{round}章', 'selectedCount', '!stakesReady || busy || !games.length']) assert.ok(app.includes(value), value);
   for (const value of ['この結果を物語へ', 'spinner', 'disabled={busy || (!prepared && !error)}',
     'props.error', 'role="alert"', 'STOP', 'HIT', 'STAND', '勝利', '敗北', 'label="アノマ"', 'バンカー', 'プレイヤー']) assert.ok(play.includes(value), value);
@@ -30,7 +30,7 @@ test('retains required content, errors, stage, manual actions and readiness UI',
 });
 
 test('corner arrows share the existing direction bounds and accessible drag controls', () => {
-  const paper = source('StoryHistory.tsx'), css = source('history.css');
+  const paper = source('StoryHistory.tsx'), css = source('notebook-paper.css');
   assert.match(paper, /filter\(direction => index \+ direction >= 0 && index \+ direction < versions.length\)/);
   assert.match(paper, /className="paper-turn-arrow" aria-hidden="true">\{direction === -1 \? '↖' : '↘'\}/);
   assert.match(paper, /aria-label=\{direction === -1 \? '右下の角を左上へドラッグして前の版へ' : '左上の角を右下へドラッグして次の版へ'\}/);
