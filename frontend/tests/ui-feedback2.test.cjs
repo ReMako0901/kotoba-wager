@@ -100,7 +100,7 @@ test('game hides intro, omits reward descriptions and opens only on selection co
     ui.click('変更');
     ui.find(n => n.type === 'button' && n.props.className === 'reward-option').props.onClick(); ui.draw();
     assert.equal(gameModal(), undefined);
-    ui.click('ギャンブルを選ぶ'); assert.ok(gameModal()); ui.click('閉じる');
+    assert.equal(ui.find(n => n.type === 'button' && text(n) === 'ギャンブルを選ぶ'), undefined);
     ui.click('月'); assert.equal(gameModal(), undefined); // Too many.
     ui.click('月'); assert.ok(gameModal()); ui.click('閉じる'); // Ready again.
     ui.click('猫'); assert.equal(gameModal(), undefined);

@@ -1,0 +1,95 @@
+.page-viewport {
+  --step: 18px;
+  --ease: cubic-bezier(.2,.72,.22,1);
+  position: relative;
+  overflow: clip;
+  min-height: 0;
+  min-width: 0;
+}
+.page-viewport[data-back=true] { --step: -18px; }
+.notebook-body { height: 100%; animation: page-in 300ms var(--ease) backwards; }
+@keyframes page-in { from { opacity: 0; transform: translateX(var(--step)); } }
+@keyframes page-out { to { opacity: 0; transform: translateX(calc(-1 * var(--step))); } }
+@keyframes soft-in { from { opacity: 0; } }
+@keyframes soft-out { to { opacity: 0; } }
+@keyframes sheet-in { from { opacity: 0; transform: translateY(38%); } }
+@keyframes sheet-out { to { opacity: 0; transform: translateY(38%); } }
+@keyframes place-object { from { opacity: 0; transform: translateY(10px) scale(.97); } }
+
+.anoma-dialogue { position: relative; }
+.dialogue-lines { animation: soft-in 230ms ease-out; }
+[data-exiting] { pointer-events: none; z-index: 2; }
+.dialogue-lines[data-exiting] { animation: soft-out 200ms ease-out forwards; }
+.notebook-body[data-page=sheet] { animation-name: sheet-in; }
+.notebook-body:is([data-page=waiting],[data-page=result],[data-page=decision]) { animation-name: soft-in; }
+.notebook-body[data-exiting] { animation: page-out 210ms var(--ease) forwards; }
+.notebook-body[data-page=sheet][data-exiting] { animation-name: sheet-out; }
+.notebook-body[data-exiting] * { animation: none !important; }
+.object-history, .page-viewport[data-returning=true] .game-screen { animation: page-in 270ms var(--ease); }
+.game-screen[data-exiting], .object-history[data-exiting] { animation: page-out 200ms var(--ease) forwards; }
+.object-rewards .reward-option,
+.gambling-view :is(.rps-side,.dice-game,.card-hand,.guess-board,.slot-machine,.baccarat-stage),
+.wager-tabs { animation: place-object 300ms var(--ease) backwards; }
+.object-rewards .reward-option:nth-child(2), .gambling-view :is(.card-hand,.rps-side):nth-child(2) { animation-delay: 55ms; }
+.object-rewards .reward-option:nth-child(3), .wager-tabs { animation-delay: 95ms; }
+
+/* The transparent centre expands while the surrounding paper recedes. */
+[data-from=waiting]:is([data-page=result],[data-page=decision]) .story-paper-stack {
+  position: relative; overflow: clip;
+}
+[data-from=waiting]:is([data-page=result],[data-page=decision]) .story-paper-stack::after {
+  content: ''; position: absolute; z-index: 4; pointer-events: none;
+  inset: 0; background: radial-gradient(circle at center, transparent 0 4%, var(--paper) 4.5%);
+  opacity: 0; animation: ink-opening 430ms var(--ease);
+}
+@keyframes ink-opening {
+  from { transform: scale(1); opacity: 1; }
+  to { transform: scale(26); opacity: 1; }
+}
+.paper-stamp { animation: place-object 280ms var(--ease) 100ms backwards; }
+.skeleton-ink { width: min(70%,220px); height: 2px; overflow: hidden; background: var(--rule); }
+.skeleton-ink::after {
+  content: ''; display: block; height: 100%; width: 50%;
+  background: linear-gradient(90deg,transparent,var(--ink),transparent);
+  animation: writing-line 1.4s ease-in-out infinite;
+}
+@keyframes writing-line { from { transform: translateX(-100%); } to { transform: translateX(200%); } }
+@media (max-height: 720px) {
+  .app-shell .anoma-photo { width: 78px; }
+  .app-shell .page-margin { padding-bottom: 2px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .page-viewport :is(.notebook-body,.object-history,.game-screen,.reward-option,.rps-side,.dice-game,.card-hand,.guess-board,.slot-machine,.baccarat-stage,.wager-tabs,.paper-stamp),
+  .dialogue-lines { animation: soft-in 90ms linear backwards !important; }
+  .page-viewport [data-exiting], .dialogue-lines[data-exiting] { animation: soft-out 90ms linear forwards !important; }
+  .page-viewport .story-paper-stack::after, .skeleton-ink::after { display: none; }
+}
+
+/* Keep the shuffle's own horizontal card positions and pointer coordinates. */
+.gambling-view .guess-card > .baccarat-face, .gambling-view .playing-cards > .playing-card {
+  animation: place-object 250ms var(--ease) backwards;
+}
+.gambling-view :is(.guess-card:nth-child(2) > .baccarat-face,.playing-card:nth-child(2)) { animation-delay: 45ms; }
+.gambling-view :is(.guess-card:nth-child(3) > .baccarat-face,.playing-card:nth-child(3)) { animation-delay: 90ms; }
+@media (prefers-reduced-motion: reduce) {
+  .gambling-view :is(.guess-card > .baccarat-face,.playing-cards > .playing-card) {
+    animation: soft-in 90ms linear backwards;
+  }
+}
+
+.shedding-ink .marked-glyph { visibility: hidden; }
+.loss-fragments { position: fixed; inset: 0; z-index: 20; overflow: clip; pointer-events: none; }
+.loss-fragments > span {
+  position: absolute; color: #171412;
+  animation: loss-to-photo 720ms ease-in both;
+}
+@keyframes loss-to-photo {
+  0% { transform: none; }
+  26% { transform: translate(var(--burst-x),var(--burst-y)) scale(.82); }
+  83% { opacity: 1; }
+  100% { transform: translate(var(--flight-x),var(--flight-y)) scale(.08); opacity: 0; }
+}
+body:has(.game-screen[hidden]) .loss-fragments { visibility: hidden; }
+@media (prefers-reduced-motion: reduce) {
+  .loss-fragments > span { animation: soft-out 100ms linear both; }
+}

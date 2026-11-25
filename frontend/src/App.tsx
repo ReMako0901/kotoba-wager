@@ -2,6 +2,8 @@ import './fonts.css';
 import './notebook.css';
 import './notebook-paper.css';
 import './notebook-games.css';
+import './notebook-motion.css';
+import { retainExit } from './notebookMotion';
 import { ScenePublisher } from './ScenePublisher';
 import { gameScene } from './sceneDialogue';
 import { AnomaStageProvider, AnomaStage, StagePublisher, resultReaction, Opening } from './Anoma';
@@ -27,7 +29,7 @@ function SceneObject({ title, onClose, children, kind }: {
   title: string; onClose?: () => void; children: ReactNode; kind: string;
 }) {
   const titleId = useId();
-  return <section className={`scene-object object-${kind}`} aria-labelledby={titleId}>
+  return <section ref={kind === 'history' ? retainExit : undefined} className={`scene-object object-${kind}`} aria-labelledby={titleId}>
     <header className="object-heading">
       <h2 id={titleId}>{title}</h2>
       {onClose && <button className="icon-button" aria-label="閉じる" onClick={onClose}>×</button>}
@@ -171,9 +173,19 @@ function AppContent(){
     });
   }
 
+  const page = screen !== 'game' ? (customOpen ? 'custom' : screen)
+    : ended ? 'ending' : gambleMode ? 'board' : decision ? 'decision' : resultMode ? 'result'
+    : rewardModalOpen ? 'reward' : gambleModalOpen ? 'sheet' : processing ? 'waiting' : 'words';
+  const [turn, setTurn] = useState({ page, from: '', history: historyOpen, returning: false });
+  if (turn.page !== page || turn.history !== historyOpen) {
+    setTurn({ page, from: turn.page, history: historyOpen, returning: turn.history && !historyOpen });
+  }
+  const backward = turn.returning || page === 'title' || (page === 'choose' && turn.from === 'custom')
+    || (page === 'words' && turn.from === 'sheet') || (page === 'reward' && turn.from === 'words');
   return <div className="app-shell" data-screen={screen}>
     <AnomaStage portraitFocus={screen === 'title' || screen === 'opening' || Boolean(ended || decision)}>
-      <div className="notebook-body">
+      <div className="page-viewport" data-back={backward} data-returning={turn.returning}>
+      <div className="notebook-body" key={page} ref={retainExit} data-page={page} data-from={turn.from}>
       {screen === 'title' && <ScenePublisher scene="title" />}
       {screen === 'choose' && <ScenePublisher scene="storySelect" />}
       {screen === 'game' && session && !ended && (!resultMode || !reaction) &&
@@ -225,7 +237,7 @@ function AppContent(){
           </form>
       </SceneObject>}
       {screen === 'game' && session?.story_progress && ended && <NormalEnding progress={session.story_progress} onTitle={returnToTitle} />}
-      {screen==='game'&&session&&!ended&&<main hidden={historyOpen} key={`${session.id}-${session.version}-${session.view}`}
+      {screen==='game'&&session&&!ended&&<main ref={historyOpen ? undefined : retainExit} hidden={historyOpen} key={`${session.id}-${session.version}-${session.view}`}
         className={`game-screen${resultMode && currentVersion?.transaction ? ` result-${currentVersion.transaction.outcome}-view` : ''}${gambleMode ? ' gambling-view' : ''}`}>
         {!rewardModalOpen && !gambleModalOpen && <div className="game-object" key={gambleMode ? 'table' : 'manuscript'}>
           {decision && <StoryDecision progress={decision} busy={busy} showCounts={false} onChoice={choice => void chooseStory(choice)} />}
@@ -276,8 +288,6 @@ function AppContent(){
                 <button className="text-button" disabled={busy || !selected.length} onClick={() => {
                   setSelected([]); action.current = undefined;
                 }}>クリア</button>
-                <button className="primary" disabled={!stakesReady || busy || !games.length}
-                  onClick={() => { setError(''); setChoosingGame(true); }}>ギャンブルを選ぶ</button>
               </>}
             </div>)}
         </div>}
@@ -314,6 +324,7 @@ function AppContent(){
       {screen === 'game' && !ended && <button className="scene-link history-link" aria-label="取引履歴" aria-expanded={historyOpen} disabled={busy}
         onClick={() => setHistoryOpen(!historyOpen)}>取引履歴</button>}
       </div>}
+      </div>
       </div>
     </AnomaStage>
   </div>;
