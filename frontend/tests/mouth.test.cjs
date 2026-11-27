@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 require('./component-harness.cjs');
-const { mouthVowelFor, mouthFor } = require('../src/Anoma.tsx');
+const { mouthVowelFor, mouthFor, mouthAt, MOUTH_HOLD_CHARS } = require('../src/Anoma.tsx');
 
 test('kana map to their vowel row', () => {
   assert.equal(mouthVowelFor('あ', 0), 'a');
@@ -33,10 +33,22 @@ test('unknown characters cycle deterministically', () => {
   assert.deepEqual(seq, ['a', 'u', 'o', 'e', 'i', 'a']);
 });
 
-test('mouth frame swaps every three characters', () => {
+test('mouth frame alternates per held step', () => {
   assert.equal(mouthFor('あ', 0).frame, 1);
+  assert.equal(mouthFor('あ', 1).frame, 2);
   assert.equal(mouthFor('あ', 2).frame, 1);
-  assert.equal(mouthFor('あ', 3).frame, 2);
-  assert.equal(mouthFor('あ', 6).frame, 1);
   assert.deepEqual(mouthFor('き', 0), { vowel: 'i', frame: 1 });
+});
+
+test('mouth shape is held for MOUTH_HOLD_CHARS characters', () => {
+  const chars = Array.from('あいうえおかきくけこさしすせそ');
+  assert.equal(mouthAt(chars, 0), null);
+  const first = mouthAt(chars, 1);
+  for (let visible = 2; visible <= MOUTH_HOLD_CHARS; visible++) {
+    assert.deepEqual(mouthAt(chars, visible), first);
+  }
+  const second = mouthAt(chars, MOUTH_HOLD_CHARS + 1);
+  assert.notDeepEqual(second, first);
+  // the second block samples its first character (き -> i) with frame 2
+  assert.deepEqual(second, { vowel: 'i', frame: 2 });
 });

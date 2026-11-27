@@ -30,10 +30,19 @@ export function mouthVowelFor(char: string, index: number): MouthVowel {
   return VOWEL_ROWS[hira] ?? FALLBACK_VOWELS[Math.abs(index) % FALLBACK_VOWELS.length];
 }
 export type MouthShape = { vowel: MouthVowel; frame: 1 | 2 };
-// Swap the opening size every few typed characters, not on every character,
-// so the portrait does not shimmer at typewriter speed.
-export function mouthFor(char: string, index: number): MouthShape {
-  return { vowel: mouthVowelFor(char, index), frame: Math.floor(Math.max(0, index) / 3) % 2 === 0 ? 1 : 2 };
+export function mouthFor(char: string, step: number): MouthShape {
+  return { vowel: mouthVowelFor(char, step), frame: step % 2 === 0 ? 1 : 2 };
+}
+// Hold one mouth shape for several typed characters. Following every
+// character (35ms each) reads as frantic; ~6 characters ≈ 210ms per shape,
+// sampled from the block's first character, with the opening size
+// alternating per block.
+export const MOUTH_HOLD_CHARS = 6;
+export function mouthAt(chars: readonly string[], visible: number): MouthShape | null {
+  if (visible <= 0 || chars.length === 0) return null;
+  const step = Math.floor((visible - 1) / MOUTH_HOLD_CHARS);
+  const sample = chars[Math.min(step * MOUTH_HOLD_CHARS, chars.length - 1)];
+  return mouthFor(sample, step);
 }
 const unavailableMouthShapes = new Set<string>();
 
@@ -192,7 +201,7 @@ export function AnomaStage({ portraitFocus = false, inactive = false, children }
   const visible = useTypedLength(linesKey, length);
   const speaking = visible < length;
   const flatCharacters = characters.flat();
-  const mouth = speaking && visible > 0 ? mouthFor(flatCharacters[visible - 1], visible - 1) : null;
+  const mouth = speaking ? mouthAt(flatCharacters, visible) : null;
   let remaining = visible;
   return <div inert={inactive} className="anoma-stage" data-expression={expression} data-reaction={reaction ?? 'normal'}>
     <header className="page-margin">
@@ -228,7 +237,7 @@ export function Opening({ busy, error, onDark, onComplete }: {
   const chars = Array.from(line);
   const visible = useTypedLength(line, chars.length);
   const speaking = !revealed && visible < chars.length;
-  const mouth = speaking && visible > 0 ? mouthFor(chars[visible - 1], visible - 1) : null;
+  const mouth = speaking ? mouthAt(chars, visible) : null;
 
   useEffect(() => {
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
