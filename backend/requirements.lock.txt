@@ -24,3 +24,10 @@ typing-inspection==0.4.5
 typing_extensions==4.16.0
 uvicorn==0.54.0
 google-auth==2.63.1
+requests==2.34.2
+urllib3==2.5.0
+charset-normalizer==3.4.3
+pyasn1==0.6.1
+pyasn1-modules==0.4.2
+rsa==4.9.1
+cachetools==6.2.2
