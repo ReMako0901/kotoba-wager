@@ -37,6 +37,12 @@ export function mouthFor(char: string, step: number): MouthShape {
 // character (35ms each) reads as frantic; ~6 characters ≈ 210ms per shape,
 // sampled from the block's first character, with the opening size
 // alternating per block.
+// Crossfading into or out of the wide triangular 'a' mouth ghosts badly
+// (its silhouette is the largest and most pointed), so transitions that
+// involve 'a' cut instantly; rounder shapes may crossfade.
+export function mouthCrossfade(prevKey: string | null, vowel: MouthVowel): boolean {
+  return prevKey !== null && vowel !== 'a' && !prevKey.startsWith('a');
+}
 export const MOUTH_HOLD_CHARS = 6;
 export function mouthAt(chars: readonly string[], visible: number): MouthShape | null {
   if (visible <= 0 || chars.length === 0) return null;
@@ -130,7 +136,8 @@ export function AnomaPortrait({ expression, speaking, mouth }: { expression: Ano
     {!reducedMotion && mouth && (() => {
       const mouthKey = `${mouth.vowel}${mouth.frame}`;
       const mouthActive = Boolean(speaking && loaded && mouthReady.has(mouthKey) && !mouthFailed.has(mouthKey));
-      const prevActive = Boolean(speaking && loaded && prevMouthKey && prevMouthKey !== mouthKey && mouthReady.has(prevMouthKey) && !mouthFailed.has(prevMouthKey));
+      const fadeOk = mouthCrossfade(prevMouthKey, mouth.vowel);
+      const prevActive = fadeOk && Boolean(speaking && loaded && prevMouthKey && prevMouthKey !== mouthKey && mouthReady.has(prevMouthKey) && !mouthFailed.has(prevMouthKey));
       const onMouthError = (key: string) => () => {
         unavailableMouthShapes.add(`${expression}-${key}`);
         setMouthFailed(previous => new Set(previous).add(key));
@@ -143,7 +150,7 @@ export function AnomaPortrait({ expression, speaking, mouth }: { expression: Ano
           onError={onMouthError(prevMouthKey as string)} />}
         <img
           key={mouthKey}
-          className="anoma-portrait-mouth anoma-portrait-mouth-fade"
+          className={`anoma-portrait-mouth${fadeOk ? ' anoma-portrait-mouth-fade' : ''}`}
           data-active={mouthActive}
           src={`${import.meta.env.BASE_URL}anoma/${expression}-${mouthKey}.webp`} alt=""
           onError={onMouthError(mouthKey)} />

@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 require('./component-harness.cjs');
-const { mouthVowelFor, mouthFor, mouthAt, MOUTH_HOLD_CHARS } = require('../src/Anoma.tsx');
+const { mouthVowelFor, mouthFor, mouthAt, mouthCrossfade, MOUTH_HOLD_CHARS } = require('../src/Anoma.tsx');
 
 test('kana map to their vowel row', () => {
   assert.equal(mouthVowelFor('あ', 0), 'a');
@@ -38,6 +38,15 @@ test('mouth frame alternates per held step', () => {
   assert.equal(mouthFor('あ', 1).frame, 2);
   assert.equal(mouthFor('あ', 2).frame, 1);
   assert.deepEqual(mouthFor('き', 0), { vowel: 'i', frame: 1 });
+});
+
+test('triangular a mouth never crossfades, rounder shapes do', () => {
+  assert.equal(mouthCrossfade('o1', 'a'), false);
+  assert.equal(mouthCrossfade('a2', 'o'), false);
+  assert.equal(mouthCrossfade('a1', 'a'), false);
+  assert.equal(mouthCrossfade('o1', 'u'), true);
+  assert.equal(mouthCrossfade('i2', 'e'), true);
+  assert.equal(mouthCrossfade(null, 'o'), false);
 });
 
 test('mouth shape is held for MOUTH_HOLD_CHARS characters', () => {
