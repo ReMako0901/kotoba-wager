@@ -77,24 +77,19 @@ def test_blackjack_hit_or_stand_keeps_result_and_uses_the_same_deck(wins):
 
 
 def test_rock_paper_scissors_has_exact_per_throw_odds():
-    from collections import Counter
+    from unittest.mock import Mock
     from app.gambles import play_beginner_game
 
-    counts = Counter()
-    for value in range(100):
-        class FixedRoll:
-            def randrange(self, stop):
-                assert stop == 100
-                return value
-
-        game = make_gamble('rps', lambda _: None)
-        play_beginner_game(game, 1, FixedRoll())
-        move = game['moves'][0]
-        counts[move['outcome']] += 1
-        expected = {'win': 0, 'loss': 2, 'tie': 1}
-        assert move['opponent'] == expected[move['outcome']]
-        assert game.get('strength') == (None if move['outcome'] == 'tie' else 2)
-    assert counts == {'win': 33, 'loss': 33, 'tie': 34}
+    for choice in range(3):
+        for offset, outcome in [(1, 'loss'), (2, 'win')]:
+            opponent = (choice + offset) % 3
+            rng = Mock()
+            rng.randrange.side_effect = [choice, choice, opponent]
+            game = make_gamble('rps', lambda _: None)
+            play_beginner_game(game, choice, rng)
+            assert game['moves'] == [dict(choice=choice, opponent=opponent, outcome=outcome)]
+            assert game['outcome'] == outcome
+            assert game['strength'] == 2
 
 
 def test_card_choice_resolves_against_the_fixed_shuffle():

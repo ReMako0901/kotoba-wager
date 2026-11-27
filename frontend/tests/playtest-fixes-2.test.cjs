@@ -127,5 +127,5 @@ test('gamble tier resets to beginner after a new version and history opens durin
   ui.click('じゃんけん'); await flush(); ui.draw();
   assert.doesNotMatch(text(ui.tree), /賭けた言葉：猫/);
   assert.ok(ui.find(n => n.type === 'section' && n.props['aria-label'] === 'じゃんけん'));
-  ui.click('取引履歴'); assert.match(text(ui.tree), /物語の変遷/);
+  ui.click('勝敗記録'); assert.ok(ui.find(n => n.type === "h2" && text(n).includes("勝敗記録")));
 });

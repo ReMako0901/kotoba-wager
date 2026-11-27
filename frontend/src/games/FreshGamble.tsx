@@ -211,7 +211,7 @@ function RpsGamble({
     return () => window.clearTimeout(timer);
   }, [beat]);
   const pending = moves.length === selectedAttempt;
-  const lastMove = beat === null && !pending ? moves.at(-1) : undefined;
+  const lastMove = beat === null && !pending && gamble.outcome ? moves.at(-1) : undefined;
   const revealAttempt = lastMove ? moves.length : 0;
   useEffect(() => {
     if (!revealAttempt) return;
@@ -219,7 +219,7 @@ function RpsGamble({
     const timer = window.setTimeout(() => setRevealed(revealAttempt), 850);
     return () => { window.clearTimeout(playerTimer); window.clearTimeout(timer); };
   }, [revealAttempt]);
-  const showing = beat !== null || busy || Boolean(lastMove && (revealed < moves.length || lastMove.outcome !== 'tie'));
+  const showing = beat !== null || busy || Boolean(lastMove);
   const finished = beat === null && revealed === moves.length && (gamble.outcome === 'win' || gamble.outcome === 'loss');
 
   return (
@@ -228,7 +228,6 @@ function RpsGamble({
         {beat !== null ? <strong key={beat} className={`rps-call beat-${beat}`}>
           {['じゃん', 'けん', 'ぽん'][beat]}
         </strong> : lastMove ? <div className="rps-reveal" key={moves.length}>
-          {lastMove.outcome === 'tie' && <strong>あいこで、しょ</strong>}
           <span>アノマの札<HandGlyph hand={lastMove.opponent} />{handName(lastMove.opponent)}</span>
           {playerShown === moves.length && <span>あなたの札<HandGlyph hand={lastMove.choice} />{handName(lastMove.choice)}</span>}
         </div> : <span>{busy ? '札を開いています…' : '出す手を選ぶ'}</span>}
@@ -343,7 +342,6 @@ function ChinchiroGamble({ gamble, busy, error, prepared, onMove, onFinish }: Fr
   const previous = moves[shown - 1];
   const hand = current ?? previous;
   const rolls = hand?.side === 'anoma' ? hand.rolls : hand ? [hand.roll] : [];
-  const faces = rolls[current ? rollIndex : rolls.length - 1] ?? [1, 2, 3];
   const player = previous?.side === 'player' && current?.side !== 'anoma' ? previous : undefined;
   const tie = player?.result === 'tie';
   const waitingForAnoma = !current && !gamble.outcome && (!moves.length || tie);
@@ -354,6 +352,16 @@ function ChinchiroGamble({ gamble, busy, error, prepared, onMove, onFinish }: Fr
     const timer = window.setTimeout(() => setAnnouncedTurn(shown), 1000);
     return () => window.clearTimeout(timer);
   }, [anomaTurn, shown]);
+  const showTurn = anomaTurn && announcedTurn !== shown;
+  const [readyTurn, setReadyTurn] = useState(-1);
+  useEffect(() => {
+    if (!anomaTurn || showTurn) return;
+    const timer = window.setTimeout(() => setReadyTurn(shown), 32);
+    return () => window.clearTimeout(timer);
+  }, [anomaTurn, showTurn, shown]);
+  const waitingToRoll = anomaTurn && readyTurn !== shown;
+  const faces = waitingToRoll ? (previous?.side === 'player' ? previous.roll : [1, 2, 3])
+    : rolls[current ? rollIndex : rolls.length - 1] ?? [1, 2, 3];
   const sentAttempt = useRef<number | null>(null);
   const attempt = moves.length;
   const moveRef = useRef(onMove);
@@ -383,9 +391,9 @@ function ChinchiroGamble({ gamble, busy, error, prepared, onMove, onFinish }: Fr
       />
     )}
     <div className="chin-table">
-      {anomaTurn && <strong className="chin-turn" role="status">アノマのターンです</strong>}
+      {showTurn && <strong className="chin-turn" role="status">アノマのターンです</strong>}
       <div className="chin-bowl">
-        <div key={`${shown}-${rollIndex}`} className={`chin-roll${current && !announcing && (!anomaTurn || announcedTurn === shown) ? ' rolling' : ''}`}
+        <div key={`${shown}-${rollIndex}`} className={`chin-roll${current && !announcing && !waitingToRoll ? ' rolling' : ''}`}
           onAnimationEnd={event => {
             if (event.target === event.currentTarget ||
                 (event.target === event.currentTarget.firstElementChild && event.animationName === 'chin-bounce')) finishRoll();
@@ -654,6 +662,7 @@ function SlotGamble({
   const [reels, setReels] = useState<ReelState[]>(['ready', 'ready', 'ready']);
   const strips = useRef<(HTMLDivElement | null)[]>([]);
   const [pulling, setPulling] = useState(false);
+  const leverStartY = useRef<number | null>(null);
   const allStopped = reels.every(state => state === 'landed');
 
   useEffect(() => {
@@ -735,6 +744,18 @@ function SlotGamble({
             started ? ' is-pulled' : ''
           }`}
           disabled={started || pulling}
+          onPointerDown={event => {
+            if (!event.isPrimary || event.button !== 0) return;
+            leverStartY.current = event.clientY;
+            event.currentTarget.setPointerCapture(event.pointerId);
+          }}
+          onPointerMove={event => {
+            if (event.isPrimary && leverStartY.current !== null && event.clientY - leverStartY.current >= 20) {
+              leverStartY.current = null;
+              setPulling(true);
+            }
+          }}
+          onLostPointerCapture={event => { if (event.isPrimary) leverStartY.current = null; }}
           onClick={() => setPulling(true)}
           aria-label="レバーを引く"
         >
@@ -742,7 +763,7 @@ function SlotGamble({
             <span className="folio-lever-knob" />
           </span>
         </button>
-        <small className="slot-lever-hint" style={{ visibility: started || pulling ? 'hidden' : 'visible' }}>↓ 引いてスタート</small>
+        <small className="slot-lever-hint" style={{ visibility: started || pulling ? 'hidden' : 'visible' }}>↓ 引く／タップ</small>
       </div>
 
       {allStopped && gamble.outcome && (

@@ -1,5 +1,5 @@
 html, body, #root { height: 100%; overflow: hidden; }
-html, body { background: #100b13; }
+html, body { overscroll-behavior-y: none; background: #100b13; }
 
 .app-shell {
   --scene-gutter: 12px;

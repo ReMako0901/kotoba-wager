@@ -51,8 +51,8 @@ test('the edition label follows the paper and the latest result highlights chang
   ui.tick();
   assert.match(meta(), /第1版/);
   assert.doesNotMatch(paper().props.className, /show-changes/);
-  ui.click('取引履歴');
-  ui.click('取引履歴');
+  ui.click('勝敗記録');
+  ui.click('勝敗記録');
   ui.find(n => n.props.role === 'slider').props.onKeyDown({ key: 'Enter', preventDefault() {} });
   ui.draw();
   ui.tick();
@@ -87,6 +87,9 @@ test('gambling actions stay with the tabletop object and generation polling only
     ui.draw();
   };
   assert.match(text(table()), /アノマのターンです/);
+  assert.equal(ui.find(n => n.props.className === 'chin-roll rolling'), undefined);
+  ui.tick();
+  assert.doesNotMatch(text(table()), /アノマのターンです/);
   assert.equal(ui.find(n => n.props.className === 'chin-roll rolling'), undefined);
   ui.tick();
   land();

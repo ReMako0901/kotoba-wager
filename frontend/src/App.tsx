@@ -318,13 +318,13 @@ function AppContent(){
             {error && <p className="input-error" role="alert">{error}</p>}
           </SceneObject>}
       </main>}
-      {screen === 'game' && session && historyOpen && <SceneObject kind="history" title="物語の変遷" onClose={() => setHistoryOpen(false)}><StoryHistory session={session} pageIndex={paperIndex} onPageChange={setPaperIndex} /></SceneObject>}
+      {screen === 'game' && session && historyOpen && <SceneObject kind="history" title="勝敗記録" onClose={() => setHistoryOpen(false)}><StoryHistory session={session} pageIndex={paperIndex} onPageChange={setPaperIndex} /></SceneObject>}
       {errorNotice}
       {screen === 'game' && !ended && <div className="page-links">
         {ready && offer && !historyOpen && !resultMode && !gambleMode && !rewardModalOpen && !gambleModalOpen &&
           <button className="scene-link" disabled={busy} onClick={() => setChoosingReward(true)}>‹ 欲しいものを変更</button>}
-        <button className="scene-link history-link" aria-label="取引履歴" aria-expanded={historyOpen} disabled={busy}
-        onClick={() => setHistoryOpen(!historyOpen)}>取引履歴</button>
+        <button className="scene-link history-link" aria-label="勝敗記録" aria-expanded={historyOpen} disabled={busy}
+        onClick={() => setHistoryOpen(!historyOpen)}>勝敗記録</button>
       </div>}
       </div>
       </div>
