@@ -127,7 +127,7 @@ export function AnomaPortrait({ expression, speaking, mouth }: { expression: Ano
     <img key={expression} className={`anoma-portrait-current${loaded ? ' anoma-portrait-fade' : ''}`}
       src={source(expression)} alt="" onLoad={() => setLoaded(true)} onError={() => setFailed(true)}
       onAnimationEnd={() => { setPrevious(undefined); setSettled(true); }} />
-    {!reducedMotion && !talkFailed && <img
+    {!reducedMotion && !talkFailed && mouthReady.size === 0 && <img
       className={`anoma-portrait-talk${speaking ? ' anoma-portrait-speaking' : ''}`}
       data-ready={talkLoaded && loaded}
       src={`${import.meta.env.BASE_URL}anoma/${expression}-talk.webp`} alt=""
@@ -144,9 +144,10 @@ export function AnomaPortrait({ expression, speaking, mouth }: { expression: Ano
       };
       return <>
         {prevActive && <img
-          className="anoma-portrait-mouth"
+          className="anoma-portrait-mouth anoma-portrait-mouth-prev"
           data-active={true}
           src={`${import.meta.env.BASE_URL}anoma/${expression}-${prevMouthKey}.webp`} alt=""
+          onAnimationEnd={() => setPrevMouthKey(null)}
           onError={onMouthError(prevMouthKey as string)} />}
         <img
           key={mouthKey}
