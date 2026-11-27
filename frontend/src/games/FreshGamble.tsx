@@ -200,56 +200,26 @@ function RpsGamble({
   onFinish,
 }: FreshGambleProps) {
   const moves = (gamble.moves ?? []) as HandMove[];
-  const lastMove = moves.length > 0 ? moves[moves.length - 1] : undefined;
-  const finished = gamble.outcome === 'win' || gamble.outcome === 'loss';
+  const [beat, setBeat] = useState<number | null>(null);
+  useEffect(() => {
+    if (beat === null) return;
+    const timer = window.setTimeout(() => setBeat(beat < 2 ? beat + 1 : null),
+      prefersReducedMotion() ? 140 : 380);
+    return () => window.clearTimeout(timer);
+  }, [beat]);
+  const lastMove = beat === null ? moves.at(-1) : undefined;
+  const finished = beat === null && (gamble.outcome === 'win' || gamble.outcome === 'loss');
 
   return (
     <div className="folio-rps">
-      <div className="folio-rps-top">
-        <div className="folio-opponent-tag" aria-live="polite">
-          <span className="folio-note-caption">アノマの札</span>
-          {lastMove ? (
-            <div className="folio-opponent-hand" key={moves.length}>
-              <HandGlyph hand={lastMove.opponent} />
-              <strong>{handName(lastMove.opponent)}</strong>
-            </div>
-          ) : (
-            <div className="folio-opponent-hand is-waiting">
-              <span className="folio-mystery-mark">？</span>
-              <span>伏せ札</span>
-            </div>
-          )}
-        </div>
-
-        <aside className="folio-margin-tally" aria-label="手合わせの記録">
-          <span className="folio-note-caption">余白の記録</span>
-          {moves.length === 0 ? (
-            <p className="folio-scribble">札を一枚抜き出して勝負する</p>
-          ) : (
-            <ul className="folio-tally-list">
-              {moves.map((m, idx) => (
-                <li key={idx}>
-                  <span>{idx + 1}手目:</span>
-                  <span>
-                    {handName(m.choice)} × {handName(m.opponent)}
-                  </span>
-                  <b>
-                    {m.outcome === 'tie'
-                      ? 'あいこ'
-                      : m.outcome === 'win'
-                        ? '勝'
-                        : '敗'}
-                  </b>
-                </li>
-              ))}
-            </ul>
-          )}
-          {lastMove?.outcome === 'tie' && !finished && (
-            <p className="folio-tie-prompt" role="status">
-              あいこ — 続けて次の手を選ぶ
-            </p>
-          )}
-        </aside>
+      <div className="rps-showdown" aria-live="polite">
+        {beat !== null ? <strong key={beat} className={`rps-call beat-${beat}`}>
+          {['じゃん', 'けん', 'ぽん'][beat]}
+        </strong> : lastMove && (!busy || finished) ? <div className="rps-reveal" key={moves.length}>
+          <span>あなたの札<HandGlyph hand={lastMove.choice} />{handName(lastMove.choice)}</span>
+          <strong>{lastMove.outcome === 'tie' ? 'あいこで、しょ' : lastMove.outcome === 'win' ? '勝利' : '敗北'}</strong>
+          <span>アノマの札<HandGlyph hand={lastMove.opponent} />{handName(lastMove.opponent)}</span>
+        </div> : <span>{busy ? '札を開いています…' : '出す手を選ぶ'}</span>}
       </div>
 
       <div className="folio-rps-ring" role="group" aria-label="出す手を選ぶ">
@@ -283,9 +253,9 @@ function RpsGamble({
                 type="button"
                 className={`folio-rps-slip${isChosen ? ' is-chosen' : ''}`}
                 style={{ '--slip-angle': item.angle } as React.CSSProperties}
-                disabled={busy || finished}
+                disabled={busy || finished || beat !== null}
                 aria-label={`${item.name}を出す`}
-                onClick={() => onMove(moves.length, item.id)}
+                onClick={() => { setBeat(0); onMove(moves.length, item.id); }}
               >
                 <span className="folio-slip-pin" aria-hidden="true" />
                 <span className="folio-slip-motif">{item.motif}</span>
@@ -334,7 +304,7 @@ function ChinchiroDie({ value }: { value: number }) {
   return <div className="chin-view" role="img" aria-label={`サイコロの目 ${value}`}>
     <div className="chin-spin"><div className="chin-cube" style={{ transform: rest }}>
       {FACE_ANGLES.map((angle, i) => <div className="chin-face" key={i} aria-hidden="true"
-        style={{ transform: `rotate${FACE_AXES[i]}(${angle}deg) translateZ(17px)` }}>
+        style={{ transform: `rotate${FACE_AXES[i]}(${angle}deg) translateZ(var(--chin-half))` }}>
         {Array.from({ length: 9 }, (_, cell) => <i key={cell} className={DICE_PIPS[i + 1].includes(cell) ? 'pip' : ''} />)}
       </div>)}
     </div></div>
@@ -342,7 +312,7 @@ function ChinchiroDie({ value }: { value: number }) {
 }
 
 function chinchiroHandName(hand: ChinchiroMove) {
-  return { pinzoro: 'ピンゾロ', zorome: 'ゾロ目', shigoro: 'シゴロ', normal: `${hand.point}の役`,
+  return { pinzoro: 'ピンゾロ', zorome: 'ゾロ目', shigoro: 'シゴロ', normal: `${hand.point}の目`,
     hifumi: 'ヒフミ', menashi: '目なし' }[hand.yaku];
 }
 
@@ -388,7 +358,8 @@ function ChinchiroGamble({ gamble, busy, error, prepared, onMove, onFinish }: Fr
       <div className="chin-bowl">
         <div key={`${shown}-${rollIndex}`} className={`chin-roll${current ? ' rolling' : ''}`}
           onAnimationEnd={event => {
-            if (event.target === event.currentTarget) finishRoll();
+            if (event.target === event.currentTarget ||
+                (event.target === event.currentTarget.firstElementChild && event.animationName === 'chin-bounce')) finishRoll();
           }}>
           {faces.map((value, i) => <ChinchiroDie key={i} value={value} />)}
         </div>
@@ -468,6 +439,8 @@ function CardGuessGamble({
     }
   }, [resultMove, gamble.outcome, phase]);
 
+  const swapInterval = (idx: number) => 570 - 320 * idx / Math.max(1, swaps.length - 1);
+
   // シャッフル演出の再生
   const startShuffle = () => {
     if (phase !== 'reveal') return;
@@ -476,7 +449,7 @@ function CardGuessGamble({
 
     const reduced = prefersReducedMotion();
     const flipDelay = reduced ? 120 : 380;
-    const stepDuration = reduced ? 110 : 360;
+    let nextSwap = flipDelay;
 
     const current = [0, 1, 2];
     const timers: number[] = [];
@@ -498,13 +471,14 @@ function CardGuessGamble({
           setSlots([...current]);
           setActiveSwapStep(idx + 1);
         }
-      }, flipDelay + idx * stepDuration);
+      }, nextSwap);
+      nextSwap += reduced ? 110 : swapInterval(idx);
       timers.push(t);
     });
 
     const endTimer = window.setTimeout(() => {
       setPhase('choose');
-    }, flipDelay + swaps.length * stepDuration + (reduced ? 90 : 280));
+    }, nextSwap + (reduced ? 90 : 280));
     timers.push(endTimer);
   };
 
@@ -588,7 +562,7 @@ function CardGuessGamble({
                 className={`folio-guess-card-slot pos-${pos}${
                   canSelect ? ' is-selectable' : ''
                 }${isChosenPos ? ' is-chosen' : ''}`}
-                style={{ '--slot-pos': pos } as React.CSSProperties}
+                style={{ '--slot-pos': pos, '--swap-time': `${swapInterval(Math.max(0, activeSwapStep - 1)) * .88}ms` } as React.CSSProperties}
                 disabled={!canSelect}
                 aria-label={`${POS_LABELS[pos]}を選ぶ`}
                 onClick={() => {

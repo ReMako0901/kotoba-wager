@@ -102,6 +102,8 @@ def test_card_choice_resolves_against_the_fixed_shuffle():
 
     game = make_gamble('card_guess', lambda _: None, Random(1))
     assert game['outcome'] is None and len(game['swaps']) == 8
+    assert game['cards'][game['target']] == {'rank': 'A', 'suit': '♠'}
+    assert len({(c['rank'], c['suit']) for c in game['cards']}) == 3
     outcomes = []
     for choice in range(3):
         plan = {**game, 'moves': []}
