@@ -27,7 +27,6 @@ export function StoryDecision({ progress, busy, onChoice, showCounts = true }: {
 }
 export function NormalEnding({ progress, onTitle }: { progress: StoryProgress; onTitle: () => void }) {
   return <main className="ending-screen">
-    <h1>ノーマルエンディング</h1>
     <StoryCounts totals={progress.totals} />
     <StagePublisher lines={normalEnding(progress.totals.difference)} expression={expressionForEnding(progress.totals.difference, JSON.stringify(progress.totals))} />
     <button className="primary" onClick={onTitle}>タイトルへ戻る</button>

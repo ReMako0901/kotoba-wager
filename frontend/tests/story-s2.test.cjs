@@ -70,7 +70,8 @@ test('App handles reaching the goal and escaping for all games', async () => {
     ui.click('脱出する'); await flush(); ui.draw();
     assert.equal(choices[0].choice, 'escape');
     assert.equal(choices[0].version, 6);
-    assert.ok(text(ui.tree).includes('ノーマルエンディング'));
+    assert.equal(text(ui.tree).includes('ノーマルエンディング'), false);
+    assert.ok(text(ui.tree).includes('タイトルへ戻る'));
     ui.click('タイトルへ戻る');
     assert.ok(!text(ui.tree).includes('つづきから'));
   }

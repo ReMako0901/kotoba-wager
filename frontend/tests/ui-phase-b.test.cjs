@@ -23,9 +23,10 @@ test('retains required content, errors, stage, manual actions and readiness UI',
   const app = source('App.tsx'), play = source('games/FreshGamble.tsx');
   for (const value of ['<AnomaStage portraitFocus=', '<AnomaStageProvider>', 'custom-story-intro', 'custom-story-text',
     '{customCount} / {MAX_STORY}文字', '第{round}章', 'selectedCount', 'stakesReady && !wasStakesReady.current && selectable']) assert.ok(app.includes(value), value);
-  for (const value of ['この結果を物語へ', 'spinner', 'prepared || Boolean(error)',
+  for (const value of ['この結果を物語へ', 'prepared || Boolean(error)',
     'disabled={!canPress}', 'error={error}', 'role="alert"', '止める', 'HIT', 'STAND', '勝利', '敗北', 'アノマ（親）', 'バンカー', 'プレイヤー']) assert.ok(play.includes(value), value);
   assert.ok(play.includes('アノマの札'));
+  assert.ok(!play.includes('spinner'));
   assert.ok(source('GenerationSkeleton.tsx').includes('generation-skeleton'));
 });
 

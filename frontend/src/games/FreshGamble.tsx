@@ -34,8 +34,40 @@ function prefersReducedMotion(): boolean {
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
+type Outcome = 'win' | 'loss' | 'tie';
+
+const OUTCOME_LABELS: Record<Outcome, string> = {
+  win: '勝利',
+  loss: '敗北',
+  tie: '引き分け',
+};
+
+function OutcomeBanner({
+  outcome,
+  label,
+  transient = false,
+  bannerKey,
+}: {
+  outcome: Outcome;
+  label?: string;
+  transient?: boolean;
+  bannerKey?: string | number;
+}) {
+  return (
+    <div
+      key={bannerKey}
+      className={`folio-outcome-banner is-${outcome}${
+        transient ? ' is-transient' : ''
+      }`}
+      aria-live="polite"
+    >
+      <span>{label ?? OUTCOME_LABELS[outcome]}</span>
+    </div>
+  );
+}
+
 interface OutcomeSlipProps {
-  outcome: 'win' | 'loss' | 'tie';
+  outcome: Outcome;
   prepared: boolean;
   busy: boolean;
   error?: string;
@@ -51,68 +83,67 @@ function OutcomeSlip({
   onFinish,
   onNextRound,
 }: OutcomeSlipProps) {
-  const heading =
-    outcome === 'win' ? '勝利' : outcome === 'loss' ? '敗北' : '引き分け';
+  const heading = OUTCOME_LABELS[outcome];
+  const banner = <OutcomeBanner outcome={outcome} label={heading} />;
 
   if (outcome === 'tie' && onNextRound) {
     return (
-      <footer className="folio-outcome-slip is-tie" aria-live="polite">
-        <div className="folio-wax-seal is-tie">
-          <span className="folio-seal-ring">{heading}</span>
-        </div>
-        <div className="folio-slip-body">
-          <button
-            type="button"
-            className="folio-story-turn"
-            onClick={onNextRound}
-          >
-            同じことばでもう一度
-          </button>
-        </div>
-      </footer>
+      <>
+        {banner}
+        <footer className="folio-outcome-slip is-tie" aria-live="polite">
+          <div className="folio-slip-body">
+            <button
+              type="button"
+              className="folio-story-turn"
+              onClick={onNextRound}
+            >
+              同じことばでもう一度
+            </button>
+          </div>
+        </footer>
+      </>
     );
   }
 
   const canPress = !busy && (prepared || Boolean(error));
 
   return (
-    <footer
-      className={`folio-outcome-slip is-${outcome}`}
-      aria-live="polite"
-    >
-      <div className={`folio-wax-seal is-${outcome}`}>
-        <span className="folio-seal-ring">{heading}</span>
-      </div>
-      <div className="folio-slip-body">
-        {!prepared && !error && (
-          <div
-            className="generation-skeleton"
-            role="status"
-            aria-label="物語を書き換え中"
-            aria-busy="true"
-          >
-            <span className="spinner" aria-hidden="true" />
-            <div className="skeleton-ink" aria-hidden="true" />
-          </div>
-        )}
-        {error && (
-          <p className="folio-slip-error" role="alert">
-            {error}
-          </p>
-        )}
-        <button
-          type="button"
-          className="folio-story-turn primary"
-          disabled={!canPress}
-          onClick={onFinish}
-        >
+    <>
+      {banner}
+      <footer
+        className={`folio-outcome-slip is-${outcome}`}
+        aria-live="polite"
+      >
+        <div className="folio-slip-body">
           {!prepared && !error && (
-            <span className="spinner" aria-hidden="true" />
+            <div
+              className="generation-skeleton folio-generation-wait"
+              role="status"
+              aria-label="物語を書き換え中"
+              aria-busy="true"
+            >
+              <div className="skeleton-ink" aria-hidden="true" />
+              <span className="folio-generation-label">
+                物語を書き換えています
+              </span>
+            </div>
           )}
-          <span>この結果を物語へ →</span>
-        </button>
-      </div>
-    </footer>
+          {error && (
+            <p className="folio-slip-error" role="alert">
+              {error}
+            </p>
+          )}
+          <button
+            type="button"
+            className="folio-story-turn primary"
+            disabled={!canPress}
+            onClick={onFinish}
+          >
+            <span>この結果を物語へ →</span>
+          </button>
+        </div>
+      </footer>
+    </>
   );
 }
 
@@ -204,7 +235,7 @@ function RpsGamble({
   useEffect(() => {
     if (beat === null) return;
     const timer = window.setTimeout(() => setBeat(beat < 2 ? beat + 1 : null),
-      prefersReducedMotion() ? 140 : 380);
+      prefersReducedMotion() ? 140 : 530);
     return () => window.clearTimeout(timer);
   }, [beat]);
   const lastMove = beat === null ? moves.at(-1) : undefined;
@@ -217,7 +248,7 @@ function RpsGamble({
           {['じゃん', 'けん', 'ぽん'][beat]}
         </strong> : lastMove && (!busy || finished) ? <div className="rps-reveal" key={moves.length}>
           <span>あなたの札<HandGlyph hand={lastMove.choice} />{handName(lastMove.choice)}</span>
-          <strong>{lastMove.outcome === 'tie' ? 'あいこで、しょ' : lastMove.outcome === 'win' ? '勝利' : '敗北'}</strong>
+          {lastMove.outcome === 'tie' && <strong>あいこで、しょ</strong>}
           <span>アノマの札<HandGlyph hand={lastMove.opponent} />{handName(lastMove.opponent)}</span>
         </div> : <span>{busy ? '札を開いています…' : '出す手を選ぶ'}</span>}
       </div>
@@ -353,6 +384,14 @@ function ChinchiroGamble({ gamble, busy, error, prepared, onMove, onFinish }: Fr
   }
 
   return <div className="chin-board">
+    {tie && !current && (
+      <OutcomeBanner
+        outcome="tie"
+        label="同点"
+        transient
+        bannerKey={`tie-${shown}`}
+      />
+    )}
     <div className="chin-table">
       {anomaTurn && <strong className="chin-turn" role="status">アノマのターンです</strong>}
       <div className="chin-bowl">
@@ -439,7 +478,7 @@ function CardGuessGamble({
     }
   }, [resultMove, gamble.outcome, phase]);
 
-  const swapInterval = (idx: number) => 570 - 320 * idx / Math.max(1, swaps.length - 1);
+  const swapInterval = (idx: number) => 790 - 440 * idx / Math.max(1, swaps.length - 1);
 
   // シャッフル演出の再生
   const startShuffle = () => {
@@ -448,7 +487,7 @@ function CardGuessGamble({
     setActiveSwapStep(0);
 
     const reduced = prefersReducedMotion();
-    const flipDelay = reduced ? 120 : 380;
+    const flipDelay = reduced ? 120 : 520;
     let nextSwap = flipDelay;
 
     const current = [0, 1, 2];
@@ -478,7 +517,7 @@ function CardGuessGamble({
 
     const endTimer = window.setTimeout(() => {
       setPhase('choose');
-    }, nextSwap + (reduced ? 90 : 280));
+    }, nextSwap + (reduced ? 90 : 390));
     timers.push(endTimer);
   };
 
@@ -674,14 +713,13 @@ function SlotGamble({
     ];
     changeReel(index, 'braking');
     const brake = strip.animate(frames, {
-      duration: reduced ? 90 : 640, easing: 'cubic-bezier(.15,.65,.35,1)', fill: 'forwards',
+      duration: reduced ? 90 : 900, easing: 'cubic-bezier(.15,.65,.35,1)', fill: 'forwards',
     });
     brake.onfinish = () => changeReel(index, 'landed');
   }
 
   return (
     <div className="folio-slot">
-      <span className="folio-note-caption">真鍮の三連覗き窓</span>
       <div className="folio-slot-mechanica">
         <div className="folio-slot-windows" role="group" aria-label="スロットリール">
           {reels.map((state, idx) => {
@@ -709,7 +747,7 @@ function SlotGamble({
           {reels.map((state, idx) => (
             <button type="button" className="folio-reel-latch" key={idx}
               disabled={!started || state !== 'ready'} onClick={() => stopReel(idx)}
-              aria-label={`第${idx + 1}リールを止める`}>止める</button>
+              aria-label={`第${idx + 1}リールを止める`} />
           ))}
         </div>
 
@@ -725,9 +763,6 @@ function SlotGamble({
         >
           <span className="folio-lever-shaft" aria-hidden="true">
             <span className="folio-lever-knob" />
-          </span>
-          <span className="folio-lever-label">
-            引く
           </span>
         </button>
       </div>
@@ -784,7 +819,7 @@ function BlackjackGamble({
       : isFinished && !dealerSettled ? () => setDealerSettled(true)
       : undefined;
     if (!advance) return;
-    const timer = window.setTimeout(advance, prefersReducedMotion() ? 90 : 350);
+    const timer = window.setTimeout(advance, prefersReducedMotion() ? 90 : 480);
     return () => window.clearTimeout(timer);
   }, [dealt, hits, settledHits, isFinished, dealerOpen, dealerHandForStep.length, dealerSettled]);
 
