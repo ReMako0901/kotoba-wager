@@ -60,6 +60,8 @@ class Rewrite(BaseModel):
 
 
 class CreateSession(BaseModel):
+    title: str | None = Field(default=None, max_length=500)
+    generated_story_id: str | None = Field(default=None, pattern=r"^[a-f0-9]{32}$")
     story_id: str | None = None
     intro: str = ""
     custom_text: str | None = Field(default=None, min_length=20, max_length=100)

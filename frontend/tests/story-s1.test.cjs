@@ -78,6 +78,12 @@ test('new start opens before drawing stories; results publish reactions for all 
   ui.click('はじめる'); assert.ok(!text(ui.tree).includes(scenario.opening[0]));
   assert.equal(requests.some(url => url.endsWith('/stories/draw')), false);
   ui.click('スキップ'); await flush(); ui.draw();
+  assert.ok(text(ui.tree).includes('まず、あなたのことを教えてくれる？'));
+  ui.find(n => n.type === 'textarea').props.onChange({ target: { value: 'ソラ' } });
+  ui.draw(); ui.click('答える');
+  assert.ok(!text(ui.tree).includes('もう少しだけ、教えてくれる？'));
+  assert.equal(requests.some(url => url.endsWith('/stories/draw')), false);
+  ui.click('プリセットの文で始める'); await flush(); ui.draw();
   assert.ok(text(ui.tree).includes('物語を選ぶ'));
   assert.equal(requests.filter(url => url.endsWith('/stories/draw')).length, 1);
   for (const kind of ['rps', 'card_guess', 'chinchiro', 'slot', 'blackjack', 'baccarat']) {

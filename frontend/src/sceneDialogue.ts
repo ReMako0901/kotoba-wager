@@ -47,3 +47,14 @@ export function gameScene(state: GameSceneState): SceneKey {
   if (state.processing) return 'generating';
   return state.selectedCount === 0 ? 'wordSelect0' : state.stakesReady ? 'wordSelectReady' : 'wordSelectPartial';
 }
+
+export const interviewDialogue = {
+  intro: 'まず、あなたのことを教えてくれる？',
+  caution: '内緒のことや重い話は、ここではお休みにしよう。',
+  name: '物語では、あなたを何と呼べばいい？',
+  questions: ['今日はどんなことがあったの？', 'どこから、どうやって来たの？', '今はどんな気分？',
+    'どんなものが好き？', '今日は何を食べたの？', '最近、気になっていることはある？', 'どこへ行ってみたい？'],
+  more: 'もう少しだけ、教えてくれる？',
+  contact: '連絡先を除いて答えてください。',
+  note: '住所・学校・連絡先など個人が分かることや、重い話題は避けてください。',
+};

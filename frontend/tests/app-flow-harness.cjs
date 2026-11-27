@@ -9,6 +9,7 @@ async function startStory(ui) {
   global.crypto = require('node:crypto').webcrypto;
   ui.click('はじめる');
   ui.click('スキップ');
+  await flush(); ui.draw(); ui.click('プリセットの文で始める');
   await flush();
   ui.draw();
   ui.click(initialStory.title);

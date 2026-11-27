@@ -142,3 +142,8 @@ button:focus-visible, [tabindex]:focus-visible, textarea:focus-visible { outline
   .app-shell[data-screen=game] .anoma-dialogue { font-size: 13px; line-height: 1.42; }
   .story-list { margin-top: 5px; }
 }
+
+.story-interview { display: flex; flex-direction: column; gap: .55rem; padding: 1rem; overflow: auto; height: 100%; box-sizing: border-box; }
+.story-interview textarea { font: inherit; width: 100%; box-sizing: border-box; }
+.story-interview small { line-height: 1.4; }
+.interview-preset { align-self: flex-end; margin-top: auto; font-size: .8rem; }
