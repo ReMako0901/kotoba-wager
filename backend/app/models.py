@@ -61,7 +61,7 @@ class Rewrite(BaseModel):
 
 
 class CreateSession(BaseModel):
-    mark_ids: list[str] | None = Field(default=None, max_length=1)
+    mark_ids: list[str] | None = Field(default=None, min_length=1, max_length=1)
     title: str | None = Field(default=None, max_length=500)
     generated_story_id: str | None = Field(default=None, pattern=r"^[a-f0-9]{32}$")
     story_id: str | None = None
@@ -76,6 +76,8 @@ class CreateSession(BaseModel):
 
     @model_validator(mode='after')
     def one_story_source(self):
+        if self.generated_story_id and self.mark_ids is None:
+            raise ValueError("開始前に言葉を1つ選んで印をつけてください。")
         if bool(self.story_id) == bool(self.custom_text):
             raise ValueError('物語を選ぶか、本文を入力してください。')
         if self.story_id and self.intro:

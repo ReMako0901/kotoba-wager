@@ -1,3 +1,4 @@
+import { StagePublisher } from './Anoma';
 import { WagerManuscript } from './Manuscript';
 import type { Unit } from './types';
 
@@ -11,8 +12,7 @@ export function StoryMarks({ text, units, marks, onChange, busy }: {
   }
   return <section className="story-marks" aria-labelledby="story-marks-heading">
     <h3 id="story-marks-heading">印をつける</h3>
-    <p>アノマ「{markLine}」</p>
-    <small aria-live="polite">失いたくない言葉に印をつける（{marks.length} / 1）</small>
+    <StagePublisher expression="normal" lines={[markLine]} />
     <WagerManuscript text={text} units={units} selected={marks} markIds={marks} disabled={busy} onToggle={toggle} />
   </section>;
 }

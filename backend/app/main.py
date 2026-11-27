@@ -112,7 +112,7 @@ def mark_preview(request: MarkPreview):
 
 
 class MarkSelection(BaseModel):
-    unit_ids: list[str] = Field(max_length=1)
+    unit_ids: list[str] = Field(min_length=1, max_length=1)
 
 
 @app.post("/api/sessions/{sid}/marks")
@@ -121,7 +121,7 @@ async def confirm_marks(sid: str, request: MarkSelection):
         session = load(sid)
         if session.get("initial_mark_ids") == request.unit_ids:
             return public(session)
-        if "initial_mark_ids" in session or session["version"] != 1 or session["transactions"]:
+        if session.get("initial_mark_ids") or session["version"] != 1 or session["transactions"]:
             raise HTTPException(409, "この原稿の印は確定済みです。")
         save_marks(session, request.unit_ids)
         store.save(session)
@@ -209,6 +209,8 @@ async def trade(sid:str,request:TradeRequest):
         session=load_progress(sid)
         update_progress(session)
         try:
+            if not session["transactions"] and len(session.get("initial_mark_ids", [])) != 1:
+                raise ValueError("開始前に言葉を1つ選んで印をつけてください。")
             generate=engine.settle_draw(session,request)
         except ValueError as error:
             raise HTTPException(409,str(error)) from None
