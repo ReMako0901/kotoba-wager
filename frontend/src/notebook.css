@@ -179,3 +179,28 @@ button:focus-visible, [tabindex]:focus-visible, textarea:focus-visible { outline
 @media (prefers-reduced-motion: reduce) {
   .ending-screen, .ending-screen > * { animation-duration: 80ms; animation-delay: 0ms; }
 }
+
+/* The notebook body starts below the portrait and dialogue row. */
+.title-words {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  perspective: 450px;
+  pointer-events: none;
+  user-select: none;
+  z-index: 0;
+  color: #f4dca6;
+  font-family: var(--serif);
+}
+.title-words + .title-folio { position: relative; z-index: 1; }
+.title-words span { position: absolute; white-space: nowrap; }
+.title-words i {
+  display: block;
+  font-style: normal;
+  animation: title-word-float 12s ease-in-out infinite alternate;
+  animation-delay: inherit;
+}
+@keyframes title-word-float { to { transform: translateY(-5px); } }
+@media (prefers-reduced-motion: reduce) {
+  .title-words i { animation: none; }
+}
