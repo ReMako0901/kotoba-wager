@@ -76,3 +76,5 @@
   .opening-screen[data-phase=waiting] .opening-portrait { animation: soft-in 120ms linear; }
   .app-shell .opening-portrait .anoma-portrait { animation: none; }
 }
+.opening-advance { position: absolute; inset: 0; width: 100%; border: 0; background: transparent; }
+.opening-narration { pointer-events: none; }

@@ -126,6 +126,6 @@ test('gamble tier resets to beginner after a new version and history opens durin
   response = { ...response, version: 5, status: 'playing', transactions: [{ ...tx, status: 'playing', presentation_completed: false, gamble: { kind: 'rps', moves: [] } }] };
   ui.click('じゃんけん'); await flush(); ui.draw();
   assert.doesNotMatch(text(ui.tree), /賭けた言葉：猫/);
-  assert.match(text(ui.tree), /じゃんけん/);
+  assert.ok(ui.find(n => n.type === 'section' && n.props['aria-label'] === 'じゃんけん'));
   ui.click('取引履歴'); assert.match(text(ui.tree), /物語の変遷/);
 });

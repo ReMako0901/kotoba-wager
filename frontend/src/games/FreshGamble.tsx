@@ -10,10 +10,9 @@ import type {
 import type { FreshGambleProps } from './contract';
 import {
   FolioCardView,
-  calcBaccaratPoint,
+  BaccaratFace,
   calcBaccaratTotal,
   calcBlackjackTotal,
-  cardAssetUrl,
   cardLabel,
   isRedSuit,
   slotAssetUrl,
@@ -231,23 +230,31 @@ function RpsGamble({
   onFinish,
 }: FreshGambleProps) {
   const moves = (gamble.moves ?? []) as HandMove[];
+  const [selection, setSelection] = useState<{ attempt: number; hand: number } | null>(null);
+  const [revealed, setRevealed] = useState(0);
   const [beat, setBeat] = useState<number | null>(null);
   useEffect(() => {
     if (beat === null) return;
     const timer = window.setTimeout(() => setBeat(beat < 2 ? beat + 1 : null),
-      prefersReducedMotion() ? 140 : 530);
+      prefersReducedMotion() ? 140 : 690);
     return () => window.clearTimeout(timer);
   }, [beat]);
-  const lastMove = beat === null ? moves.at(-1) : undefined;
-  const finished = beat === null && (gamble.outcome === 'win' || gamble.outcome === 'loss');
+  const pending = selection && moves.length === selection.attempt;
+  const lastMove = beat === null && !pending ? moves.at(-1) : undefined;
+  useEffect(() => {
+    if (!lastMove) return;
+    const timer = window.setTimeout(() => setRevealed(moves.length), 850);
+    return () => window.clearTimeout(timer);
+  }, [lastMove, moves.length]);
+  const showing = beat !== null || busy || Boolean(lastMove && (revealed < moves.length || lastMove.outcome !== 'tie'));
+  const finished = beat === null && revealed === moves.length && (gamble.outcome === 'win' || gamble.outcome === 'loss');
 
   return (
     <div className="folio-rps">
       <div className="rps-showdown" aria-live="polite">
         {beat !== null ? <strong key={beat} className={`rps-call beat-${beat}`}>
           {['じゃん', 'けん', 'ぽん'][beat]}
-        </strong> : lastMove && (!busy || finished) ? <div className="rps-reveal" key={moves.length}>
-          <span>あなたの札<HandGlyph hand={lastMove.choice} />{handName(lastMove.choice)}</span>
+        </strong> : lastMove ? <div className="rps-reveal" key={moves.length}>
           {lastMove.outcome === 'tie' && <strong>あいこで、しょ</strong>}
           <span>アノマの札<HandGlyph hand={lastMove.opponent} />{handName(lastMove.opponent)}</span>
         </div> : <span>{busy ? '札を開いています…' : '出す手を選ぶ'}</span>}
@@ -277,19 +284,20 @@ function RpsGamble({
 
         <div className="folio-rps-fan">
           {RPS_HANDS.map((item) => {
-            const isChosen = lastMove?.choice === item.id;
+            const chosen = selection?.hand ?? lastMove?.choice;
+            const isChosen = chosen === item.id;
             return (
               <button
                 key={item.id}
                 type="button"
-                className={`folio-rps-slip${isChosen ? ' is-chosen' : ''}`}
+                className={`folio-rps-slip${isChosen ? ' is-chosen' : showing && chosen !== undefined ? ' is-hidden' : ''}`}
                 style={{ '--slip-angle': item.angle } as React.CSSProperties}
-                disabled={busy || finished || beat !== null}
+                disabled={busy || finished || showing}
                 aria-label={`${item.name}を出す`}
-                onClick={() => { setBeat(0); onMove(moves.length, item.id); }}
+                onClick={() => { setSelection({ attempt: moves.length, hand: item.id }); setBeat(0); onMove(moves.length, item.id); }}
               >
                 <span className="folio-slip-pin" aria-hidden="true" />
-                <span className="folio-slip-motif">{item.motif}</span>
+                <span className="folio-slip-motif">{isChosen && lastMove ? 'あなたの札' : item.motif}</span>
                 <HandGlyph hand={item.id} />
                 <strong className="folio-slip-name">{item.name}</strong>
               </button>
@@ -351,6 +359,16 @@ function ChinchiroGamble({ gamble, busy, error, prepared, onMove, onFinish }: Fr
   const moves = (gamble.moves ?? []) as ChinchiroMove[];
   const [shown, setShown] = useState(() => Math.max(0, moves.length - 1));
   const [rollIndex, setRollIndex] = useState(0);
+  const [announcing, setAnnouncing] = useState(false);
+  useEffect(() => {
+    if (!announcing) return;
+    const timer = window.setTimeout(() => {
+      setAnnouncing(false);
+      setRollIndex(0);
+      setShown(index => index + 1);
+    }, 1100);
+    return () => window.clearTimeout(timer);
+  }, [announcing]);
   const current = moves[shown];
   const previous = moves[shown - 1];
   const hand = current ?? previous;
@@ -371,19 +389,17 @@ function ChinchiroGamble({ gamble, busy, error, prepared, onMove, onFinish }: Fr
     const timer = window.setTimeout(() => {
       sentAttempt.current = attempt;
       moveRef.current(attempt);
-    }, 750);
+    }, 975);
     return () => window.clearTimeout(timer);
   }, [waitingForAnoma, busy, attempt]);
   function finishRoll() {
-    if (!current) return;
+    if (!current || announcing) return;
     if (rollIndex + 1 < rolls.length) setRollIndex(rollIndex + 1);
-    else {
-      setRollIndex(0);
-      setShown(shown + 1);
-    }
+    else setAnnouncing(true);
   }
 
   return <div className="chin-board">
+    {announcing && current && <div className="folio-hand-call" role="status">{chinchiroHandName(current)}</div>}
     {tie && !current && (
       <OutcomeBanner
         outcome="tie"
@@ -395,7 +411,7 @@ function ChinchiroGamble({ gamble, busy, error, prepared, onMove, onFinish }: Fr
     <div className="chin-table">
       {anomaTurn && <strong className="chin-turn" role="status">アノマのターンです</strong>}
       <div className="chin-bowl">
-        <div key={`${shown}-${rollIndex}`} className={`chin-roll${current ? ' rolling' : ''}`}
+        <div key={`${shown}-${rollIndex}`} className={`chin-roll${current && !announcing ? ' rolling' : ''}`}
           onAnimationEnd={event => {
             if (event.target === event.currentTarget ||
                 (event.target === event.currentTarget.firstElementChild && event.animationName === 'chin-bounce')) finishRoll();
@@ -478,7 +494,7 @@ function CardGuessGamble({
     }
   }, [resultMove, gamble.outcome, phase]);
 
-  const swapInterval = (idx: number) => 790 - 440 * idx / Math.max(1, swaps.length - 1);
+  const swapInterval = (idx: number) => 1027 - 572 * idx / Math.max(1, swaps.length - 1);
 
   // シャッフル演出の再生
   const startShuffle = () => {
@@ -487,7 +503,7 @@ function CardGuessGamble({
     setActiveSwapStep(0);
 
     const reduced = prefersReducedMotion();
-    const flipDelay = reduced ? 120 : 520;
+    const flipDelay = reduced ? 120 : 676;
     let nextSwap = flipDelay;
 
     const current = [0, 1, 2];
@@ -517,7 +533,7 @@ function CardGuessGamble({
 
     const endTimer = window.setTimeout(() => {
       setPhase('choose');
-    }, nextSwap + (reduced ? 90 : 390));
+    }, nextSwap + (reduced ? 90 : 507));
     timers.push(endTimer);
   };
 
@@ -684,7 +700,7 @@ function SlotGamble({
     const timer = window.setTimeout(() => {
       setStarted(true);
       setPulling(false);
-    }, prefersReducedMotion() ? 60 : 220);
+    }, prefersReducedMotion() ? 60 : 286);
     return () => window.clearTimeout(timer);
   }, [pulling]);
 
@@ -713,7 +729,7 @@ function SlotGamble({
     ];
     changeReel(index, 'braking');
     const brake = strip.animate(frames, {
-      duration: reduced ? 90 : 900, easing: 'cubic-bezier(.15,.65,.35,1)', fill: 'forwards',
+      duration: reduced ? 90 : 1170, easing: 'cubic-bezier(.15,.65,.35,1)', fill: 'forwards',
     });
     brake.onfinish = () => changeReel(index, 'landed');
   }
@@ -802,6 +818,7 @@ function BlackjackGamble({
   const [settledHits, setSettledHits] = useState(0);
   const [dealerOpen, setDealerOpen] = useState(1);
   const [dealerSettled, setDealerSettled] = useState(false);
+  const [announced, setAnnounced] = useState({ player: false, dealer: false });
   const visiblePlayerCards = playerAll.slice(0, Math.ceil(Math.min(dealt, 4) / 2) + hits);
   const playerTotal = calcBlackjackTotal(visiblePlayerCards);
   const ready = dealt === 5 && settledHits === hits;
@@ -811,17 +828,20 @@ function BlackjackGamble({
   const dealerCount = Math.max(Math.floor(Math.min(dealt, 4) / 2), isFinished ? dealerOpen : 0);
   const dealerVisibleTotal = calcBlackjackTotal(dealerHandForStep.slice(0, Math.min(dealerOpen, dealerCount)));
 
+  const natural = ready && !announced.player && hits === 0 && playerTotal === 21 ? 'player'
+    : dealerOpen === 2 && !announced.dealer && dealerVisibleTotal === 21 ? 'dealer' : null;
   useEffect(() => {
     // The fifth beat lets the fourth opening card land before enabling actions.
-    const advance = dealt < 5 ? () => setDealt(dealt + 1)
+    const advance = natural ? () => setAnnounced(previous => ({ ...previous, [natural]: true }))
+      : dealt < 5 ? () => setDealt(dealt + 1)
       : settledHits < hits ? () => setSettledHits(hits)
       : isFinished && dealerOpen < dealerHandForStep.length ? () => setDealerOpen(dealerOpen + 1)
       : isFinished && !dealerSettled ? () => setDealerSettled(true)
       : undefined;
     if (!advance) return;
-    const timer = window.setTimeout(advance, prefersReducedMotion() ? 90 : 480);
+    const timer = window.setTimeout(advance, natural ? 1100 : prefersReducedMotion() ? 90 : 624);
     return () => window.clearTimeout(timer);
-  }, [dealt, hits, settledHits, isFinished, dealerOpen, dealerHandForStep.length, dealerSettled]);
+  }, [natural, dealt, hits, settledHits, isFinished, dealerOpen, dealerHandForStep.length, dealerSettled]);
 
   const finalOutcome =
     gamble.outcome ??
@@ -831,6 +851,7 @@ function BlackjackGamble({
 
   return (
     <div className="folio-bj">
+      {natural && <div className="folio-hand-call" role="status"><small>{natural === 'player' ? 'あなた' : 'アノマ'}</small>ブラックジャック！</div>}
       {/* 左上：アノマ（ディーラー）の手札と余白の合計メモ */}
       <section className="folio-bj-dealer" aria-label="アノマの手札">
         <div className="folio-hand-header">
@@ -1081,7 +1102,7 @@ function BaccaratGamble({
   function peel(value: number) {
     if (!activeItem) return;
     if (value >= 75) openSingleCard(activeItem.key);
-    else setPeelProgress(Math.max(0, Math.round(value)));
+    else setPeelProgress(Math.max(0, value));
   }
 
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -1093,6 +1114,7 @@ function BaccaratGamble({
     };
     const nearest = (Object.keys(distances) as PeelEdge[])
       .reduce((a, b) => distances[a] < distances[b] ? a : b);
+    if (!peelProgress && distances[nearest] > Math.min(rect.width, rect.height) * .25) return;
     const from = peelProgress > 0 ? edge : nearest;
     setEdge(from);
     e.currentTarget.setPointerCapture(e.pointerId);
@@ -1110,7 +1132,10 @@ function BaccaratGamble({
   };
 
   const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (dragStartRef.current?.id === e.pointerId) dragStartRef.current = null;
+    if (dragStartRef.current?.id === e.pointerId) {
+      dragStartRef.current = null;
+      setPeelProgress(0);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
@@ -1150,12 +1175,8 @@ function BaccaratGamble({
         <section className="folio-baccarat-side" aria-label="プレイヤーの手札">
           <div className="folio-side-header">
             <span className="folio-note-caption">あなた (PLAYER)</span>
-            <span className="folio-ink-total" aria-live="polite">
-              下1桁:{' '}
-              <strong>
-                {openedPlayerCards.length > 0 ? playerTotal : '―'}
-              </strong>
-            </span>
+            {openedPlayerCards.length === playerCards.length &&
+              <span className="folio-ink-total" aria-live="polite">下1桁: <strong>{playerTotal}</strong></span>}
           </div>
           <div className="folio-baccarat-row">
             {playerCards.slice(0, dealtPlayerCount).map((card, idx) => {
@@ -1176,12 +1197,13 @@ function BaccaratGamble({
                     setPeelProgress(0);
                   }}
                   aria-label={`プレイヤー${idx + 1}枚目の札${
-                    isOpened ? ` (${cardLabel(card)})` : 'を絞る'
+                    isOpened ? ` (${card.suit})` : 'を絞る'
                   }`}
                 >
                   <FolioCardView
                     card={card}
                     faceUp={isOpened}
+                    suitOnly
                     highlighted={isSelected}
                     badge={idx === 2 ? '3枚目' : undefined}
                   />
@@ -1195,12 +1217,8 @@ function BaccaratGamble({
         <section className="folio-baccarat-side" aria-label="バンカーの手札">
           <div className="folio-side-header">
             <span className="folio-note-caption">アノマ (BANKER)</span>
-            <span className="folio-ink-total" aria-live="polite">
-              下1桁:{' '}
-              <strong>
-                {openedBankerCards.length > 0 ? bankerTotal : '―'}
-              </strong>
-            </span>
+            {openedBankerCards.length === bankerCards.length &&
+              <span className="folio-ink-total" aria-live="polite">下1桁: <strong>{bankerTotal}</strong></span>}
           </div>
           <div className="folio-baccarat-row">
             {bankerCards.slice(0, dealtBankerCount).map((card, idx) => {
@@ -1221,12 +1239,13 @@ function BaccaratGamble({
                     setPeelProgress(0);
                   }}
                   aria-label={`バンカー${idx + 1}枚目の札${
-                    isOpened ? ` (${cardLabel(card)})` : 'を絞る'
+                    isOpened ? ` (${card.suit})` : 'を絞る'
                   }`}
                 >
                   <FolioCardView
                     card={card}
                     faceUp={isOpened}
+                    suitOnly
                     highlighted={isSelected}
                     badge={idx === 2 ? '3枚目' : undefined}
                   />
@@ -1259,13 +1278,14 @@ function BaccaratGamble({
           <div className="folio-squeeze-workarea">
             <div
               className="folio-squeeze-card"
+              key={activeItem.key}
               data-edge={edge}
               tabIndex={0}
               role="slider"
               aria-label={`${activeItem.label}を絞ってめくる`}
               aria-valuemin={0}
               aria-valuemax={75}
-              aria-valuenow={peelProgress}
+              aria-valuenow={Math.round(peelProgress)}
               onPointerDown={handlePointerDown}
               onPointerMove={handlePointerMove}
               onPointerUp={handlePointerUp}
@@ -1274,25 +1294,12 @@ function BaccaratGamble({
               style={
                 {
                   '--peel-pct': `${peelProgress}%`,
-                  '--peel-opacity': 1 - peelProgress / 100,
                 } as React.CSSProperties
               }
             >
               {/* 下から覗く絵札 */}
               <div className="folio-squeeze-underlay">
-                <img
-                  src={cardAssetUrl(activeItem.card)}
-                  alt={cardLabel(activeItem.card)}
-                  draggable={false}
-                />
-                <span
-                  className={`folio-squeeze-peek${
-                    isRedSuit(activeItem.card.suit) ? ' is-red' : ''
-                  }`}
-                >
-                  {activeItem.card.suit}
-                  {activeItem.card.rank} · 点{calcBaccaratPoint(activeItem.card)}
-                </span>
+                <BaccaratFace card={activeItem.card} />
               </div>
 
               {/* 上にかぶさっている裏紙（めくり進行度に応じて端から折れ上がる） */}
@@ -1333,11 +1340,6 @@ export function FreshGamble(props: FreshGambleProps) {
       className={`folio-gamble kind-${gamble.kind}`}
       aria-label={kindTitle}
     >
-      {/* ページの端に差し込まれた縦書きの栞タグ（上部を圧迫しない種目名表示） */}
-      <header className="folio-ear-tag">
-        <span className="folio-ear-title">{kindTitle}</span>
-      </header>
-
       <div className="folio-gamble-canvas">
         {gamble.kind === 'rps' && <RpsGamble {...props} />}
         {gamble.kind === 'chinchiro' && <ChinchiroGamble {...props} />}

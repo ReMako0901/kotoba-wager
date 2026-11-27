@@ -202,7 +202,7 @@ function AppContent(){
         <StagePublisher lines={[reaction.line]} expression={reaction.expression} reaction={reaction.reaction} />}
       {screen === 'title' && <main className="title-screen">
         <div className="title-folio">
-          <h1><span>ギャンブル</span><span>ライティングメーカー</span><small>(仮称)</small></h1>
+          <h1><span>アノマと</span><span>言葉の遊戯場</span></h1>
           <div className="title-actions">
             <button className="primary" disabled={busy} onClick={() => setStarting(true)}>はじめる <span>→</span></button>
           </div>

@@ -28,13 +28,13 @@ test('名前から始まり、異なる2問を聞き、各問の深掘りは1回
   for (const value of ['風', '海']) {
     questions.push(label());
     answer(value);
-    assert.equal(label(), interviewDialogue.more);
+    assert.equal(label(), interviewDialogue.questions.find(q => q.question === questions.at(-1)).followup);
     answer('少し');
   }
   await pending;
   assert.equal(questions[0], interviewDialogue.name);
   assert.equal(new Set(questions).size, 3);
-  assert.ok(questions.slice(1).every(q => interviewDialogue.questions.includes(q)));
+  assert.ok(questions.slice(1).every(q => interviewDialogue.questions.some(item => item.question === q)));
   const [[generate, payload], [start, session]] = requests;
   assert.equal(generate, '/api/stories/generate');
   assert.equal(payload.name, 'ソラ');

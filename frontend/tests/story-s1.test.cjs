@@ -45,11 +45,12 @@ test('opening separates narration, arrival, tapped dialogue and docking', () => 
   const ui = mount(Opening, props);
   assert.equal(ui.tree.props['data-phase'], 'blackout');
   for (let i = 0; i < openingNarration.length; i++) {
-    ui.tick();
+    if (i === 0) ui.tick();
+    else ui.click('地の文を送る');
     assert.deepEqual(ui.all(n => n.type === 'p').map(text), openingNarration.slice(0, i + 1));
     assert.ok(!text(ui.tree).includes(scenario.opening[0]));
   }
-  ui.tick();
+  ui.click('地の文を送る');
   assert.equal(ui.tree.props['data-phase'], 'arrival');
   assert.ok(!text(ui.tree).includes(openingNarration[0]));
   ui.tick();
