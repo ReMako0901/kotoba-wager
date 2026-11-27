@@ -21,7 +21,7 @@ function gameApi(response) {
   return requests;
 }
 
-test('the edition label follows the paper and its tab toggles the diff in place', async () => {
+test('the edition label follows the paper and the latest result highlights changes immediately', async () => {
   const result = {
     ...session, view: 'result', version: 2, text: '犬が来た。',
     transactions: [{
@@ -32,6 +32,8 @@ test('the edition label follows the paper and its tab toggles the diff in place'
   };
   gameApi(() => result);
   const ui = mount(App, {}, true);
+  const flags = new Map();
+  window.localStorage = { getItem: key => flags.get(key), setItem: (key, value) => flags.set(key, value) };
   await startStory(ui);
   const meta = () => text(ui.find(n => n.props.className === 'game-heading'));
   const paper = () => ui.find(n => n.type === 'article');
@@ -40,19 +42,28 @@ test('the edition label follows the paper and its tab toggles the diff in place'
   assert.equal(text(ui.find(n => n.props.className === 'paper-stamp stamp-loss')), '敗北');
   assert.doesNotMatch(text(ui.tree), /紙に残る粉/);
   assert.equal(ui.find(n => n.props.className === 'paper-caption'), undefined);
-  assert.match(text(bar()), /どこが変わった？.*次は何をねらう？/);
-  const page = paper().key;
-  ui.click('どこが変わった？');
-  assert.equal(paper().key, page);
+  assert.match(text(bar()), /次は何をねらう？/);
+  assert.doesNotMatch(text(bar()), /どこが変わった？/);
   assert.match(paper().props.className, /show-changes/);
-  ui.click('どこが変わった？');
-  assert.equal(paper().key, page);
-  assert.doesNotMatch(paper().props.className, /show-changes/);
+  assert.match(text(paper()), /右下をめくると、変更が見れる/);
   ui.find(n => n.props.role === 'slider').props.onKeyDown({ key: 'Enter', preventDefault() {} });
   ui.draw();
   ui.tick();
   assert.match(meta(), /第1版/);
+  assert.doesNotMatch(paper().props.className, /show-changes/);
+  ui.click('取引履歴');
+  ui.click('取引履歴');
+  ui.find(n => n.props.role === 'slider').props.onKeyDown({ key: 'Enter', preventDefault() {} });
+  ui.draw();
+  ui.tick();
+  assert.match(meta(), /第2版/);
+  assert.doesNotMatch(text(paper()), /右下をめくると/);
   ui.unmount();
+  const again = mount(App, {});
+  window.localStorage = { getItem: key => flags.get(key) };
+  await startStory(again);
+  assert.doesNotMatch(text(again.tree), /右下をめくると/);
+  again.unmount();
 });
 
 test('gambling actions stay with the tabletop object and generation polling only reads the active session', async () => {
@@ -105,7 +116,16 @@ test('each roll waits for landing and the upper face has the server pip count', 
   const calls = [];
   const props = { gamble: { kind: 'chinchiro', moves }, onMove: n => calls.push(n) };
   const ui = mount(FreshGamble, props);
-  ui.click('アノマが振る');
+  ui.draw({ ...props, busy: true });
+  ui.tick();
+  assert.deepEqual(calls, []);
+  ui.draw(props);
+  ui.draw({ ...props, onMove: n => calls.push(n) });
+  ui.tick();
+  ui.draw({ ...props, busy: true });
+  ui.draw(props);
+  ui.tick();
+  assert.deepEqual(calls, [0]);
   moves.push({ side: 'anoma', rolls: [[1, 3, 5], [6, 2, 4], [2, 2, 1]], yaku: 'normal', point: 1 });
   ui.draw();
 
@@ -130,7 +150,7 @@ test('each roll waits for landing and the upper face has the server pip count', 
   function land(expected) {
     verifyFaces(expected);
     const roll = ui.find(n => n.props.className === 'chin-roll rolling');
-    assert.ok(ui.find(n => n.type === 'button').props.disabled);
+    assert.ok(!ui.find(n => n.type === 'button' && !n.props.disabled));
     roll.props.onAnimationEnd({ target: roll, currentTarget: roll });
     ui.draw();
   }
@@ -145,7 +165,9 @@ test('each roll waits for landing and the upper face has the server pip count', 
   moves.push({ side: 'player', roll: [3, 1, 3], yaku: 'normal', point: 1, attempt: 2, result: 'tie' });
   ui.draw();
   land([3, 1, 3]);
-  ui.click('もう一勝負');
+  assert.match(text(ui.tree), /同点/);
+  assert.equal(text(ui.find(n => n.props.role === 'status')), 'アノマのターンです');
+  ui.tick();
   assert.deepEqual(calls, [0, 1, 2, 3]);
   ui.unmount();
 });

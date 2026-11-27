@@ -17,7 +17,7 @@ export function PaperLayers({ count, children }: { count: number; children: Reac
   </div>;
 }
 
-export function StoryPaperStack({ session, result = false, pageIndex, onPageChange, highlight = false }: { session: Session; result?: boolean; pageIndex?: number; onPageChange?: (index: number) => void; highlight?: boolean }) {
+export function StoryPaperStack({ session, result = false, pageIndex, onPageChange, highlight = result }: { session: Session; result?: boolean; pageIndex?: number; onPageChange?: (index: number) => void; highlight?: boolean }) {
   const versions = storyVersions(session);
   const [localIndex, setLocalIndex] = useState(versions.length - 1);
   const index = Math.min(pageIndex ?? localIndex, versions.length - 1);
@@ -55,6 +55,18 @@ export function StoryPaperStack({ session, result = false, pageIndex, onPageChan
   }
   const current = versions[index];
   const latest = index === versions.length - 1;
+  const [showHint, setShowHint] = useState(() => {
+    if (!result || !latest || index === 0) return false;
+    try { return !window.localStorage?.getItem('storyPaperTurnHintSeen'); }
+    catch { return true; }
+  });
+  useEffect(() => {
+    if (showHint) {
+      try { window.localStorage?.setItem('storyPaperTurnHintSeen', '1'); }
+      catch { /* Storage can be unavailable in private browsing. */ }
+    }
+  }, [showHint]);
+  useEffect(() => { if (!latest) setShowHint(false); }, [latest]);
   const transaction = current.transaction;
   const preview = drag ? versions[index + drag.direction] : undefined;
   const movingStyle = drag && !reduced ? {
@@ -100,6 +112,7 @@ export function StoryPaperStack({ session, result = false, pageIndex, onPageChan
             ? <LossManuscript transaction={transaction} highlight={highlight} text={current.text} />
             : <Manuscript text={current.text} before={latest ? transaction?.before : undefined} />}
         </div>
+        {showHint && latest && <small className="paper-turn-hint">右下をめくると、変更が見れる</small>}
       </article>
     </PaperLayers>
   </section>;

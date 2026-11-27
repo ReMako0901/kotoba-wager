@@ -545,8 +545,12 @@
   letter-spacing: 0.05em;
 }
 
+.gambling-view:has(.chin-board):not([hidden]) { flex: 1; display: grid; align-content: center; }
+.kind-chinchiro .folio-gamble-canvas { justify-content: center; }
 .chin-board { display: grid; gap: 8px; align-content: center; width: 100%; }
 .chin-table, .chin-actions { display: flex; align-items: center; justify-content: center; gap: 12px; }
+.chin-table { position: relative; }
+.chin-turn { position: absolute; left: 50%; bottom: calc(50% + 36px); transform: translateX(-50%); white-space: nowrap; z-index: 1; padding: 2px 8px; background: #f8efd9; }
 .chin-bowl {
   width: clamp(142px, 25vh, 190px); aspect-ratio: 1; flex: none;
   display: grid; place-items: center; overflow: hidden; border-radius: 50%;
@@ -556,17 +560,17 @@
 }
 .chin-notes, .chin-slip { display: grid; gap: 3px; }
 .chin-slip { padding: 5px 8px; background: #f8efd9; border: 1px solid #ab9876; transform: rotate(2deg); }
-.chin-roll { display: flex; gap: 11px; }
+.chin-roll { display: flex; gap: 6px; }
 .chin-view { transform: rotateX(-16deg) rotateY(15deg); }
 .chin-view:nth-child(2) { translate: 0 14px; }
 .chin-view:nth-child(3) { translate: 0 -5px; }
-.chin-view, .chin-spin, .chin-cube { width: 24px; height: 24px; transform-style: preserve-3d; }
+.chin-view, .chin-spin, .chin-cube { width: 34px; height: 34px; transform-style: preserve-3d; }
 .chin-face {
   position: absolute; inset: 0; display: grid; grid-template: repeat(3,1fr) / repeat(3,1fr);
   padding: 3px; gap: 1px; box-sizing: border-box; backface-visibility: hidden;
   background: #fff8e4; border: 1px solid #756858; border-radius: 4px;
 }
-.chin-face .pip { background: #48392d; border-radius: 50%; }
+.chin-face .pip { background: #291e17; border-radius: 50%; }
 .chin-face:first-child .pip { background: #994039; }
 .chin-roll.rolling { animation: chin-bounce 1.3s ease-out; }
 .chin-roll.rolling .chin-spin { animation: chin-tumble 1.3s ease-out; }

@@ -44,7 +44,6 @@ function AppContent(){
   const [screen,setScreen]=useState<'title'|'opening'|'choose'|'game'>('title');
   const [session,setSession]=useState<Session>();
   const [paperIndex,setPaperIndex]=useState<number>();
-  const [highlight,setHighlight]=useState(false);
   const transactions = session?.transactions;
   const [customOpen, setCustomOpen] = useState(false);
   const [customText, setCustomText] = useState('');
@@ -59,6 +58,7 @@ function AppContent(){
   const [choosingGame, setChoosingGame] = useState(false);
   const [choosingReward,setChoosingReward]=useState(false),[historyOpen,setHistoryOpen]=useState(false);
   const [busy,setBusy]=useState(false),[error,setError]=useState('');
+  const [boardRecovery, setBoardRecovery] = useState(0);
   const inFlight=useRef(false),action=useRef<{id: string; game: GameKind} | undefined>(undefined);
   useEffect(() => {api<{games: GameOption[]}>('/games').then(data => setGames(data.games)).catch(() => setError('ゲームの一覧を取得できません。再読み込みしてください。'))}, []);
   function accept(s:Session){if(s.betting_mode!=='count-v1')throw new Error('個数方式へ更新中です。少し待ってからページを再読み込みしてください。');setSession(s);setScreen('game')}
@@ -66,7 +66,6 @@ function AppContent(){
     setSelected([]);
     setGameTier('beginner');
     setPaperIndex(undefined);
-    setHighlight(false);
     setChoosingGame(false);
     setOfferId('');
     setChoosingReward(true);
@@ -151,7 +150,14 @@ function AppContent(){
   const rewardModalOpen = !gambleMode && Boolean(ready && !resultMode && (choosingReward || !offer));
   const gambleModalOpen = !gambleMode && Boolean(ready && !resultMode && !choosingReward && stakesReady && choosingGame);
   const errorNotice = error && !customOpen && !choosingGame && <div className="alert" role="alert">{error}{screen === 'game' && session &&
-    <button onClick={() => act(async () => accept(await api<Session>(`/sessions/${session.id}`)))}>状態を確認</button>}</div>;
+    <button onClick={() => act(async () => {
+      const refreshed = await api<Session>(`/sessions/${session.id}`);
+      accept(refreshed);
+      // An explicit state check can retry a failed automatic hand if it never reached the server.
+      const checked = refreshed.transactions.at(-1);
+      if (last?.gamble?.kind === 'chinchiro' && checked?.id === last.id &&
+          checked.gamble?.moves?.length === last.gamble.moves?.length) setBoardRecovery(n => n + 1);
+    })}>状態を確認</button>}</div>;
   function returnToTitle() {
     setSession(undefined);
     setScreen('title');
@@ -240,17 +246,17 @@ function AppContent(){
           {!gambleMode && <div className="game-heading">
             {currentVersion ? <span className="edition-badge" aria-live="polite">第{currentVersion.version}版</span> : <>
               <div className="chapter-line"><span>第{round}章</span></div>
-              <h1 className="story-title" title={session.title}>{session.title}</h1>
+              <h1 className="story-title" title={session.title}>{session.title}{offer && ` ＞ ${offer.title}`}</h1>
             </>}
           </div>}
           {resultMode && decision && <div className="result-meta">
             <StoryCounts totals={decision.totals} />
           </div>}
-            {gambleMode && last?.gamble ? <FreshGamble key={last.id} gamble={last.gamble} busy={busy} error={session.error} prepared={session.status === 'awaiting_reveal'}
+            {gambleMode && last?.gamble ? <FreshGamble key={last.gamble.kind === 'chinchiro' ? `${last.id}-${boardRecovery}` : last.id} gamble={last.gamble} busy={busy} error={session.error} prepared={session.status === 'awaiting_reveal'}
               onMove={(attempt, choice) => act(async () => accept(await api<Session>(`/sessions/${session.id}/transactions/${last.id}/play`, { attempt, choice })))}
               onFinish={() => act(async () => accept(await api<Session>(`/sessions/${session.id}/transactions/${last.id}/finish`, {})))} />
             : resultMode ?
-              <StoryPaperStack session={session} result pageIndex={paperIndex} onPageChange={setPaperIndex} highlight={highlight} />
+              <StoryPaperStack session={session} result pageIndex={paperIndex} onPageChange={setPaperIndex} />
             : <>
               <section className={`story-board wager-paper-stack${processing ? ' is-processing' : ''}`} aria-label="賭ける言葉を選ぶ">
                 {processing ? <GenerationSkeleton /> : <PaperLayers count={round}>{session.analysis ?
@@ -262,10 +268,6 @@ function AppContent(){
               {session.status === 'error' && <div className="api-error" role="alert"><p>{session.error}</p></div>}
             </>}
           {!gambleMode && (resultMode ? <div className="paper-tabs result-tabs">
-              <button className="text-button" aria-pressed={highlight} onClick={() => {
-                if (!highlight && versions) setPaperIndex(versions.length - 1);
-                setHighlight(!highlight);
-              }}>どこが変わった？</button>
               {session.story_progress?.phase !== 'escapable' &&
                 <button className="primary" disabled={busy} onClick={() => act(async () => {
                   accept(await api<Session>(`/sessions/${session.id}/continue`, {}));
@@ -274,16 +276,11 @@ function AppContent(){
                   setChoosingReward(true);
                 })}>次は何をねらう？ <span>→</span></button>}
             </div> : <div className="paper-tabs wager-tabs" aria-label="取引の確定">
-              <button className="secondary reward-change" disabled={!ready || busy}
-                title={offer ? `${offer.title}・${offer.required_count}個 変更` : undefined}
-                onClick={() => { setChoosingGame(false); setChoosingReward(true); }}>
-                {offer ? <><span>{offer.title}</span>{`・${offer.required_count}個 変更`}</> : '願いを伝える'}
-              </button>
               {offer && <>
-                <output className={`stake-count${stakesReady ? ' stakes-ready' : ''}`} aria-label="選んだ個数">{selectedCount} / {offer.required_count}</output>
                 <button className="text-button" disabled={busy || !selected.length} onClick={() => {
                   setSelected([]); action.current = undefined;
                 }}>クリア</button>
+                <output className={`stake-count${stakesReady ? ' stakes-ready' : ''}`} aria-label="選んだ個数">{selectedCount} / {offer.required_count}</output>
               </>}
             </div>)}
         </div>}
@@ -296,7 +293,7 @@ function AppContent(){
               action.current = undefined;
             }}>
               <b>{reward.title}</b>
-              <small>ことば {reward.required_count}個</small>
+              <small><span className="stake-caption">かけるもの</span>ことば {reward.required_count}個</small>
             </button>)}</div>
           </SceneObject>}
         {gambleModalOpen &&
@@ -316,6 +313,8 @@ function AppContent(){
       {screen === 'game' && session && historyOpen && <SceneObject kind="history" title="物語の変遷" onClose={() => setHistoryOpen(false)}><StoryHistory session={session} pageIndex={paperIndex} onPageChange={setPaperIndex} /></SceneObject>}
       {errorNotice}
       {screen === 'game' && !ended && <div className="page-links">
+        {ready && offer && !historyOpen && !resultMode && !gambleMode && !rewardModalOpen && !gambleModalOpen &&
+          <button className="scene-link" disabled={busy} onClick={() => setChoosingReward(true)}>‹ 欲しいものを変更</button>}
         <button className="scene-link history-link" aria-label="取引履歴" aria-expanded={historyOpen} disabled={busy}
         onClick={() => setHistoryOpen(!historyOpen)}>取引履歴</button>
       </div>}
