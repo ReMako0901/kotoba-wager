@@ -8,7 +8,7 @@
   --serif: 'Kotoba Serif', 'Yu Mincho', serif;
   --body-serif: 'Yu Mincho', 'Hiragino Mincho ProN', serif;
   --shadow: 1px 3px 6px #44301f30;
-  --leather: repeating-linear-gradient(103deg,#fff1 0 .5px,transparent .5px 4px), linear-gradient(110deg,#573727,#714b36 50%,#543626);
+  --leather: repeating-linear-gradient(103deg,#fff1 0 .5px,transparent .5px 4px), linear-gradient(110deg,#6d4c36,#84644c 50%,#66452f);
   color: var(--ink); background: #342b27; font-family: var(--body-serif);
 }
 * { box-sizing: border-box; }
@@ -94,8 +94,8 @@ button:focus-visible, [tabindex]:focus-visible, textarea:focus-visible { outline
 .primary:disabled { background: #e6ddcb; border-color: var(--rule); }
 .app-shell[data-screen=title] .anoma-stage { background: var(--leather); color: #f6e4c8; }
 .app-shell[data-screen=title] .anoma-stage::after { width: 12px; height: 100%; right: 6px; top: 0; clip-path: none; background: repeating-linear-gradient(0deg,#30231f 0 2px,#40312a 2px 3px); box-shadow: -2px 1px 4px #281a1680; }
-.title-folio { padding: 22px 18px 44px; }
-.title-folio h1 { font-size: clamp(25px,6.6vw,40px); line-height: 1.65; color: #e5ccb0; text-shadow: 0 -1px 1px #301a10,0 1px #916b4e; }
+.title-folio { padding: 22px 18px 44px; text-align: center; }
+.title-folio h1 { font-size: clamp(25px,6.6vw,40px); line-height: 1.65; color: #eed7ba; text-shadow: 0 -1px 1px #3a2313,0 1px #a97f5f; }
 .title-folio h1 span,.title-folio h1 small { display: block; }
 .title-folio small { font-size: 14px; letter-spacing: .16em; }
 .title-actions { display: flex; justify-content: center; margin-top: 32px; }
