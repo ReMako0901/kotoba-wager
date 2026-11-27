@@ -441,7 +441,7 @@
 .rps-call { font-size: 26px; animation: rps-pop 300ms ease-out both; }
 .rps-call.beat-1 { font-size: 32px; }
 .rps-call.beat-2 { font-size: 38px; }
-.rps-reveal { display: flex; align-items: center; gap: 12px; animation: rps-pop 250ms ease-out; }
+.rps-reveal { display: flex; flex-direction: column; align-items: center; gap: 4px; animation: rps-pop 250ms ease-out; }
 .rps-reveal span { display: grid; justify-items: center; font-size: 12px; }
 .rps-reveal strong { font-size: clamp(23px, 7vw, 32px); }
 @keyframes rps-pop { from { opacity: .3; transform: scale(.75); } }
@@ -810,6 +810,7 @@
 
 /* 右脇の真鍮レバー */
 .folio-slot-lever {
+  touch-action: none;
   grid-column: 2;
   grid-row: 1;
   display: flex;
@@ -1294,8 +1295,19 @@
 .slot-lever-hint { grid-row: 2; grid-column: 2; font-size: 10px; text-align: center; }
 
 .rps-reveal span {
-  min-width: 4.8em;
-  padding: 5px;
-  border: 1px solid var(--rule);
-  background: var(--paper);
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 6px;
+  width: min(220px, 100%);
+  padding: 4px 8px;
+  font-size: 15px;
+  white-space: nowrap;
 }
+
+.rps-reveal .folio-rps-glyph {
+  width: clamp(42px, 7dvh, 52px);
+  height: auto;
+}
+
+.folio-rps > .folio-outcome-banner { position: static; }
+.folio-rps > .folio-outcome-banner span { font-size: clamp(32px, 6dvh, 50px); }

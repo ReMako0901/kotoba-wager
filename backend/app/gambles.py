@@ -2,8 +2,8 @@
 import secrets
 
 GAMES = [
-    {'id': 'rps', 'name': 'じゃんけん', 'tier': 'beginner', 'win_probability': .33,
-     'description': '手を選ぶ。あいこならもう一回。'},
+    {'id': 'rps', 'name': 'じゃんけん', 'tier': 'beginner', 'win_probability': .5,
+     'description': '手を選ぶ。一投で勝負が決まる。'},
     {'id': 'card_guess', 'name': 'カード当て', 'tier': 'beginner', 'win_probability': 1 / 3,
      'description': '高速で混ざる3枚から当たりを追う。'},
     {'id': 'chinchiro', 'name': 'チンチロ', 'tier': 'beginner', 'win_probability': .5,
@@ -199,9 +199,10 @@ def play_beginner_game(game, choice, rng=None):
     elif choice not in (0, 1, 2):
         raise ValueError('三つの中から選んでください。')
     elif kind == 'rps':
-        roll = rng.randrange(100)
-        outcome = 'win' if roll < 33 else 'loss' if roll < 66 else 'tie'
-        opponent = (choice + {'win': -1, 'loss': 1, 'tie': 0}[outcome]) % 3
+        opponent = rng.randrange(3)
+        while opponent == choice:
+            opponent = rng.randrange(3)
+        outcome = 'win' if (choice - opponent) % 3 == 1 else 'loss'
         strength = 2
         move = {'choice': choice, 'opponent': opponent, 'outcome': outcome}
     else:
@@ -213,8 +214,7 @@ def play_beginner_game(game, choice, rng=None):
         strength = 3 if outcome == 'win' else 4
         move = {'choice': choice, 'answer': answer, 'outcome': outcome}
     game['moves'].append(move)
-    if outcome != 'tie':
-        game.update(outcome=outcome, strength=strength, label='WIN' if outcome == 'win' else 'LOSE')
+    game.update(outcome=outcome, strength=strength, label='WIN' if outcome == 'win' else 'LOSE')
 
 
 

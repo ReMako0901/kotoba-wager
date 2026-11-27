@@ -14,7 +14,7 @@ test('all fifteen pools and expressions match the authoritative specification', 
   assert.equal(sections.length, 15);
   for (const [, title, body] of sections) {
     const key = title.replace('（共通）', '').replace('gamblePlay:dice', 'gamblePlay:chinchiro');
-    assert.deepEqual([...scenePools[key].lines], [...body.matchAll(/^- (.+)$/gm)].map(m => m[1].replaceAll('あんた', 'あなた')).filter(line => line !== '一振りで決まるの。潔いでしょう。'));
+    assert.deepEqual([...scenePools[key].lines], [...body.matchAll(/^- (.+)$/gm)].map(m => m[1].replaceAll('あんた', 'あなた')).filter(line => line !== '一振りで決まるの。潔いでしょう。' && line !== 'あいこは嫌いじゃないわ。長く遊べるもの。'));
     assert.ok(scenePools[key].lines.length > 0);
     assert.ok(scenePools[key].expressions.length > 0);
     const rowKey = key.startsWith('gamblePlay') ? 'gamblePlay:<種目>' : key;
