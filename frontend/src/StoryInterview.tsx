@@ -3,11 +3,12 @@ import { StagePublisher } from './Anoma';
 import { interviewDialogue as d } from './sceneDialogue';
 import { api, requestId } from './api';
 import { GenerationSkeleton } from './GenerationSkeleton';
-import type { Session } from './types';
+import { StoryMarks, markLine } from './StoryMarks';
+import type { Analysis, Session } from './types';
 
 const SHORT_ANSWER = 5;
 type Answer = { question: string; text: string };
-type Story = { generated_story_id: string; title: string; intro: string; text: string };
+type Story = { analysis: Analysis; generated_story_id: string; title: string; intro: string; text: string };
 
 function drawQuestions() {
   const pool = [...d.questions];
@@ -29,6 +30,9 @@ export function StoryInterview({ busy, act, onPreset, accept }: {
   const [editing, setEditing] = useState(false);
   const [body, setBody] = useState('');
   const [intro, setIntro] = useState('');
+  const [marks, setMarks] = useState<string[]>([]);
+  const [analysis, setAnalysis] = useState<Analysis>({ units: [] });
+  const bodyAtPreview = useRef('');
   const sid = useRef('');
   useEffect(() => {
     if (!introLine) return;
@@ -59,7 +63,9 @@ export function StoryInterview({ busy, act, onPreset, accept }: {
         const generated = await api<Story>('/stories/generate', payload);
         sid.current = requestId();
         setStory(generated);
+        setAnalysis(generated.analysis);
         setBody(generated.text);
+        bodyAtPreview.current = generated.text;
         setIntro(generated.intro);
       } finally { setWaiting(false); }
     });
@@ -73,20 +79,31 @@ export function StoryInterview({ busy, act, onPreset, accept }: {
         });
       }
       accept(await api<Session>('/sessions', { generated_story_id: story.generated_story_id,
-        title: story.title, intro: finalIntro, custom_text: finalText, request_id: sid.current }));
+        mark_ids: marks, title: story.title, intro: finalIntro, custom_text: finalText, request_id: sid.current }));
     });
     return <main className="story-interview">
-      <StagePublisher expression="normal" lines={['これでいいかしら？']} />
+      <StagePublisher expression="normal" lines={[markLine]} />
       <h2>{story.title}</h2>
+      <p>これでいいかしら？</p>
       {editing ? <>
         <label>導入<textarea value={intro} maxLength={500} disabled={busy} onChange={e => setIntro(e.target.value)} /></label>
+        {marks.length > 0 && <small>本文を変更したら、印をつけ直せます。</small>}
         <label>本文（20〜100文字）<textarea rows={4} value={body} disabled={busy} onChange={e => setBody(e.target.value)} /></label>
-        <button className="primary" disabled={busy || [...finalText].length < 20 || [...finalText].length > 100} onClick={start}>これで始める</button>
+        <button className="primary" disabled={busy || [...finalText].length < 20 || [...finalText].length > 100} onClick={() => act(async () => {
+          if (finalText !== bodyAtPreview.current) {
+            const preview = await api<Analysis>('/stories/mark-preview', { text: finalText });
+            setAnalysis(preview);
+            setMarks([]);
+            bodyAtPreview.current = finalText;
+          }
+          setEditing(false);
+        })}>修正を反映</button>
       </> : <>
-        <p>{intro}</p><p>{body}</p>
+        <p>{intro}</p>
+        <StoryMarks text={finalText} units={analysis.units} marks={marks} onChange={setMarks} busy={busy} />
         <div className="review-actions">
           <button disabled={busy} onClick={() => setEditing(true)}>手動で修正する</button>
-          <button className="primary" disabled={busy} onClick={start}>はい</button>
+          <button className="primary" disabled={busy} onClick={start}>これで始める</button>
         </div>
       </>}
     </main>;

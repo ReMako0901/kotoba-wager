@@ -35,6 +35,7 @@ def test_generate_and_start(tmp_path, monkeypatch, texts, fallback):
     if len(texts) == 2:
         assert generate.await_args_list[0].args[0] != generate.await_args_list[1].args[0]
     story_id = story.pop('generated_story_id')
+    assert story.pop('analysis')['units']
     save.assert_called_once_with(story_id, {**PAYLOAD, **story})
     assert 'ミオ' in story['intro']
     assert (story['text'] != GOOD) == fallback

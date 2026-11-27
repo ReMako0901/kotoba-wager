@@ -1,6 +1,7 @@
 """Complete a settled trade when Gemini cannot return a usable story."""
 from .gemini import GenerationError
 from .models import Rewrite
+from .marks import protected_units, map_edits
 
 WIN_ENDINGS = {
     'ちょっと名文': 'そのひとときは、しおりを挟みたくなる一ページのようだった。',
@@ -35,7 +36,7 @@ def local_concepts(units):
 
 
 def complete_story(tx, past_losses):
-    original = tx['before'].strip()
+    original = tx['before']
     won = tx['outcome'] == 'win'
     if won:
         prefix = original
@@ -63,10 +64,34 @@ def complete_story(tx, past_losses):
         endings = (('小さな幸運が訪れ、思わず笑顔になった。', 'うれしい余韻が残った。')
                    if won else ('やがて日が暮れた。', '空はすっかり暗くなった。', '長い夜が訪れた。'))
         ending = next((line for line in endings if not any(s in line for s in surfaces)), endings[0])
+    marks = protected_units(tx)
+    edits = []
+    if marks and not won:
+        # Keep surrounding prose. Remove selected occurrences and their resolved mentions
+        # while giving a protected occurrence precedence over overlapping references.
+        ranges = {(u['start'], u['end']) for u in tx['selected_units']}
+        for anchor in anchors:
+            pos = 0
+            while anchor and (pos := original.find(anchor, pos)) >= 0:
+                ranges.add((pos, pos + len(anchor)))
+                pos += len(anchor)
+        merged = []
+        for start, end in sorted(ranges):
+            if any(start < m['end'] and end > m['start'] for m in marks):
+                continue
+            if merged and start <= merged[-1][1]:
+                merged[-1] = (merged[-1][0], max(end, merged[-1][1]))
+            else:
+                merged.append((start, end))
+        edits = [(start, end, '') for start, end in merged]
+        prefix = original
+        for start, end, replacement in reversed(edits):
+            prefix = prefix[:start] + replacement + prefix[end:]
+    starts = map_edits(original, edits, marks)
     if prefix and prefix[-1] not in '。！？!?」』':
         prefix += '。'
     return Rewrite(
-        text=prefix + ending, summary=summary, changes=[summary],
+        mark_starts=starts, text=prefix + ending, summary=summary, changes=[summary],
         checks={'protected_retained': won, 'lost_absent': True, 'reward_realized': won,
                 'notes': '定型文で補完。文脈に沿った意味の確認には限界があります。'},
     )

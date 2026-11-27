@@ -12,12 +12,23 @@ def is_gap(text):
     return all(c.isspace() or unicodedata.category(c).startswith(('P','Z')) for c in text)
 
 
-def build_analysis(text: str,version: int) -> Analysis:
+def build_analysis(text: str, version: int, marked_ranges=()) -> Analysis:
     cursor=0
     units=[]
-    for i,surface in enumerate(split_phrases(text)):
-        units.append(Unit(id=f'v{version}-u{i+1}',text=surface,start=cursor,end=cursor+len(surface),stakeable=not is_gap(surface) and is_stakeable_phrase(surface)))
-        cursor+=len(surface)
+    surfaces = []
+    for start, end in marked_ranges:
+        if start > cursor:
+            surfaces.extend(split_phrases(text[cursor:start]))
+        surfaces.append(text[start:end])
+        cursor = end
+    if cursor < len(text):
+        surfaces.extend(split_phrases(text[cursor:]))
+    cursor = 0
+    for i,surface in enumerate(surfaces):
+        end = cursor + len(surface)
+        stakeable = (cursor, end) in marked_ranges or (not is_gap(surface) and is_stakeable_phrase(surface))
+        units.append(Unit(id=f'v{version}-u{i+1}', text=surface, start=cursor, end=end, stakeable=stakeable))
+        cursor = end
     if ''.join(u.text for u in units)!=text:
         raise GenerationError('本文とコマの対応を確認できませんでした。')
     if not any(u.stakeable for u in units):

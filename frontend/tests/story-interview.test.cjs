@@ -9,7 +9,7 @@ test('名前から始まり、異なる2問を聞き、各問の深掘りは1回
   global.crypto = require('node:crypto').webcrypto;
   global.fetch = async (url, options) => {
     requests.push([url, JSON.parse(options.body)]);
-    const data = { generated_story_id: 'abc', title: '青い鳥', intro: '私はソラ。', text: '本文' };
+    const data = { generated_story_id: 'abc', title: '青い鳥', intro: '私はソラ。', text: '本文', analysis: { units: [] } };
     return { ok: true, json: async () => data };
   };
   let pending;
@@ -38,7 +38,7 @@ test('名前から始まり、異なる2問を聞き、各問の深掘りは1回
   assert.ok(questions.slice(1).every(q => interviewDialogue.questions.some(item => item.question === q)));
   ui.draw();
   assert.equal(requests.length, 1);
-  ui.click('はい');
+  ui.click('これで始める');
   await pending;
   const [[generate, payload], [start, session]] = requests;
   assert.equal(generate, '/api/stories/generate');
