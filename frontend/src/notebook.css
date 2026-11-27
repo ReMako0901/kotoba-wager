@@ -28,7 +28,23 @@ button:focus-visible, [tabindex]:focus-visible, textarea:focus-visible { outline
 .anoma-photo::after { content: ''; position: absolute; width: 35%; height: 9px; left: 31%; top: -4px; transform: rotate(7deg); background: #ddc79ebf; }
 .anoma-portrait { position: relative; width: 100%; height: 100%; overflow: hidden; filter: grayscale(1); }
 .anoma-portrait img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
-.anoma-dialogue { font: 500 clamp(14px,2.2dvh,17px)/1.55 var(--body-serif); letter-spacing: .035em; }
+.anoma-dialogue {
+  min-width: 0;
+  padding: 11px 9px 6px;
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  background: #fffaf0;
+  font: 500 clamp(14px,2.2dvh,17px)/1.55 var(--body-serif); letter-spacing: .035em;
+}
+.anoma-dialogue .speaker-name {
+  position: absolute;
+  top: 0;
+  left: 8px;
+  transform: translateY(-50%);
+  background: var(--paper);
+  line-height: 1.25;
+}
+.anoma-dialogue .dialogue-lines { min-height: 2lh; }
 .app-shell:not([data-screen="game"]) .anoma-portrait {
   animation: anoma-breathe 6s ease-in-out infinite;
 }

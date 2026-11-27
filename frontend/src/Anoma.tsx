@@ -132,7 +132,9 @@ export function AnomaStage({ portraitFocus = false, inactive = false, children }
       <aside className="anoma-photo" data-focus={portraitFocus || Boolean(reaction && speaking) ? 'portrait' : 'table'} aria-label="アノマ">
         <AnomaPortrait key={expression} expression={expression} speaking={speaking} />
       </aside>
-      <div className="anoma-dialogue" aria-live="polite"><span className="sr-only">{lines?.join('\n')}</span>
+      <div className="anoma-dialogue" hidden={!length} aria-live="polite">
+        <span className="speaker-name">アノマ</span>
+        <span className="sr-only">{lines?.join('\n')}</span>
         <div key={linesKey} className="dialogue-lines" ref={retainExit} aria-hidden="true">{characters.map((line, index) => {
           const prefix = line.slice(0, remaining).join('');
           remaining = Math.max(0, remaining - line.length);
@@ -197,7 +199,7 @@ export function Opening({ busy, error, onDark, onComplete }: {
     {phase === 'narration' && <div className="opening-narration" aria-live="polite">
       {openingNarration.slice(0, count).map(line => <p key={line}>{line}</p>)}
     </div>}
-    {phase !== 'blackout' && phase !== 'narration' && <aside className="anoma-photo opening-photo" aria-label="アノマ">
+    {phase !== 'blackout' && phase !== 'narration' && <aside className="opening-portrait" aria-label="アノマ">
       <AnomaPortrait expression={storyExpressions.opening} speaking={speaking} />
     </aside>}
     {phase === 'dialogue' && <button className="opening-dialogue" autoFocus onClick={advance}>
