@@ -7,7 +7,37 @@ import { chooseLine, openingClosings, openingGreetings, openingNarration, reacti
 let previousExpression: AnomaExpression | undefined;
 const unavailableTalkExpressions = new Set<AnomaExpression>();
 const unavailableClosedExpressions = new Set<AnomaExpression>();
-export function AnomaPortrait({ expression, speaking }: { expression: AnomaExpression; speaking: boolean }) {
+// Vowel mouth shapes (口パク): the typewriter's current character picks the
+// mouth. Kana map to their vowel row; katakana are folded to hiragana first.
+// Anything else (kanji, punctuation) cycles deterministically so the mouth
+// still moves without pretending to know the reading.
+export type MouthVowel = 'a' | 'i' | 'u' | 'e' | 'o';
+const VOWEL_ROWS: Record<string, MouthVowel> = {};
+for (const [vowel, chars] of Object.entries({
+  a: 'あかさたなはまやらわがざだばぱぁゃ',
+  i: 'いきしちにひみりゐぎじぢびぴぃ',
+  u: 'うくすつぬふむゆるぐずづぶぷぅゅ',
+  e: 'えけせてねへめれゑげぜでべぺぇ',
+  o: 'おこそとのほもよろをごぞどぼぽぉょ',
+}) as [MouthVowel, string][]) {
+  for (const char of chars) VOWEL_ROWS[char] = vowel;
+}
+const FALLBACK_VOWELS: readonly MouthVowel[] = ['a', 'u', 'o', 'e', 'i'];
+export function mouthVowelFor(char: string, index: number): MouthVowel {
+  if (char === 'ん' || char === 'ン') return 'u';
+  const code = char.codePointAt(0) ?? 0;
+  const hira = code >= 0x30a1 && code <= 0x30f6 ? String.fromCodePoint(code - 0x60) : char;
+  return VOWEL_ROWS[hira] ?? FALLBACK_VOWELS[Math.abs(index) % FALLBACK_VOWELS.length];
+}
+export type MouthShape = { vowel: MouthVowel; frame: 1 | 2 };
+// Swap the opening size every few typed characters, not on every character,
+// so the portrait does not shimmer at typewriter speed.
+export function mouthFor(char: string, index: number): MouthShape {
+  return { vowel: mouthVowelFor(char, index), frame: Math.floor(Math.max(0, index) / 3) % 2 === 0 ? 1 : 2 };
+}
+const unavailableMouthShapes = new Set<string>();
+
+export function AnomaPortrait({ expression, speaking, mouth }: { expression: AnomaExpression; speaking: boolean; mouth?: MouthShape | null }) {
   const [previous, setPrevious] = useState(() => previousExpression);
   const [loaded, setLoaded] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -17,7 +47,30 @@ export function AnomaPortrait({ expression, speaking }: { expression: AnomaExpre
   const [closedLoaded, setClosedLoaded] = useState(false);
   const [talkLoaded, setTalkLoaded] = useState(false);
   const [talkFailed, setTalkFailed] = useState(() => unavailableTalkExpressions.has(expression));
+  const [mouthReady, setMouthReady] = useState<ReadonlySet<string>>(new Set());
+  const [mouthFailed, setMouthFailed] = useState<ReadonlySet<string>>(new Set());
   const [blinking, setBlinking] = useState(false);
+  useEffect(() => {
+    if (typeof Image === 'undefined') return;
+    let cancelled = false;
+    const ready = new Set<string>();
+    const failed = new Set<string>();
+    for (const vowel of ['a', 'i', 'u', 'e', 'o'] as MouthVowel[]) {
+      for (const frame of [1, 2] as const) {
+        const key = `${vowel}${frame}`;
+        if (unavailableMouthShapes.has(`${expression}-${key}`)) { failed.add(key); continue; }
+        const img = new Image();
+        img.onload = () => { if (!cancelled) { ready.add(key); setMouthReady(new Set(ready)); } };
+        img.onerror = () => {
+          unavailableMouthShapes.add(`${expression}-${key}`);
+          if (!cancelled) { failed.add(key); setMouthFailed(new Set(failed)); }
+        };
+        img.src = `${import.meta.env.BASE_URL}anoma/${expression}-${key}.webp`;
+      }
+    }
+    if (failed.size) setMouthFailed(new Set(failed));
+    return () => { cancelled = true; };
+  }, [expression]);
   useEffect(() => {
     const media = window.matchMedia('(prefers-reduced-motion: reduce)');
     const update = () => { setReducedMotion(media.matches); setBlinking(false); };
@@ -56,6 +109,18 @@ export function AnomaPortrait({ expression, speaking }: { expression: AnomaExpre
       src={`${import.meta.env.BASE_URL}anoma/${expression}-talk.webp`} alt=""
       onLoad={() => setTalkLoaded(true)}
       onError={() => { unavailableTalkExpressions.add(expression); setTalkFailed(true); }} />}
+    {!reducedMotion && mouth && (() => {
+      const mouthKey = `${mouth.vowel}${mouth.frame}`;
+      const mouthActive = Boolean(speaking && loaded && mouthReady.has(mouthKey) && !mouthFailed.has(mouthKey));
+      return <img
+        className="anoma-portrait-mouth"
+        data-active={mouthActive}
+        src={`${import.meta.env.BASE_URL}anoma/${expression}-${mouthKey}.webp`} alt=""
+        onError={() => {
+          unavailableMouthShapes.add(`${expression}-${mouthKey}`);
+          setMouthFailed(previous => new Set(previous).add(mouthKey));
+        }} />;
+    })()}
     {settled && !reducedMotion && !closedFailed && <img
       className={`anoma-portrait-closed${blinking && closedLoaded ? ' anoma-portrait-blinking' : ''}`}
       src={`${import.meta.env.BASE_URL}anoma/${expression}-closed.webp`} alt=""
@@ -126,11 +191,13 @@ export function AnomaStage({ portraitFocus = false, inactive = false, children }
   const length = characters.reduce((sum, line) => sum + line.length, 0);
   const visible = useTypedLength(linesKey, length);
   const speaking = visible < length;
+  const flatCharacters = characters.flat();
+  const mouth = speaking && visible > 0 ? mouthFor(flatCharacters[visible - 1], visible - 1) : null;
   let remaining = visible;
   return <div inert={inactive} className="anoma-stage" data-expression={expression} data-reaction={reaction ?? 'normal'}>
     <header className="page-margin">
       <aside className="anoma-photo" data-focus={portraitFocus || Boolean(reaction && speaking) ? 'portrait' : 'table'} aria-label="アノマ">
-        <AnomaPortrait key={expression} expression={expression} speaking={speaking} />
+        <AnomaPortrait key={expression} expression={expression} speaking={speaking} mouth={mouth} />
       </aside>
       <div className="anoma-dialogue" hidden={!length} aria-live="polite">
         <span className="speaker-name">アノマ</span>
@@ -161,6 +228,7 @@ export function Opening({ busy, error, onDark, onComplete }: {
   const chars = Array.from(line);
   const visible = useTypedLength(line, chars.length);
   const speaking = !revealed && visible < chars.length;
+  const mouth = speaking && visible > 0 ? mouthFor(chars[visible - 1], visible - 1) : null;
 
   useEffect(() => {
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -200,7 +268,7 @@ export function Opening({ busy, error, onDark, onComplete }: {
       {openingNarration.slice(0, count).map(line => <p key={line}>{line}</p>)}
     </div>}
     {phase !== 'blackout' && phase !== 'narration' && <aside className="opening-portrait" aria-label="アノマ">
-      <AnomaPortrait expression={storyExpressions.opening} speaking={speaking} />
+      <AnomaPortrait expression={storyExpressions.opening} speaking={speaking} mouth={mouth} />
     </aside>}
     {phase === 'dialogue' && <button className="opening-dialogue" autoFocus onClick={advance}>
       <span className="sr-only" aria-live="polite">{line}</span>

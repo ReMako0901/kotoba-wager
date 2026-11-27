@@ -56,6 +56,9 @@
   50% { opacity: 0; }
 }
 
+.anoma-portrait-mouth { opacity: 0; }
+.anoma-portrait-mouth[data-active="true"] { opacity: 1; }
+
 .anoma-portrait-closed { visibility: hidden; }
 .anoma-portrait-closed.anoma-portrait-blinking { visibility: visible; }
 
@@ -63,7 +66,7 @@
   .anoma-portrait-current { animation: none; opacity: 1; }
   .anoma-portrait-previous { display: none; }
   .anoma-portrait { animation: none; transform: none; }
-  .anoma-portrait-closed, .anoma-portrait-talk { display: none; }
+  .anoma-portrait-closed, .anoma-portrait-talk, .anoma-portrait-mouth { display: none; }
 }
 
 .anoma-stage-content {
