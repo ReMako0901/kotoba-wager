@@ -87,7 +87,7 @@ test('game hides intro, omits reward descriptions and opens only on selection co
     ui.click('出会い');
     assert.equal(ui.find(n => n.props.className === 'reward-summary'), undefined);
     const bar = ui.find(n => n.props.className === 'paper-tabs wager-tabs');
-    assert.match(text(bar), new RegExp(`出会い・${required_count}個 変更`));
+    assert.match(text(ui.find(n => n.props.className === 'game-heading')), /長い物語のタイトル ＞ 出会い/);
     assert.match(text(bar), new RegExp(`0 / ${required_count}`));
     const gameModal = () => ui.find(n => n.props.className === 'scene-object object-games');
     for (let i = 0; i < required_count; i++) {

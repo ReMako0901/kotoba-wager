@@ -106,7 +106,7 @@ test('round reset, help copy, history availability and fixed cell definition rem
   assert.doesNotMatch(app, /あと\{MIN_STORY - customCount\}文字/);
   assert.match(app, /customCount < MIN_STORY \|\| customCount > MAX_STORY/);
   assert.doesNotMatch(app, /disabled=\{gambleMode\}|33％|％〜/);
-  assert.match(app, /setPaperIndex\(versions.length - 1\)/);
+  assert.match(app, /paperIndex \?\? versions.length - 1/);
   assert.match(source('notebook.css'), /--cell-size: 32px/);
   assert.doesNotMatch(source('Manuscript.tsx'), /MAX_ROWS|rows = 9/);
 });

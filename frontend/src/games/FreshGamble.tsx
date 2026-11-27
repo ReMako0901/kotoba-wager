@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type {
   CardMove,
   CardRound,
@@ -334,7 +334,7 @@ function ChinchiroDie({ value }: { value: number }) {
   return <div className="chin-view" role="img" aria-label={`サイコロの目 ${value}`}>
     <div className="chin-spin"><div className="chin-cube" style={{ transform: rest }}>
       {FACE_ANGLES.map((angle, i) => <div className="chin-face" key={i} aria-hidden="true"
-        style={{ transform: `rotate${FACE_AXES[i]}(${angle}deg) translateZ(12px)` }}>
+        style={{ transform: `rotate${FACE_AXES[i]}(${angle}deg) translateZ(17px)` }}>
         {Array.from({ length: 9 }, (_, cell) => <i key={cell} className={DICE_PIPS[i + 1].includes(cell) ? 'pip' : ''} />)}
       </div>)}
     </div></div>
@@ -359,6 +359,20 @@ function ChinchiroGamble({ gamble, busy, error, prepared, onMove, onFinish }: Fr
     : moves.slice(0, shown).reverse().find(m => m.side === 'anoma');
   const player = previous?.side === 'player' && current?.side !== 'anoma' ? previous : undefined;
   const tie = player?.result === 'tie';
+  const waitingForAnoma = !current && !gamble.outcome && (!moves.length || tie);
+  const anomaTurn = waitingForAnoma || current?.side === 'anoma';
+  const sentAttempt = useRef<number | null>(null);
+  const attempt = moves.length;
+  const moveRef = useRef(onMove);
+  useLayoutEffect(() => { moveRef.current = onMove; }, [onMove]);
+  useLayoutEffect(() => {
+    if (!waitingForAnoma || busy || sentAttempt.current === attempt) return;
+    const timer = window.setTimeout(() => {
+      sentAttempt.current = attempt;
+      moveRef.current(attempt);
+    }, 750);
+    return () => window.clearTimeout(timer);
+  }, [waitingForAnoma, busy, attempt]);
   function finishRoll() {
     if (!current) return;
     if (rollIndex + 1 < rolls.length) setRollIndex(rollIndex + 1);
@@ -370,6 +384,7 @@ function ChinchiroGamble({ gamble, busy, error, prepared, onMove, onFinish }: Fr
 
   return <div className="chin-board">
     <div className="chin-table">
+      {anomaTurn && <strong className="chin-turn" role="status">アノマのターンです</strong>}
       <div className="chin-bowl">
         <div key={`${shown}-${rollIndex}`} className={`chin-roll${current ? ' rolling' : ''}`}
           onAnimationEnd={event => {
@@ -388,10 +403,10 @@ function ChinchiroGamble({ gamble, busy, error, prepared, onMove, onFinish }: Fr
     {!current && gamble.outcome ? <OutcomeSlip outcome={gamble.outcome} {...{ prepared, busy, error, onFinish }} /> :
       <div className="chin-actions">
         {tie && !current && <strong className="chin-slip">同点</strong>}
-        <button type="button" className="folio-story-turn" disabled={busy || Boolean(current)}
+        {!anomaTurn && <button type="button" className="folio-story-turn" disabled={busy || Boolean(current)}
           onClick={() => onMove(moves.length)}>
-          {current ? '転がり中…' : tie ? 'もう一勝負' : !anoma ? 'アノマが振る' : player ? 'もう一度振る' : '丼を振る'}
-        </button>
+          {current ? '転がり中…' : player ? 'もう一度振る' : '丼を振る'}
+        </button>}
       </div>}
   </div>;
 }

@@ -109,8 +109,11 @@ button:focus-visible, [tabindex]:focus-visible, textarea:focus-visible { outline
 .game-heading .story-title { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 18px; }
 .paper-tabs,.story-decision,.story-counts { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
 .paper-tabs button,.story-decision button { font-size: 12px; }
-.reward-change { max-width: 100%; }
-.stake-count { font-size: 13px; }
+.result-tabs, .wager-tabs { justify-content: flex-end; }
+.page-links .history-link { margin-left: auto; }
+.stake-caption { display: block; font-size: 10px; color: #756653; }
+.paper-turn-hint { display: block; text-align: right; padding-right: 24px; font-size: 10px; }
+.stake-count { font-size: 20px; }
 .stake-count.stakes-ready { color: var(--stamp); font-weight: bold; }
 .story-counts { justify-content: space-between; border-block: 1px solid var(--rule); padding-block: 3px; font-size: 12px; }
 .story-counts div { display: flex; gap: 3px; }
