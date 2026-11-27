@@ -112,5 +112,7 @@ async def generate_story(request: Interview):
     try:
         await run_in_threadpool(save_generated, story_id, {**request.model_dump(), **story.model_dump()})
     except Exception:
+        import logging
+        logging.exception('generated story save failed')
         raise HTTPException(503, '物語を保存できませんでした。もう一度お試しください。') from None
     return {'generated_story_id': story_id, **story.model_dump()}
