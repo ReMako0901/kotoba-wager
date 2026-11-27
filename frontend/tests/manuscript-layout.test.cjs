@@ -1,8 +1,8 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
-require('./component-harness.cjs');
-const { paperRows, paperPositions, focusFirstChange } = require('../src/Manuscript.tsx');
+const { mount } = require('./component-harness.cjs');
+const { Manuscript, paperRows, paperPositions, focusFirstChange } = require('../src/Manuscript.tsx');
 
 test('CSS owns ten fixed rows and one cell size; paper only scrolls horizontally', () => {
   const css = fs.readFileSync('frontend/src/notebook-paper.css', 'utf8');
@@ -49,4 +49,15 @@ test('initial focus centers the FIRST change and context even if another change 
     assert.equal(left + 32 - movement, 176);
   }
   focusFirstChange({ parentElement: null, querySelector: () => null });
+});
+
+test('each contiguous rewrite has one stroke per occupied column', () => {
+  const prefix = 'あ'.repeat(8);
+  const ui = mount(Manuscript, { before: prefix + '猫。', text: prefix + '赤い小さな猫です。' });
+  const strokes = ui.all(n => n.props.className === 'rewrite-stroke');
+  assert.deepEqual(strokes.map(n => n.props.style), [
+    { gridRow: '9 / span 2', gridColumn: 1 },
+    { gridRow: '1 / span 3', gridColumn: 2 },
+    { gridRow: '5 / span 2', gridColumn: 2 },
+  ]);
 });

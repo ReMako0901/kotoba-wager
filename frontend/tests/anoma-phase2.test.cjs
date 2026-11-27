@@ -2,9 +2,9 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const { stageMount, PortraitPublisher } = require('./anoma-stage-harness.cjs');
-const { expressionPools, expressionForEnding, expressionForExtension } = require('../src/scenario.ts');
+const { expressionPools, expressionForEnding } = require('../src/scenario.ts');
 const { resultReaction, Opening } = require('../src/Anoma.tsx');
-const { StoryDecision, NormalEnding } = require('../src/StoryProgress.tsx');
+const { NormalEnding } = require('../src/StoryProgress.tsx');
 const current = ui => ui.find(n => n.type === 'img' && n.props.className.includes('anoma-portrait-current'));
 const tx = (outcome, extra = {}) => ({ id: 'round', status: 'committed', outcome, lost: [], ...extra });
 const progress = (phase, difference = 0) => ({ phase, totals: { rounds: 5, gained: 2, lost: 2, difference }, extension_start: 5 });
@@ -25,12 +25,10 @@ test('opening, arrival, extension welcome and all ending signs select their expr
   opening.tick();
   for (let i = 0; i < 3; i++) opening.click('地の文を送る');
   assert.equal(current(opening).props.src, '/anoma/normal.webp');
-  for (const [phase, expression] of [['escapable', 'surprise'], ['extension', expressionForExtension(JSON.stringify(progress('extension').totals))]]) {
-    const ui = stageMount(StoryDecision, { progress: progress(phase), busy: false, onChoice() {} });
-    assert.ok(ui.all(n => n.type === 'img' && n.props.className.includes('current')).every(n => n.props.src === `/anoma/${expression}.webp`));
-  }
   for (const difference of [10, 0, -10]) {
     const expression = expressionForEnding(difference, JSON.stringify(progress('ended', difference).totals));
+    const ui = stageMount(NormalEnding, { progress: progress('ended', difference), onTitle() {} });
+    assert.ok(ui.all(n => n.props?.className?.includes('anoma-portrait-current')).some(n => n.props.src === `/anoma/${expression}.webp`));
     assert.ok((difference > 0 ? ['smile', 'satisfied'] : difference < 0 ? ['deadpan', 'composed'] : ['deadpan']).includes(expression));
 
   }

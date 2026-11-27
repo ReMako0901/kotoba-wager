@@ -80,12 +80,15 @@ test('gambling actions stay with the tabletop object and generation polling only
   const ui = mount(App, {});
   await startStory(ui);
   const table = () => ui.find(n => n.props['aria-label'] === 'チンチロ');
-  const actions = () => ui.find(n => n.props.className?.startsWith('folio-outcome-slip'));
+  const actions = () => ui.find(n => n.type === 'button' && text(n).includes('この結果を物語へ'));
   const land = () => {
     const roll = ui.find(n => n.props.className === 'chin-roll rolling');
     roll.props.onAnimationEnd({ target: roll, currentTarget: roll });
     ui.draw();
   };
+  assert.match(text(table()), /アノマのターンです/);
+  assert.equal(ui.find(n => n.props.className === 'chin-roll rolling'), undefined);
+  ui.tick();
   land();
   assert.match(text(table()), /ヒフミ/);
   assert.equal(requests.filter(([url]) => url.endsWith('/play')).length, 0);
@@ -97,7 +100,7 @@ test('gambling actions stay with the tabletop object and generation polling only
   assert.ok(actions());
   assert.match(text(ui.find(n => n.props.className?.startsWith('folio-outcome-banner'))), /勝利/);
   assert.equal(ui.all(n => n.props.className?.includes('folio-wax-seal')).length, 0);
-  assert.equal(nodes(actions(), n => n.type === 'button')[0].props.disabled, false);
+  assert.equal(actions().props.disabled, false);
   assert.deepEqual(requests.filter(([url]) => url.endsWith('/sessions/played')), [['/api/sessions/played', 'GET']]);
   assert.equal(requests.filter(([url]) => url.endsWith('/finish')).length, 0);
   ui.unmount();
@@ -221,7 +224,7 @@ test('blackjack announces each opening natural before the outcome', () => {
   assert.ok(ui.find(n => n.props.className?.startsWith('folio-outcome-banner')));
 });
 
-test('rps keeps the chosen slip through the chant and reveals the opponent before the outcome', () => {
+test('rps hides the slips through the chant and reveals the opponent before the outcome', () => {
   const { FreshGamble } = require('../src/games/FreshGamble.tsx');
   const props = { gamble: { kind: 'rps', moves: [] }, onMove() {} };
   const ui = mount(FreshGamble, props);
@@ -230,11 +233,12 @@ test('rps keeps the chosen slip through the chant and reveals the opponent befor
   const banner = () => ui.find(n => n.props.className?.startsWith('folio-outcome-banner'));
   for (const beat of ['じゃん', 'けん', 'ぽん']) {
     assert.equal(text(ui.find(n => n.props.className?.startsWith('rps-call'))), beat);
-    assert.equal(ui.all(n => n.props.className?.includes('is-hidden')).length, 2);
+    assert.equal(ui.find(n => n.props.className === 'folio-rps-ring'), undefined);
     assert.equal(banner(), undefined);
     ui.tick();
   }
   assert.match(text(ui.tree), /アノマの札チョキ/);
+  assert.doesNotMatch(text(ui.tree), /あなたの札/);
   assert.equal(banner(), undefined);
   ui.tick();
   assert.match(text(banner()), /勝利/);

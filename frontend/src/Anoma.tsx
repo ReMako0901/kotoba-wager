@@ -7,7 +7,7 @@ import { chooseLine, openingClosings, openingGreetings, openingNarration, reacti
 let previousExpression: AnomaExpression | undefined;
 const unavailableTalkExpressions = new Set<AnomaExpression>();
 const unavailableClosedExpressions = new Set<AnomaExpression>();
-function AnomaPortrait({ expression, speaking }: { expression: AnomaExpression; speaking: boolean }) {
+export function AnomaPortrait({ expression, speaking }: { expression: AnomaExpression; speaking: boolean }) {
   const [previous, setPrevious] = useState(() => previousExpression);
   const [loaded, setLoaded] = useState(false);
   const [failed, setFailed] = useState(false);

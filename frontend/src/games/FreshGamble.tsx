@@ -109,39 +109,9 @@ function OutcomeSlip({
   return (
     <>
       {banner}
-      <footer
-        className={`folio-outcome-slip is-${outcome}`}
-        aria-live="polite"
-      >
-        <div className="folio-slip-body">
-          {!prepared && !error && (
-            <div
-              className="generation-skeleton folio-generation-wait"
-              role="status"
-              aria-label="物語を書き換え中"
-              aria-busy="true"
-            >
-              <div className="skeleton-ink" aria-hidden="true" />
-              <span className="folio-generation-label">
-                物語を書き換えています
-              </span>
-            </div>
-          )}
-          {error && (
-            <p className="folio-slip-error" role="alert">
-              {error}
-            </p>
-          )}
-          <button
-            type="button"
-            className="folio-story-turn primary"
-            disabled={!canPress}
-            onClick={onFinish}
-          >
-            <span>この結果を物語へ →</span>
-          </button>
-        </div>
-      </footer>
+      {error && <p className="folio-slip-error" role="alert">{error}</p>}
+      <button type="button" className="folio-story-turn primary" disabled={!canPress}
+        aria-busy={!prepared && !error} onClick={onFinish}>この結果を物語へ →</button>
     </>
   );
 }
@@ -230,8 +200,9 @@ function RpsGamble({
   onFinish,
 }: FreshGambleProps) {
   const moves = (gamble.moves ?? []) as HandMove[];
-  const [selection, setSelection] = useState<{ attempt: number; hand: number } | null>(null);
+  const [selectedAttempt, setSelectedAttempt] = useState<number | null>(null);
   const [revealed, setRevealed] = useState(0);
+  const [playerShown, setPlayerShown] = useState(0);
   const [beat, setBeat] = useState<number | null>(null);
   useEffect(() => {
     if (beat === null) return;
@@ -239,13 +210,15 @@ function RpsGamble({
       prefersReducedMotion() ? 140 : 690);
     return () => window.clearTimeout(timer);
   }, [beat]);
-  const pending = selection && moves.length === selection.attempt;
+  const pending = moves.length === selectedAttempt;
   const lastMove = beat === null && !pending ? moves.at(-1) : undefined;
+  const revealAttempt = lastMove ? moves.length : 0;
   useEffect(() => {
-    if (!lastMove) return;
-    const timer = window.setTimeout(() => setRevealed(moves.length), 850);
-    return () => window.clearTimeout(timer);
-  }, [lastMove, moves.length]);
+    if (!revealAttempt) return;
+    const playerTimer = window.setTimeout(() => setPlayerShown(revealAttempt), 420);
+    const timer = window.setTimeout(() => setRevealed(revealAttempt), 850);
+    return () => { window.clearTimeout(playerTimer); window.clearTimeout(timer); };
+  }, [revealAttempt]);
   const showing = beat !== null || busy || Boolean(lastMove && (revealed < moves.length || lastMove.outcome !== 'tie'));
   const finished = beat === null && revealed === moves.length && (gamble.outcome === 'win' || gamble.outcome === 'loss');
 
@@ -257,10 +230,11 @@ function RpsGamble({
         </strong> : lastMove ? <div className="rps-reveal" key={moves.length}>
           {lastMove.outcome === 'tie' && <strong>あいこで、しょ</strong>}
           <span>アノマの札<HandGlyph hand={lastMove.opponent} />{handName(lastMove.opponent)}</span>
+          {playerShown === moves.length && <span>あなたの札<HandGlyph hand={lastMove.choice} />{handName(lastMove.choice)}</span>}
         </div> : <span>{busy ? '札を開いています…' : '出す手を選ぶ'}</span>}
       </div>
 
-      <div className="folio-rps-ring" role="group" aria-label="出す手を選ぶ">
+      {!showing && <div className="folio-rps-ring" role="group" aria-label="出す手を選ぶ">
         <svg
           className="folio-rps-diagram"
           viewBox="0 0 260 110"
@@ -283,28 +257,24 @@ function RpsGamble({
         </svg>
 
         <div className="folio-rps-fan">
-          {RPS_HANDS.map((item) => {
-            const chosen = selection?.hand ?? lastMove?.choice;
-            const isChosen = showing && chosen === item.id;
-            return (
+          {RPS_HANDS.map((item) => (
               <button
                 key={item.id}
                 type="button"
-                className={`folio-rps-slip${isChosen ? ' is-chosen' : showing && chosen !== undefined ? ' is-hidden' : ''}`}
+                className="folio-rps-slip"
                 style={{ '--slip-angle': item.angle } as React.CSSProperties}
                 disabled={busy || finished || showing}
                 aria-label={`${item.name}を出す`}
-                onClick={() => { setSelection({ attempt: moves.length, hand: item.id }); setBeat(0); onMove(moves.length, item.id); }}
+                onClick={() => { setSelectedAttempt(moves.length); setBeat(0); onMove(moves.length, item.id); }}
               >
                 <span className="folio-slip-pin" aria-hidden="true" />
-                <span className="folio-slip-motif">{isChosen && lastMove ? 'あなたの札' : item.motif}</span>
+                <span className="folio-slip-motif">{item.motif}</span>
                 <HandGlyph hand={item.id} />
                 <strong className="folio-slip-name">{item.name}</strong>
               </button>
-            );
-          })}
+          ))}
         </div>
-      </div>
+      </div>}
 
       {finished && gamble.outcome && (
         <OutcomeSlip
@@ -378,6 +348,12 @@ function ChinchiroGamble({ gamble, busy, error, prepared, onMove, onFinish }: Fr
   const tie = player?.result === 'tie';
   const waitingForAnoma = !current && !gamble.outcome && (!moves.length || tie);
   const anomaTurn = waitingForAnoma || current?.side === 'anoma';
+  const [announcedTurn, setAnnouncedTurn] = useState(-1);
+  useEffect(() => {
+    if (!anomaTurn) return;
+    const timer = window.setTimeout(() => setAnnouncedTurn(shown), 1000);
+    return () => window.clearTimeout(timer);
+  }, [anomaTurn, shown]);
   const sentAttempt = useRef<number | null>(null);
   const attempt = moves.length;
   const moveRef = useRef(onMove);
@@ -409,7 +385,7 @@ function ChinchiroGamble({ gamble, busy, error, prepared, onMove, onFinish }: Fr
     <div className="chin-table">
       {anomaTurn && <strong className="chin-turn" role="status">アノマのターンです</strong>}
       <div className="chin-bowl">
-        <div key={`${shown}-${rollIndex}`} className={`chin-roll${current && !announcing ? ' rolling' : ''}`}
+        <div key={`${shown}-${rollIndex}`} className={`chin-roll${current && !announcing && (!anomaTurn || announcedTurn === shown) ? ' rolling' : ''}`}
           onAnimationEnd={event => {
             if (event.target === event.currentTarget ||
                 (event.target === event.currentTarget.firstElementChild && event.animationName === 'chin-bounce')) finishRoll();
@@ -487,7 +463,7 @@ function CardGuessGamble({
     }
   }, [resultMove, gamble.outcome, phase]);
 
-  const swapInterval = (idx: number) => 950 - 720 * idx / Math.max(1, swaps.length - 1);
+  const swapInterval = (idx: number) => 365 - 42 * idx / Math.max(1, swaps.length - 1);
 
   // シャッフル演出の再生
   const startShuffle = () => {
@@ -528,7 +504,7 @@ function CardGuessGamble({
 
     const endTimer = window.setTimeout(() => {
       setPhase('choose');
-    }, nextSwap + (reduced ? 90 : 507));
+    }, nextSwap + (reduced ? 90 : 0));
     timers.push(endTimer);
   };
 
@@ -557,16 +533,6 @@ function CardGuessGamble({
             </strong>
           )}
         </div>
-        <p className="folio-scribble" aria-live="polite">
-          {phase === 'reveal' && '当たり札の位置を覚え、札を伏せて混ぜる'}
-          {phase === 'shuffling' &&
-            `札を入れ替え中… (${activeSwapStep}/${swaps.length})`}
-          {phase === 'choose' && '当たり札が移った位置（左・中央・右）の札を抜く'}
-          {phase === 'done' &&
-            (resultMove
-              ? `${POS_LABELS[resultMove.choice] ?? '選んだ札'}を開いた`
-              : '結果確定')}
-        </p>
       </div>
 
       <div className="folio-guess-stage">
@@ -776,6 +742,7 @@ function SlotGamble({
             <span className="folio-lever-knob" />
           </span>
         </button>
+        <small className="slot-lever-hint" style={{ visibility: started || pulling ? 'hidden' : 'visible' }}>↓ 引いてスタート</small>
       </div>
 
       {allStopped && gamble.outcome && (

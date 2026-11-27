@@ -93,6 +93,20 @@ function Paper({text, units, selected, disabled, onToggle, marked, changes}: {
     }
     offset += glyphs.length;
   }
+  // A vertical stroke spans the changed cells until a column or text run ends.
+  if (changes) {
+    for (let start = 0; start < allGlyphs.length; start++) {
+      const cell = positions.get(start);
+      if (cell === undefined || changes.get(start) !== 'rewritten') continue;
+      const row = cell % rows;
+      let length = 1;
+      while (row + length < rows && changes.get(start + length) === 'rewritten' &&
+        positions.get(start + length) === cell + length) length++;
+      content.push(<span key={`stroke-${start}`} className="rewrite-stroke" aria-hidden="true"
+        style={{gridRow: `${row + 1} / span ${length}`, gridColumn: Math.floor(cell / rows) + 1}} />);
+      start += length - 1;
+    }
+  }
   for (let i = 0; i < columns * rows; i++) {
     if (occupied.has(i)) continue;
     content.push(<span className="ink-cell" key={`blank-${i}`} aria-hidden="true"

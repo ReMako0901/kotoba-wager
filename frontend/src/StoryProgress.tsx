@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { StagePublisher } from './Anoma';
-import { extensionWelcome, normalEnding, expressionForEnding, expressionForExtension, storyExpressions } from './scenario';
+import { AnomaPortrait } from './Anoma';
+import { normalEnding, expressionForEnding } from './scenario';
 import type { StoryProgress, StoryTotals } from './types';
 
 export function StoryCounts({ totals }: { totals: StoryTotals }) {
@@ -11,33 +11,23 @@ export function StoryCounts({ totals }: { totals: StoryTotals }) {
     <div><dt>差分</dt><dd>{totals.difference > 0 ? '+' : ''}{totals.difference}個</dd></div>
   </dl>;
 }
-export function StoryDecision({ progress, busy, onChoice, showCounts = true }: {
-  progress: StoryProgress; busy: boolean; showCounts?: boolean; onChoice: (choice: 'escape' | 'continue') => void;
-}) {
-  const reached = progress.phase === 'escapable';
-  const welcome = progress.phase === 'extension' && progress.totals.rounds === progress.extension_start;
-  const lines = welcome ? extensionWelcome : ['ここから脱出する？'];
-  const key = JSON.stringify(progress.totals);
-  const expression = reached ? storyExpressions.escapable : welcome ? expressionForExtension(key) : expressionForEnding(progress.totals.difference, key);
-  return <section className="story-decision" aria-label="脱出と継続">
-    {showCounts && <StoryCounts totals={progress.totals} />}
-    <StagePublisher lines={lines} expression={expression} />
-    <button className="secondary" disabled={busy} onClick={() => onChoice('escape')}>脱出する</button>
-    {reached && <button className="primary" disabled={busy} onClick={() => onChoice('continue')}>さらに賭ける</button>}
-  </section>;
-}
 export function NormalEnding({ progress, shorter, onTitle }: {
   progress: StoryProgress; shorter: boolean; onTitle: () => void;
 }) {
   const [index, setIndex] = useState(0);
   const difference = progress.totals.difference;
-  const lines = normalEnding(shorter && difference > 0 ? 0 : difference);
-  const last = index === lines.length - 1;
-  return <main className="ending-screen">
-    <StoryCounts totals={progress.totals} />
-    <p aria-live="polite">{lines[index]}</p>
-    <button autoFocus onClick={() => last ? onTitle() : setIndex(index + 1)}>
-      {last ? 'タイトルへ戻る' : '次へ'}
-    </button>
+  const tone = shorter && difference > 0 ? 0 : difference;
+  const lines = normalEnding(tone);
+  const last = index === lines.length;
+  return <main className="opening-screen ending-closeup">
+    <aside className="opening-portrait" aria-label="アノマ">
+      <AnomaPortrait expression={expressionForEnding(tone, JSON.stringify(progress.totals))} speaking={false} />
+    </aside>
+    <div className="opening-dialogue" aria-live="polite">
+      {index === 0 ? <StoryCounts totals={progress.totals} /> : <p>{lines[index - 1]}</p>}
+      <small>{last ? 'タイトルへ戻る' : '次へ'} ▼</small>
+    </div>
+    <button className="opening-advance" autoFocus aria-label={last ? 'タイトルへ戻る' : '次へ'}
+      onClick={() => last ? onTitle() : setIndex(index + 1)} />
   </main>;
 }
