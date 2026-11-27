@@ -39,7 +39,10 @@ test('ending renders all final lines and returns to title', () => {
   for (const difference of [-3, 0, 4]) {
     let title = false;
     const ui = stageMount(NormalEnding, { progress: progress('ended', difference), onTitle: () => title = true });
-    for (const line of normalEnding(difference)) assert.ok(text(ui.tree).includes(line));
+    for (const [index, line] of normalEnding(difference).entries()) {
+      if (index) ui.click('次へ');
+      assert.ok(text(ui.tree).includes(line));
+    }
     ui.click('タイトルへ戻る'); assert.ok(title);
   }
 });
@@ -71,8 +74,15 @@ test('App handles reaching the goal and escaping for all games', async () => {
     assert.equal(choices[0].choice, 'escape');
     assert.equal(choices[0].version, 6);
     assert.equal(text(ui.tree).includes('ノーマルエンディング'), false);
+    for (let i = 1; i < normalEnding(1).length; i++) ui.click('次へ');
     assert.ok(text(ui.tree).includes('タイトルへ戻る'));
     ui.click('タイトルへ戻る');
     assert.ok(!text(ui.tree).includes('つづきから'));
   }
+});
+
+test('shorter final text uses neutral dialogue and retains positive totals', () => {
+  const ui = mount(NormalEnding, { progress: progress('ended', 1), shorter: true, onTitle() {} });
+  assert.ok(text(ui.tree).includes(normalEnding(0)[0]));
+  assert.ok(text(ui.tree).includes('+1個'));
 });

@@ -188,7 +188,7 @@ test('baccarat reveals only on a full squeeze and counts each complete hand sepa
   const slider = () => ui.find(n => n.props.role === 'slider');
   const target = { getBoundingClientRect: () => ({ left: 0, right: 100, top: 0, bottom: 140, width: 100, height: 140 }),
     setPointerCapture() {} };
-  const event = x => ({ currentTarget: target, pointerId: 1, isPrimary: true, clientX: x, clientY: 70 });
+  const event = x => ({ currentTarget: target, pointerId: 1, isPrimary: true, clientX: x, clientY: 70, preventDefault() {} });
   const drag = x => {
     slider().props.onPointerDown(event(0));
     slider().props.onPointerMove(event(x));

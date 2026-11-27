@@ -285,7 +285,7 @@ function RpsGamble({
         <div className="folio-rps-fan">
           {RPS_HANDS.map((item) => {
             const chosen = selection?.hand ?? lastMove?.choice;
-            const isChosen = chosen === item.id;
+            const isChosen = showing && chosen === item.id;
             return (
               <button
                 key={item.id}
@@ -374,8 +374,6 @@ function ChinchiroGamble({ gamble, busy, error, prepared, onMove, onFinish }: Fr
   const hand = current ?? previous;
   const rolls = hand?.side === 'anoma' ? hand.rolls : hand ? [hand.roll] : [];
   const faces = rolls[current ? rollIndex : rolls.length - 1] ?? [1, 2, 3];
-  const anoma = current?.side === 'anoma' ? undefined
-    : moves.slice(0, shown).reverse().find(m => m.side === 'anoma');
   const player = previous?.side === 'player' && current?.side !== 'anoma' ? previous : undefined;
   const tie = player?.result === 'tie';
   const waitingForAnoma = !current && !gamble.outcome && (!moves.length || tie);
@@ -419,12 +417,7 @@ function ChinchiroGamble({ gamble, busy, error, prepared, onMove, onFinish }: Fr
           {faces.map((value, i) => <ChinchiroDie key={i} value={value} />)}
         </div>
       </div>
-      <aside className="chin-notes" aria-live="polite">
-        {anoma?.side === 'anoma' && <div className="chin-slip"><small>アノマ</small>
-          <strong>{chinchiroHandName(anoma)}</strong><span>{anoma.rolls.at(-1)?.join('・')}</span></div>}
-        <small aria-label={`あなたの試行 ${player?.attempt ?? 0}回`}>あなた　{'Ⅰ'.repeat(player?.attempt ?? 0)}</small>
-        {player && !current && <strong className="chin-slip">{chinchiroHandName(player)}</strong>}
-      </aside>
+
     </div>
     {!current && gamble.outcome ? <OutcomeSlip outcome={gamble.outcome} {...{ prepared, busy, error, onFinish }} /> :
       <div className="chin-actions">
@@ -494,7 +487,7 @@ function CardGuessGamble({
     }
   }, [resultMove, gamble.outcome, phase]);
 
-  const swapInterval = (idx: number) => 1027 - 572 * idx / Math.max(1, swaps.length - 1);
+  const swapInterval = (idx: number) => 950 - 720 * idx / Math.max(1, swaps.length - 1);
 
   // シャッフル演出の再生
   const startShuffle = () => {
@@ -527,7 +520,9 @@ function CardGuessGamble({
           setActiveSwapStep(idx + 1);
         }
       }, nextSwap);
-      nextSwap += reduced ? 110 : swapInterval(idx);
+      // At the climax the next pair starts while the first is still moving.
+      const overlap = swaps.length >= 14 && (idx === 9 || idx === 12);
+      nextSwap += reduced ? 110 : swapInterval(idx) * (overlap ? .4 : 1);
       timers.push(t);
     });
 
@@ -1114,7 +1109,7 @@ function BaccaratGamble({
     };
     const nearest = (Object.keys(distances) as PeelEdge[])
       .reduce((a, b) => distances[a] < distances[b] ? a : b);
-    if (!peelProgress && distances[nearest] > Math.min(rect.width, rect.height) * .25) return;
+    e.preventDefault();
     const from = peelProgress > 0 ? edge : nearest;
     setEdge(from);
     e.currentTarget.setPointerCapture(e.pointerId);
@@ -1290,6 +1285,7 @@ function BaccaratGamble({
               onPointerMove={handlePointerMove}
               onPointerUp={handlePointerUp}
               onPointerCancel={handlePointerUp}
+              onLostPointerCapture={handlePointerUp}
               onKeyDown={handleKeyDown}
               style={
                 {

@@ -184,7 +184,7 @@ function AppContent(){
   const backward = turn.returning || page === 'title' || (page === 'choose' && turn.from === 'custom')
     || (page === 'words' && turn.from === 'sheet') || (page === 'reward' && turn.from === 'words');
   return <div className="app-shell" data-screen={screen}>
-    <AnomaStage portraitFocus={screen === 'title' || screen === 'opening' || Boolean(ended || decision)} inactive={starting || screen === 'opening'}>
+    <AnomaStage portraitFocus={screen === 'title' || screen === 'opening' || Boolean(ended || decision)} inactive={starting || screen === 'opening' || Boolean(ended)}>
       <div className="page-viewport" data-back={backward} data-returning={turn.returning}>
       <div className="notebook-body" key={page} ref={retainExit} data-page={page} data-from={turn.from}>
       {screen === 'title' && <ScenePublisher scene="title" />}
@@ -237,7 +237,7 @@ function AppContent(){
             <button className="primary" disabled={busy || customCount < MIN_STORY || customCount > MAX_STORY}>この物語ではじめる</button>
           </form>
       </SceneObject>}
-      {screen === 'game' && session?.story_progress && ended && <NormalEnding progress={session.story_progress} onTitle={returnToTitle} />}
+
       {screen==='game'&&session&&!ended&&<main ref={historyOpen ? undefined : retainExit} hidden={historyOpen} key={`${session.id}-${session.version}-${session.view}`}
         className={`game-screen${resultMode && currentVersion?.transaction ? ` result-${currentVersion.transaction.outcome}-view` : ''}${gambleMode ? ' gambling-view' : ''}`}>
         {!rewardModalOpen && !gambleModalOpen && <div className="game-object" key={gambleMode ? 'table' : 'manuscript'}>
@@ -320,6 +320,7 @@ function AppContent(){
       </div>
       </div>
     </AnomaStage>
+      {screen === 'game' && session?.story_progress && ended && <NormalEnding progress={session.story_progress} shorter={[...session.text].length < [...storyVersions(session)[0].text].length} onTitle={returnToTitle} />}
     {(starting || screen === 'opening') && <Opening busy={busy} error={error}
       onDark={() => { setStarting(false); setScreen('opening'); }}
       onComplete={() => { setStarting(false); setScreen('interview'); }} />}

@@ -46,13 +46,13 @@ def test_blackjack_deck_matches_preselected_result(wins):
 @pytest.mark.parametrize('index,margins,strength', [(0,{9},10),(1,{7,8},9),(2,{4,5,6},2),(3,{1,2,3},1)])
 @pytest.mark.parametrize('wins', [True, False])
 def test_baccarat_ties_and_final_deal_are_prearranged(index, margins, strength, wins):
-    rng = FixedChoice(index, ties=2)
+    rng = FixedChoice(index)
     probabilities = []
     plan = make_gamble('baccarat', lambda p: probabilities.append(p) or wins, rng)
     assert probabilities == [.45] and rng.weights == [20, 25, 25, 30]
     for hand in plan['rounds']:
         assert deal_baccarat(hand['deck']) == {k: v for k, v in hand.items() if k != 'deck'}
-    assert [hand['outcome'] for hand in plan['rounds']] == ['tie', 'tie', 'win' if wins else 'loss']
+    assert [hand['outcome'] for hand in plan['rounds']] == ['win' if wins else 'loss']
     assert plan['strength'] == strength and plan['rounds'][-1]['difference'] in margins
 
 
@@ -101,7 +101,7 @@ def test_card_choice_resolves_against_the_fixed_shuffle():
     from app.gambles import play_beginner_game
 
     game = make_gamble('card_guess', lambda _: None, Random(1))
-    assert game['outcome'] is None and len(game['swaps']) == 8
+    assert game['outcome'] is None and len(game['swaps']) == 14
     assert game['cards'][game['target']] == {'rank': 'A', 'suit': '♠'}
     assert len({(c['rank'], c['suit']) for c in game['cards']}) == 3
     outcomes = []
@@ -178,3 +178,10 @@ def test_chinchiro_tied_misses_reset_round():
     play_rolls(game, 6, 6, 3)
     play_rolls(game, 1, 1, 4)
     assert (game['outcome'], game['strength']) == ('win', 2)
+
+def test_baccarat_equal_totals_settle_as_minimum_win():
+    plan = make_gamble('baccarat', lambda _: pytest.fail('unexpected redraw'), FixedChoice(0, ties=1))
+    hand, = plan['rounds']
+    assert hand['player_total'] == hand['banker_total']
+    assert hand['outcome'] == plan['outcome'] == 'win'
+    assert plan['strength'] == 1

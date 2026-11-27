@@ -61,3 +61,16 @@ def test_contact_rejected_before_generation(monkeypatch, field, value):
     assert '使えません' in response.json()['detail']
     generate.assert_not_awaited()
     save.assert_not_called()
+
+
+def test_finalize_updates_existing_generated_story(monkeypatch):
+    write = Mock()
+    monkeypatch.setattr(generation, 'write_generated', write)
+    story_id = 'a' * 32
+    payload = {'final_text': GOOD, 'final_intro': '私はミオ。'}
+    client = TestClient(main.app)
+    url = f'/api/stories/generated/{story_id}/finalize'
+    assert client.post(url, json=payload).status_code == 200
+    write.assert_called_once_with(story_id, payload, finalize=True)
+    assert client.post(url, json={**payload, 'final_text': '短い'}).status_code == 422
+    assert write.call_count == 1

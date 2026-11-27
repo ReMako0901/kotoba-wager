@@ -78,3 +78,6 @@
 }
 .opening-advance { position: absolute; inset: 0; width: 100%; border: 0; background: transparent; }
 .opening-narration { pointer-events: none; }
+
+.opening-dialogue::before { content: ''; position: fixed; inset: 0; }
+.opening-skip { z-index: 1; }

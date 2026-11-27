@@ -89,7 +89,7 @@ def deal_baccarat(cards):
             banker.append(cards[cursor])
     p, b = baccarat_total(player), baccarat_total(banker)
     return {'player': player, 'banker': banker, 'player_total': p, 'banker_total': b,
-            'outcome': 'win' if p > b else 'loss' if p < b else 'tie', 'difference': abs(p-b)}
+            'outcome': 'win' if p >= b else 'loss', 'difference': abs(p-b)}
 
 
 def matching_deal(kind, outcome, rng, differences=None):
@@ -121,7 +121,7 @@ def prepare_beginner_game(kind, rng):
     if kind == 'card_guess':
         pairs = [(0, 1), (1, 2), (0, 2)]
         swaps = []
-        for _ in range(8):
+        for _ in range(14):
             swaps.append(rng.choice([pair for pair in pairs if not swaps or pair != swaps[-1]]))
         ace = {'rank': 'A', 'suit': '♠'}
         cards = deck(rng)
@@ -237,13 +237,11 @@ def make_gamble(kind, draw, rng=None):
                 'rounds': [matching_deal(kind, outcome, rng)]}
     if kind != 'baccarat':
         raise ValueError('このギャンブルは選択できません。')
-    rounds = []
-    # Probability of ties is geometric. All tied rounds and the decisive round
-    # are constructed now, so later redeals never trigger a new settlement.
-    while rng.random() < .05:
-        rounds.append(matching_deal(kind, 'tie', rng, {0}))
-    outcome = 'win' if draw(.45) else 'loss'
-    differences, strength = rng.choices([([9], 10), ([7, 8], 9), ([4, 5, 6], 2), ([1, 2, 3], 1)], [20, 25, 25, 30])[0]
-    rounds.append(matching_deal(kind, outcome, rng, set(differences)))
-    return {'kind': kind, 'outcome': outcome, 'strength': strength, 'label': f"{rounds[-1]['difference']}点差",
-            'rounds': rounds}
+    if rng.random() < .05:
+        outcome, differences, strength = 'win', [0], 1
+    else:
+        outcome = 'win' if draw(.45) else 'loss'
+        differences, strength = rng.choices([([9], 10), ([7, 8], 9), ([4, 5, 6], 2), ([1, 2, 3], 1)], [20, 25, 25, 30])[0]
+    hand = matching_deal(kind, outcome, rng, set(differences))
+    return {'kind': kind, 'outcome': outcome, 'strength': strength, 'label': f"{hand['difference']}点差",
+            'rounds': [hand]}
