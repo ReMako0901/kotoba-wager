@@ -1,3 +1,5 @@
+/* 注意: このファイルはアプリから読み込まれていない（App.tsx の import に無い）。
+   アノマ表示の実効スタイルは notebook.css 側にある。ここだけ直しても反映されない。 */
 .anoma-stage {
   height: 100%;
   display: grid;
