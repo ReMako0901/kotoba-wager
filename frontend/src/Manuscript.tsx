@@ -82,7 +82,7 @@ function Paper({text, units, selected, disabled, onToggle, marked, markIds, chan
       }
       const position = {gridRow: `${row + 1} / span ${cells.length}`, gridColumn: Math.floor(square / rows) + 1};
       content.push(run.stakeable ? (
-        <button className="vertical-word" data-memory-mark={markIds?.includes(run.id) || undefined} key={source} type="button" style={position}
+        <button className="vertical-word" data-memory-mark={markIds?.includes(run.id) ? (firstFragment ? 'start' : 'continued') : undefined} key={source} type="button" style={position}
           aria-label={markIds?.includes(run.id) ? run.text + '（印付き）' : run.text} aria-pressed={selected?.includes(run.id)}
           tabIndex={firstFragment ? 0 : -1} disabled={disabled}
           onClick={() => onToggle?.(run.id)}>{cells}</button>

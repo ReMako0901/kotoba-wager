@@ -112,7 +112,7 @@ def mark_preview(request: MarkPreview):
 
 
 class MarkSelection(BaseModel):
-    unit_ids: list[str] = Field(max_length=3)
+    unit_ids: list[str] = Field(max_length=1)
 
 
 @app.post("/api/sessions/{sid}/marks")
