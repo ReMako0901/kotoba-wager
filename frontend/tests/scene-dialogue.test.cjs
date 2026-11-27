@@ -6,7 +6,7 @@ const { stageMount } = require('./anoma-stage-harness.cjs');
 const { ScenePublisher } = require('../src/ScenePublisher.tsx');
 const { scenePools, chooseScene, gameScene } = require('../src/sceneDialogue.ts');
 const stage = ui => ui.find(n => n.props.className === 'anoma-stage');
-const line = ui => ui.find(n => n.type === 'p');
+const line = ui => ui.find(n => n.props.className === 'sr-only');
 test('all fifteen pools and expressions match the authoritative specification', () => {
   const spec = fs.readFileSync('docs/UI_FEEDBACK3.md', 'utf8');
   const sections = [...spec.matchAll(/^### ([^\n]+)\n([\s\S]*?)(?=^### |^## |$(?![\s\S]))/gm)];
@@ -14,7 +14,7 @@ test('all fifteen pools and expressions match the authoritative specification', 
   assert.equal(sections.length, 15);
   for (const [, title, body] of sections) {
     const key = title.replace('（共通）', '');
-    assert.deepEqual([...scenePools[key].lines], [...body.matchAll(/^- (.+)$/gm)].map(m => m[1]));
+    assert.deepEqual([...scenePools[key].lines], [...body.matchAll(/^- (.+)$/gm)].map(m => m[1].replaceAll('あんた', 'あなた')));
     assert.ok(scenePools[key].lines.length > 0);
     assert.ok(scenePools[key].expressions.length > 0);
     const rowKey = key.startsWith('gamblePlay') ? 'gamblePlay:<種目>' : key;

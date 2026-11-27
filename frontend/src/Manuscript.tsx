@@ -138,7 +138,7 @@ function animateInk(frame: HTMLElement, complete: () => void) {
     if (!visible(rect)) continue;
     const font = getComputedStyle(glyph);
     // Clip copies of the actual glyph so the pieces begin as its ink strokes.
-    const divisions = reduced ? 1 : 3;
+    const divisions = reduced ? 1 : 6;
     for (let row = 0; row < divisions; row++) {
       for (let col = 0; col < divisions; col++) {
         const piece = document.createElement('span');
@@ -149,8 +149,8 @@ function animateInk(frame: HTMLElement, complete: () => void) {
           width: rect.width + 'px', height: rect.height + 'px',
           clipPath: `inset(${row * 100 / divisions}% ${(divisions-col-1) * 100 / divisions}% ${(divisions-row-1) * 100 / divisions}% ${col * 100 / divisions}%)`,
         });
-        piece.style.setProperty('--burst-x', ((col - 1) * 9) + 'px');
-        piece.style.setProperty('--burst-y', ((row - 1) * 9) + 'px');
+        piece.style.setProperty('--burst-x', ((col - (divisions - 1) / 2) * 5) + 'px');
+        piece.style.setProperty('--burst-y', ((row - (divisions - 1) / 2) * 5) + 'px');
         piece.style.setProperty('--flight-x', (target.left + target.width / 2 - rect.left - rect.width / 2) + 'px');
         piece.style.setProperty('--flight-y', (target.top + target.height / 2 - rect.top - rect.height / 2) + 'px');
         layer.append(piece);
