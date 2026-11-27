@@ -52,7 +52,7 @@ def _firestore_value(value):
     raise TypeError(f'unsupported field type: {type(value)}')
 
 
-def save_generated(story_id, record):
+def write_generated(story_id, record, *, finalize=False):
     # Firestore へは REST (httpx) で書く。gRPC クライアントはこの実行環境の
     # プロキシと相性が悪いため使わない。認証は ADC（ローカル）/
     # サービスアカウント（Cloud Run）に google.auth が解決する。
@@ -65,13 +65,45 @@ def save_generated(story_id, record):
         scopes=['https://www.googleapis.com/auth/datastore'])
     credentials.refresh(google.auth.transport.requests.Request())
     fields = {key: _firestore_value(value) for key, value in record.items()}
-    fields['created_at'] = {
-        'timestampValue': datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z')}
     url = (f'https://firestore.googleapis.com/v1/projects/{project}'
-           f'/databases/(default)/documents/generated_stories?documentId={story_id}')
-    response = httpx.post(url, json={'fields': fields}, timeout=30, headers={
-        'Authorization': f'Bearer {credentials.token}'})
+           '/databases/(default)/documents/generated_stories')
+    headers = {'Authorization': f'Bearer {credentials.token}'}
+    if finalize:
+        params = [('updateMask.fieldPaths', field) for field in fields]
+        params.append(('currentDocument.exists', 'true'))
+        response = httpx.patch(f'{url}/{story_id}', params=params, json={'fields': fields},
+                               timeout=30, headers=headers)
+        if response.status_code == 404:
+            raise HTTPException(404, '生成した物語が見つかりません。')
+    else:
+        fields['created_at'] = {
+            'timestampValue': datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z')}
+        response = httpx.post(url, params={'documentId': story_id}, json={'fields': fields},
+                              timeout=30, headers=headers)
     response.raise_for_status()
+
+
+def save_generated(story_id, record):
+    write_generated(story_id, record)
+
+
+class FinalStory(BaseModel):
+    final_text: Annotated[str, StringConstraints(strip_whitespace=True, min_length=20, max_length=100)]
+    final_intro: Annotated[str, StringConstraints(strip_whitespace=True, max_length=500)]
+
+
+async def finalize_story(story_id: Annotated[str, StringConstraints(pattern=r'^[a-f0-9]{32}$')], request: FinalStory):
+    if any(contains_contact(value) for value in request.model_dump().values()):
+        raise HTTPException(422, '連絡先を除いてください。')
+    if sum(unit.stakeable for unit in build_analysis(request.final_text, 1).units) < 3:
+        raise HTTPException(422, '賭けられる言葉を3個以上含めてください。')
+    try:
+        await run_in_threadpool(write_generated, story_id, request.model_dump(), finalize=True)
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(503, '修正文を保存できませんでした。もう一度お試しください。') from None
+    return {'generated_story_id': story_id}
 
 
 def playable(story, name):

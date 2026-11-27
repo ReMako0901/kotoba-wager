@@ -21,7 +21,8 @@ test('名前から始まり、異なる2問を聞き、各問の深掘りは1回
     ui.draw();
     ui.click('答える');
   }
-  const label = () => text(ui.find(n => n.type === 'label'));
+  ui.click('質問へ進む');
+  const label = () => ui.find(n => n.type === 'textarea').props['aria-label'];
   const questions = [];
   questions.push(label());
   answer('ソラ');
@@ -35,6 +36,10 @@ test('名前から始まり、異なる2問を聞き、各問の深掘りは1回
   assert.equal(questions[0], interviewDialogue.name);
   assert.equal(new Set(questions).size, 3);
   assert.ok(questions.slice(1).every(q => interviewDialogue.questions.some(item => item.question === q)));
+  ui.draw();
+  assert.equal(requests.length, 1);
+  ui.click('はい');
+  await pending;
   const [[generate, payload], [start, session]] = requests;
   assert.equal(generate, '/api/stories/generate');
   assert.equal(payload.name, 'ソラ');

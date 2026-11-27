@@ -80,6 +80,7 @@ test('new start opens before drawing stories; results publish reactions for all 
   assert.equal(requests.some(url => url.endsWith('/stories/draw')), false);
   ui.click('スキップ'); await flush(); ui.draw();
   assert.ok(text(ui.tree).includes('まず、あなたのことを教えてくれる？'));
+  ui.click('質問へ進む'); ui.draw();
   ui.find(n => n.type === 'textarea').props.onChange({ target: { value: 'ソラ' } });
   ui.draw(); ui.click('答える');
   assert.ok(!text(ui.tree).includes('もう少しだけ、教えてくれる？'));

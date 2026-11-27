@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
-from .story_generation import generate_story
+from .story_generation import finalize_story, generate_story
 from .config import settings
 from .engine import engine
 from .gemini import GenerationError, gemini
@@ -71,6 +71,7 @@ def public(session):
 
 
 app.post("/api/stories/generate")(generate_story)
+app.post("/api/stories/generated/{story_id}/finalize")(finalize_story)
 
 
 @app.get("/api/health")

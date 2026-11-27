@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { StagePublisher } from './Anoma';
 import { interviewDialogue as d } from './sceneDialogue';
 import { api, requestId } from './api';
@@ -24,7 +24,17 @@ export function StoryInterview({ busy, act, onPreset, accept }: {
   const [first, setFirst] = useState('');
   const [input, setInput] = useState('');
   const [waiting, setWaiting] = useState(false);
-  const saved = useRef<{ key: string; story: Story; sid: string } | undefined>(undefined);
+  const [introLine, setIntroLine] = useState(true);
+  const [story, setStory] = useState<Story>();
+  const [editing, setEditing] = useState(false);
+  const [body, setBody] = useState('');
+  const [intro, setIntro] = useState('');
+  const sid = useRef('');
+  useEffect(() => {
+    if (!introLine) return;
+    const timer = window.setTimeout(() => setIntroLine(false), 2200);
+    return () => window.clearTimeout(timer);
+  }, [introLine]);
   const index = answers.length;
   const { question, followup } = questions[index];
   const value = input.trim();
@@ -46,26 +56,51 @@ export function StoryInterview({ busy, act, onPreset, accept }: {
       setWaiting(true);
       try {
         const payload = { name, answers: next };
-        const key = JSON.stringify(payload);
-        if (saved.current?.key !== key) {
-          const story = await api<Story>('/stories/generate', payload);
-          saved.current = { key, story, sid: requestId() };
-        }
-        const { story, sid } = saved.current;
-        accept(await api<Session>('/sessions', { generated_story_id: story.generated_story_id,
-          title: story.title, intro: story.intro, custom_text: story.text, request_id: sid }));
+        const generated = await api<Story>('/stories/generate', payload);
+        sid.current = requestId();
+        setStory(generated);
+        setBody(generated.text);
+        setIntro(generated.intro);
       } finally { setWaiting(false); }
     });
   }
+  if (story) {
+    const finalText = body.trim(), finalIntro = intro.trim();
+    const start = () => act(async () => {
+      if (finalText !== story.text || finalIntro !== story.intro) {
+        await api('/stories/generated/' + story.generated_story_id + '/finalize', {
+          final_text: finalText, final_intro: finalIntro
+        });
+      }
+      accept(await api<Session>('/sessions', { generated_story_id: story.generated_story_id,
+        title: story.title, intro: finalIntro, custom_text: finalText, request_id: sid.current }));
+    });
+    return <main className="story-interview">
+      <StagePublisher expression="normal" lines={['これでいいかしら？']} />
+      <h2>{story.title}</h2>
+      {editing ? <>
+        <label>導入<textarea value={intro} maxLength={500} disabled={busy} onChange={e => setIntro(e.target.value)} /></label>
+        <label>本文（20〜100文字）<textarea rows={4} value={body} disabled={busy} onChange={e => setBody(e.target.value)} /></label>
+        <button className="primary" disabled={busy || [...finalText].length < 20 || [...finalText].length > 100} onClick={start}>これで始める</button>
+      </> : <>
+        <p>{intro}</p><p>{body}</p>
+        <div className="review-actions">
+          <button disabled={busy} onClick={() => setEditing(true)}>手動で修正する</button>
+          <button className="primary" disabled={busy} onClick={start}>はい</button>
+        </div>
+      </>}
+    </main>;
+  }
   return <main className="story-interview">
-    <StagePublisher expression="normal" lines={!index && !first ? [d.intro, d.caution, question] : [line]} />
+    <StagePublisher expression="normal" lines={[introLine ? d.intro : line]} />
     {waiting ? <GenerationSkeleton /> : <>
-      <label htmlFor="interview-answer">{line}</label>
-      <textarea id="interview-answer" rows={2} value={input} disabled={busy}
+      {introLine && <button className="interview-advance" aria-label="質問へ進む" onClick={() => setIntroLine(false)} />}
+      {!introLine && <>
+      <textarea aria-label={line} id="interview-answer" rows={2} value={input} disabled={busy}
         maxLength={!index && !first ? 40 : 480} onChange={event => setInput(event.target.value)} />
       <small>{d.note}</small>
       {contact && <small role="alert">{d.contact}</small>}
-      <button className="primary" onClick={answer} disabled={!value || contact || busy}>答える</button>
+      <button className="primary" onClick={answer} disabled={!value || contact || busy}>答える</button></>}
       <button className="secondary interview-preset" onClick={onPreset} disabled={busy}>プリセットの文で始める</button>
     </>}
   </main>;

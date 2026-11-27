@@ -136,9 +136,10 @@ button:focus-visible, [tabindex]:focus-visible, textarea:focus-visible { outline
 .story-decision { margin-bottom: 4px; }
 .opening-narration { line-height: 1.7; margin-bottom: 14px; }
 .history-body { font-size: 13px; }
+.app-shell[data-screen=game] .anoma-photo { width: clamp(96px,18.2dvh,174px); }
 @media (max-height: 720px) {
   .app-shell[data-screen=game] .page-margin { padding-bottom: 2px; }
-  .app-shell[data-screen=game] .anoma-photo { width: 78px; }
+  .app-shell[data-screen=game] .anoma-photo { width: 101px; }
   .app-shell[data-screen=game] .anoma-dialogue { font-size: 13px; line-height: 1.42; }
   .story-list { margin-top: 5px; }
 }
@@ -149,3 +150,20 @@ button:focus-visible, [tabindex]:focus-visible, textarea:focus-visible { outline
 .interview-preset { align-self: flex-end; margin-top: auto; font-size: .8rem; }
 .app-shell[data-screen=title] .anoma-dialogue { color: var(--ink); }
 .title-actions .primary { flex: 0 0 auto; width: auto; }
+
+.review-actions { display: flex; justify-content: space-between; }
+.interview-advance { position: fixed; inset: 0; border: 0; background: transparent; }
+.interview-preset { position: relative; }
+.ending-screen {
+  position: fixed; inset: 0; z-index: 50; width: 100%; height: 100%;
+  background: #080808; color: #fffaf0; display: grid; align-content: center;
+  justify-items: center; gap: 2rem; padding: 1.25rem;
+  animation: ending-darken 600ms ease both;
+}
+.ending-screen > * { animation: ending-darken 550ms 600ms ease both; }
+.ending-screen button { color: inherit; background: transparent; }
+.ending-screen button::after { content: ''; position: fixed; inset: 0; }
+@keyframes ending-darken { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .ending-screen, .ending-screen > * { animation-duration: 80ms; animation-delay: 0ms; }
+}

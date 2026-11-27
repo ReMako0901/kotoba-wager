@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { StagePublisher } from './Anoma';
 import { extensionWelcome, normalEnding, expressionForEnding, expressionForExtension, storyExpressions } from './scenario';
 import type { StoryProgress, StoryTotals } from './types';
@@ -15,7 +16,7 @@ export function StoryDecision({ progress, busy, onChoice, showCounts = true }: {
 }) {
   const reached = progress.phase === 'escapable';
   const welcome = progress.phase === 'extension' && progress.totals.rounds === progress.extension_start;
-  const lines = welcome ? extensionWelcome : normalEnding(progress.totals.difference);
+  const lines = welcome ? extensionWelcome : ['ここから脱出する？'];
   const key = JSON.stringify(progress.totals);
   const expression = reached ? storyExpressions.escapable : welcome ? expressionForExtension(key) : expressionForEnding(progress.totals.difference, key);
   return <section className="story-decision" aria-label="脱出と継続">
@@ -25,10 +26,18 @@ export function StoryDecision({ progress, busy, onChoice, showCounts = true }: {
     {reached && <button className="primary" disabled={busy} onClick={() => onChoice('continue')}>さらに賭ける</button>}
   </section>;
 }
-export function NormalEnding({ progress, onTitle }: { progress: StoryProgress; onTitle: () => void }) {
+export function NormalEnding({ progress, shorter, onTitle }: {
+  progress: StoryProgress; shorter: boolean; onTitle: () => void;
+}) {
+  const [index, setIndex] = useState(0);
+  const difference = progress.totals.difference;
+  const lines = normalEnding(shorter && difference > 0 ? 0 : difference);
+  const last = index === lines.length - 1;
   return <main className="ending-screen">
     <StoryCounts totals={progress.totals} />
-    <StagePublisher lines={normalEnding(progress.totals.difference)} expression={expressionForEnding(progress.totals.difference, JSON.stringify(progress.totals))} />
-    <button className="primary" onClick={onTitle}>タイトルへ戻る</button>
+    <p aria-live="polite">{lines[index]}</p>
+    <button autoFocus onClick={() => last ? onTitle() : setIndex(index + 1)}>
+      {last ? 'タイトルへ戻る' : '次へ'}
+    </button>
   </main>;
 }

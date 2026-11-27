@@ -82,7 +82,7 @@ test('all dialogue owners publish and obsolete embedded frames are removed', () 
   assert.doesNotMatch(anoma, /StagePublisher lines=\{\[scenario.opening/);
   assert.match(app, /<ScenePublisher scene=\{gameScene/);
   assert.match(app, /<StagePublisher lines=\{\[reaction.line\]\} expression=\{reaction.expression\} reaction=\{reaction.reaction\}/);
-  assert.equal((progress.match(/<StagePublisher /g) ?? []).length, 2);
+  assert.equal((progress.match(/<StagePublisher /g) ?? []).length, 1);
   assert.doesNotMatch(anoma + app + progress, /AnomaFrame|AnomaResult/);
   const css = fs.readFileSync('frontend/src/notebook.css', 'utf8');
   assert.match(css, /\.anoma-dialogue\s*\{[^}]*font: 500/);

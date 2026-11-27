@@ -1282,3 +1282,10 @@
   .rps-reveal span { animation: none; }
   .folio-rps-slip, .folio-squeeze-card { transition: none; }
 }
+
+.folio-squeeze-mat { touch-action: none; }
+.folio-rps { position: relative; }
+.rps-call { position: absolute; inset: 50% auto auto 50%; translate: -50% -50%; z-index: 2; pointer-events: none; }
+.folio-rps-slip.is-chosen:first-child { transform: translateX(calc(100% + 10px)); }
+.folio-rps-slip.is-chosen:last-child { transform: translateX(calc(-100% - 10px)); }
+.chin-board { grid-template-columns: minmax(0, 1fr); margin-inline: auto; }
