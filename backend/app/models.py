@@ -53,6 +53,7 @@ class Checks(BaseModel):
 
 
 class Rewrite(BaseModel):
+    mark_starts: list[int] | None = None
     text: str = Field(min_length=1)
     summary: str
     changes: list[str] = Field(min_length=1,max_length=8)
@@ -60,6 +61,7 @@ class Rewrite(BaseModel):
 
 
 class CreateSession(BaseModel):
+    mark_ids: list[str] | None = Field(default=None, max_length=3)
     title: str | None = Field(default=None, max_length=500)
     generated_story_id: str | None = Field(default=None, pattern=r"^[a-f0-9]{32}$")
     story_id: str | None = None

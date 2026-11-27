@@ -8,6 +8,7 @@ from .store import store
 from .quota import reserve_call
 from .gambles import BEGINNER_GAMES, make_gamble, play_beginner_game
 from .story_fallback import complete_story, local_concepts
+from .marks import marked_ranges, protected_units
 from .story_progress import update_progress
 
 STORY_GENERATION_TIMEOUT = 24
@@ -72,6 +73,10 @@ class GameEngine:
         gamble = make_gamble(request.game, self.draw) if request.game else None
         outcome = gamble['outcome'] if gamble else "win" if self.draw(session["win_probability"]) else "loss"
         tx = {"id":request.request_id,"source_version":session["version"],"status":"generating","outcome":outcome,"offer":deepcopy(offer),"unit_ids":request.unit_ids,"wager_count":len(units),"stakes":[u["text"] for u in units],"selected_units":deepcopy(units),"staked_concepts":[],"lost":[],"meanings_resolved":False,"before":session["text"],"attempts":0}
+        marked = set(session.get('marked_unit_ids', []))
+        tx['marked_units'] = [u for u in session["analysis"]["units"] if u['id'] in marked]
+        tx['staked_mark_ids'] = [i for i in request.unit_ids if i in marked]
+        tx['guarded_mark_ids'] = [u['id'] for u in tx['marked_units'] if u['id'] not in request.unit_ids]
         if gamble:
             tx['gamble'] = gamble
             tx['presentation_completed'] = False
@@ -126,6 +131,7 @@ class GameEngine:
                             tx["meanings_resolved"] = True
                         edited = complete_story(tx, session["lost_concepts"])
                         tx["used_fallback"] = True
+                    marked_ranges(tx, edited.text, edited.mark_starts)
                     tx["draft"]=edited.model_dump()
                     self.store.save(session)
                 if tx.get('gamble') and not tx.get('presentation_completed'):
@@ -160,6 +166,8 @@ class GameEngine:
         stakes = tx["staked_concepts"]
         lost = session["lost_concepts"]
         context = {"intro": session["intro"]} if session.get("intro") else {}
+        if marks := protected_units(tx):
+            context["marked_units"] = marks
         feedback = {}
         relaxed = False
         for attempt in range(2):
@@ -176,6 +184,7 @@ class GameEngine:
                     raise ReviewRejected("不採用になった本文と同じ文章が返りました。")
                 review_options = {"relax_budget": True} if relaxed else {}
                 edited = await self.call(session, self.ai.review, original, candidate, outcome, offer, stakes, lost, **context, **review_options)
+                marked_ranges(tx, edited.text, edited.mark_starts)
                 if edited.text == original:
                     raise ReviewRejected("編集後の本文が原文と同じです。")
                 if outcome == "win" and not lost:
@@ -205,12 +214,15 @@ class GameEngine:
         for c in tx["lost"]:
             lost.append({**c,"transaction_id":tx["id"],"source_version":tx["source_version"]})
         version=session["version"]+1
-        analysis=build_analysis(draft['text'],version).model_dump()
+        ranges = marked_ranges(tx, draft['text'], draft.get('mark_starts'))
+        analysis = build_analysis(draft['text'], version, ranges).model_dump()
+        marks = set(ranges)
+        mark_ids = [u['id'] for u in analysis['units'] if (u['start'], u['end']) in marks]
         completed=sum(t["status"]=="committed" for t in session["transactions"])+1
         offers=make_offers(analysis,completed+1,version)
         tx.update(status="committed",after=draft["text"],summary=draft["summary"],changes=draft["changes"],checks=draft["checks"],error=None)
         tx.pop("draft",None)
-        session.update(text=tx["after"],version=version,analysis=analysis,offers=offers,lost_concepts=lost,status="ready",view="result",error=None)
+        session.update(marked_unit_ids=mark_ids,text=tx["after"],version=version,analysis=analysis,offers=offers,lost_concepts=lost,status="ready",view="result",error=None)
         update_progress(session)
 
     async def finish_gamble(self, sid, transaction_id):

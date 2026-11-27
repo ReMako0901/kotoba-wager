@@ -10,7 +10,7 @@ from .engine import engine
 from .gemini import GenerationError, gemini
 from .models import CreateSession, GameMoveRequest, TradeRequest, StoryChoiceRequest
 from .story_progress import update_progress, public_progress, choose_progress
-from .analysis import build_analysis, make_offers, BETTING_MODE
+from .analysis import validate_stakes, build_analysis, make_offers, BETTING_MODE
 from .segmentation import external_lexicon, selection_dictionary
 from .store import store
 from .gambles import GAMES
@@ -99,6 +99,43 @@ def draw_stories(request:DrawRequest):
     return {"stories":secrets.SystemRandom().sample(available,min(request.count,len(available))),"exhausted":exhausted}
 
 
+class MarkPreview(BaseModel):
+    text: str = Field(min_length=20, max_length=100)
+
+
+@app.post("/api/stories/mark-preview")
+def mark_preview(request: MarkPreview):
+    try:
+        return build_analysis(request.text, 1)
+    except GenerationError as error:
+        raise HTTPException(422, str(error)) from None
+
+
+class MarkSelection(BaseModel):
+    unit_ids: list[str] = Field(max_length=3)
+
+
+@app.post("/api/sessions/{sid}/marks")
+async def confirm_marks(sid: str, request: MarkSelection):
+    async with store.lock(sid):
+        session = load(sid)
+        if session.get("initial_mark_ids") == request.unit_ids:
+            return public(session)
+        if "initial_mark_ids" in session or session["version"] != 1 or session["transactions"]:
+            raise HTTPException(409, "この原稿の印は確定済みです。")
+        save_marks(session, request.unit_ids)
+        store.save(session)
+        return public(session)
+
+
+def save_marks(session, ids):
+    try:
+        validate_stakes(session["analysis"], ids, len(ids))
+    except ValueError as error:
+        raise HTTPException(422, str(error)) from None
+    session.update(initial_mark_ids=ids, marked_unit_ids=ids)
+
+
 @app.post("/api/sessions",status_code=202)
 async def create_session(request:CreateSession):
     sid=request.request_id
@@ -117,6 +154,8 @@ async def create_session(request:CreateSession):
                     or existing.get("generated_story_id") != request.generated_story_id)
             ):
                 raise HTTPException(409,"同じ開始IDで違う物語は開始できません。")
+            if request.mark_ids is not None and existing.get("initial_mark_ids") != request.mark_ids:
+                raise HTTPException(409, "開始時の印が一致しません。")
             update_progress(existing)
             store.save(existing)
             return public(existing)
@@ -139,6 +178,8 @@ async def create_session(request:CreateSession):
             raise HTTPException(422, "文章が短すぎます。人物や物、様子を表す言葉を足して、もう一度入力してください")
         analysis = starter_analysis.model_dump()
         session={"betting_mode":BETTING_MODE,"id":sid,"story_id":story["id"],"title":story["title"],"intro":story.get("intro", ""),"text":story["text"],"version":1,"status":"ready","analysis":analysis,"offers":make_offers(analysis,1,1),"win_probability":settings.win_probability,"transactions":[],"lost_concepts":[],"pending_transaction_id":None,"view":"game","api_calls":0,"api_events":[],"usage":{"input":0,"output":0,"thoughts":0},"model":settings.model,"analysis_attempts":0,"error":None}
+        if request.mark_ids is not None:
+            save_marks(session, request.mark_ids)
         if request.custom_text is not None:
             session["custom_text"] = request.custom_text
             if request.generated_story_id:

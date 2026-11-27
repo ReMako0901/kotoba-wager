@@ -105,6 +105,8 @@ export function StoryPaperStack({ session, result = false, pageIndex, onPageChan
           {transaction.outcome === 'win' ? '勝利' : '敗北'}
         </strong>}
         {!result && <header className="paper-caption">
+          {Boolean(transaction?.staked_mark_ids?.length) && <small>印付きを賭けた</small>}
+          {Boolean(transaction?.guarded_mark_ids?.length) && <small>印付きを守った</small>}
           <p>{transaction ? `第${current.round}ラウンド · ${transaction.outcome === 'win' ? '勝利' : '敗北'}` : '最初の物語'}</p>
         </header>}
         <div className="story-board">

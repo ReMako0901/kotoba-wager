@@ -108,4 +108,6 @@ def apply_edits(text, proposal, plan):
         raise GenerationError('関係だけの消失で対象の物まで削除されたため、本文を保護しました。')
     if len(result)>140 or not result.strip():
         raise GenerationError('編集後の長さが条件を満たしませんでした。本文を保護しました。')
-    return Rewrite(text=result,summary=proposal.summary,changes=proposal.changes,checks=proposal.checks)
+    from .marks import map_edits
+    starts = map_edits(text, spans, plan.get('marked_units', []))
+    return Rewrite(mark_starts=starts, text=result,summary=proposal.summary,changes=proposal.changes,checks=proposal.checks)

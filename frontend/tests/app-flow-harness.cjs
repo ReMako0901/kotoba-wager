@@ -15,6 +15,10 @@ async function startStory(ui) {
   ui.click(initialStory.title);
   await flush();
   ui.draw();
+  if (ui.find(n => n.props['data-screen'] === 'marks')) {
+    ui.click('これで始める');
+    await flush(); ui.draw();
+  }
 }
 
 module.exports = { drawStories, startStory };

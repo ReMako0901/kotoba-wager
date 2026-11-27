@@ -1,3 +1,4 @@
+import { StoryMarks, markLine } from './StoryMarks';
 import { StoryInterview } from './StoryInterview';
 import './fonts.css';
 import './notebook.css';
@@ -40,7 +41,9 @@ export default function App() {
 }
 
 function AppContent(){
-  const [screen,setScreen]=useState<'title'|'opening'|'interview'|'choose'|'game'>('title');
+  const [screen,setScreen]=useState<'title'|'opening'|'interview'|'choose'|'marks'|'game'>('title');
+  const [marks, setMarks] = useState<string[]>([]);
+  const [confirmStake, setConfirmStake] = useState(false);
   const [starting, setStarting] = useState(false);
   const [session,setSession]=useState<Session>();
   const [paperIndex,setPaperIndex]=useState<number>();
@@ -62,7 +65,15 @@ function AppContent(){
   const inFlight=useRef(false),action=useRef<{id: string; game: GameKind} | undefined>(undefined);
   useEffect(() => {api<{games: GameOption[]}>('/games').then(data => setGames(data.games)).catch(() => setError('ゲームの一覧を取得できません。再読み込みしてください。'))}, []);
   function accept(s:Session){if(s.betting_mode!=='count-v1')throw new Error('個数方式へ更新中です。少し待ってからページを再読み込みしてください。');setSession(s);setScreen('game')}
+  function openMarks(s: Session) {
+    accept(s);
+    if (s.version === 1 && !s.initial_mark_ids && !s.transactions.length) {
+      setMarks([]);
+      setScreen('marks');
+    }
+  }
   useEffect(()=>{
+    setConfirmStake(false);
     setSelected([]);
     setGameTier('beginner');
     setPaperIndex(undefined);
@@ -106,10 +117,11 @@ function AppContent(){
     const selectable = screen === 'game' && ready && !resultMode && !gambleMode && !choosingReward;
     if (stakesReady && !wasStakesReady.current && selectable) {
       setError('');
-      setChoosingGame(true);
+      if (selected.some(id => session?.marked_unit_ids?.includes(id))) setConfirmStake(true);
+      else setChoosingGame(true);
     }
     wasStakesReady.current = stakesReady;
-  }, [stakesReady, screen, ready, resultMode, gambleMode, choosingReward]);
+  }, [stakesReady, screen, ready, resultMode, gambleMode, choosingReward, selected, session?.marked_unit_ids]);
   function toggle(id:string){
     if(busy||!ready||resultMode||!offer||choosingReward)return;
     action.current=undefined;
@@ -183,7 +195,7 @@ function AppContent(){
       const next = await api<Session>('/sessions', { intro: customIntro.trim(), custom_text: customText.trim(), request_id: requestId() });
       setCustomOpen(false);
       setCustomText('');
-      accept(next);
+      openMarks(next);
     });
   }
 
@@ -203,7 +215,7 @@ function AppContent(){
       {screen === 'title' && <ScenePublisher scene="title" />}
       {screen === 'choose' && <ScenePublisher scene="storySelect" />}
       {screen === 'game' && session && !ended && (!resultMode || !reaction) &&
-        (rewardModalOpen && welcomeVersion === resultKey
+        (confirmStake ? <StagePublisher expression="normal" lines={['それ、本当に賭けるの？']} /> : rewardModalOpen && welcomeVersion === resultKey
           ? <StagePublisher lines={['あら、もう帰っていいのに。物好きね。']} expression={expressionForExtension(session.id)} />
           : <ScenePublisher scene={gameScene({
           rewardModal: rewardModalOpen,
@@ -222,6 +234,14 @@ function AppContent(){
           </div>
         </div>
       </main>}
+      {screen === 'marks' && session && <main className="story-interview">
+        <StagePublisher expression="normal" lines={[markLine]} />
+        <h2>{session.title}</h2>
+        <StoryMarks text={session.text} units={units} marks={marks} onChange={setMarks} busy={busy} />
+        <button className="primary" disabled={busy} onClick={() => act(async () =>
+          accept(await api<Session>(`/sessions/${session.id}/marks`, { unit_ids: marks }))
+        )}>これで始める</button>
+      </main>}
       {screen === 'interview' && <StoryInterview busy={busy} act={act} accept={accept} onPreset={() => void reroll(true)} />}
       {screen === 'choose' && !customOpen && <main className="choose-screen">
         <div className="choose-header">
@@ -232,7 +252,7 @@ function AppContent(){
           </div>
         </div>
         <div className="story-list">{choices.map(story => <button key={story.id} className="story-card" disabled={busy}
-          onClick={() => act(async () => accept(await api<Session>('/sessions', { story_id: story.id, request_id: requestId() })))}>
+          onClick={() => act(async () => openMarks(await api<Session>('/sessions', { story_id: story.id, request_id: requestId() })))}>
           <div className="story-card-top"><span>{story.genre}</span></div>
           <h2>{story.title}</h2>{story.intro && <p className="story-intro">{story.intro}</p>}<p>{story.text}</p>
         </button>)}</div>
@@ -254,7 +274,7 @@ function AppContent(){
 
       {screen==='game'&&session&&!ended&&<main ref={historyOpen ? undefined : retainExit} hidden={historyOpen} key={`${session.id}-${session.version}-${session.view}`}
         className={`game-screen${resultMode && currentVersion?.transaction ? ` result-${currentVersion.transaction.outcome}-view` : ''}${gambleMode ? ' gambling-view' : ''}`}>
-        {!rewardModalOpen && !gambleModalOpen && <div className="game-object" key={gambleMode ? 'table' : 'manuscript'}>
+        {!confirmStake && !rewardModalOpen && !gambleModalOpen && <div className="game-object" key={gambleMode ? 'table' : 'manuscript'}>
           {!gambleMode && <div className="game-heading">
             {currentVersion ? <span className="edition-badge" aria-live="polite">第{currentVersion.version}版</span> : <>
               <div className="chapter-line"><span>第{round}章</span></div>
@@ -269,7 +289,7 @@ function AppContent(){
             : <>
               <section className={`story-board wager-paper-stack${processing ? ' is-processing' : ''}`} aria-label="賭ける言葉を選ぶ">
                 {processing ? <GenerationSkeleton /> : <PaperLayers count={round}>{session.analysis ?
-                  <WagerManuscript text={session.text} units={units} selected={selected}
+                  <WagerManuscript markIds={session.marked_unit_ids} text={session.text} units={units} selected={selected}
                     disabled={!ready || !offer || busy || choosingReward || choosingGame} onToggle={toggle} />
                   : <Manuscript text={session.text} />}
                 </PaperLayers>}
@@ -304,6 +324,10 @@ function AppContent(){
               <small><span className="stake-caption">かけるもの</span>ことば {reward.required_count}個</small>
             </button>)}</div>
           </SceneObject>}
+        {confirmStake && <SceneObject kind="games" title="印をつけた言葉を賭ける？">
+          <button onClick={() => { setConfirmStake(false); setChoosingGame(true); }}>このまま賭ける</button>
+          <button onClick={() => { setConfirmStake(false); setSelected([]); }}>選び直す</button>
+        </SceneObject>}
         {gambleModalOpen &&
           <SceneObject kind="games" title="どのギャンブルにする？" onClose={() => { if (!busy) setChoosingGame(false); }}>
 
@@ -321,7 +345,7 @@ function AppContent(){
       {screen === 'game' && session && historyOpen && <SceneObject kind="history" title="勝敗記録" onClose={() => setHistoryOpen(false)}><StoryHistory session={session} pageIndex={paperIndex} onPageChange={setPaperIndex} /></SceneObject>}
       {errorNotice}
       {screen === 'game' && !ended && <div className="page-links">
-        {ready && offer && !historyOpen && !resultMode && !gambleMode && !rewardModalOpen && !gambleModalOpen &&
+        {!confirmStake && ready && offer && !historyOpen && !resultMode && !gambleMode && !rewardModalOpen && !gambleModalOpen &&
           <button className="scene-link" disabled={busy} onClick={() => setChoosingReward(true)}>‹ 欲しいものを変更</button>}
         <button className="scene-link history-link" aria-label="勝敗記録" aria-expanded={historyOpen} disabled={busy}
         onClick={() => setHistoryOpen(!historyOpen)}>勝敗記録</button>

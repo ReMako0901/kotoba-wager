@@ -147,4 +147,4 @@ async def generate_story(request: Interview):
         import logging
         logging.exception('generated story save failed')
         raise HTTPException(503, '物語を保存できませんでした。もう一度お試しください。') from None
-    return {'generated_story_id': story_id, **story.model_dump()}
+    return {'generated_story_id': story_id, **story.model_dump(), 'analysis': build_analysis(story.text, 1)}

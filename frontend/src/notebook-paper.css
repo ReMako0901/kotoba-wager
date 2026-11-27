@@ -112,3 +112,13 @@
 @media (prefers-reduced-motion: reduce) {
   .rewrite-stroke { animation-timing-function: steps(1, end); }
 }
+
+.vertical-word[data-memory-mark]::before {
+  content: '●';
+  position: absolute;
+  top: 1px;
+  left: 2px;
+  color: var(--stamp);
+  font-size: .42rem;
+  line-height: 1;
+}

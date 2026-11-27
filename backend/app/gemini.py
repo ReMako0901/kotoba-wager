@@ -140,6 +140,7 @@ class Gemini:
         # Imported lazily: the pure edit validator uses GenerationError.
         from .editing import edit_plan, apply_edits
         plan = edit_plan(text, outcome, stakes, payload.get("existing_concepts_and_dependencies", []), payload.get("reward"), payload.get("narrative_change"))
+        plan["marked_units"] = payload.get("marked_units", ())
         if (payload.get("previous_review") or {}).get("relax_budget"):
             relax_edit_budget(plan)
         result = await self.generate(
@@ -152,19 +153,20 @@ class Gemini:
             raise EditRejected(str(error)) from error
         return result
 
-    async def win(self, text, offer, stakes, lost, *, previous_review=None, intro=""):
-        return await self.edit(WIN + "\n" + reward_policy(offer), text, {"intro": intro, "text": text, "reward": offer, "protected_stakes": stakes, "past_lost_concepts": lost, "previous_review": previous_review}, "win", stakes)
+    async def win(self, text, offer, stakes, lost, *, previous_review=None, intro="", marked_units=()):
+        return await self.edit(mark_instruction(marked_units) + WIN + "\n" + reward_policy(offer), text, {"marked_units": marked_units, "intro": intro, "text": text, "reward": offer, "protected_stakes": stakes, "past_lost_concepts": lost, "previous_review": previous_review}, "win", stakes)
 
-    async def loss(self, text, stakes, lost, dependencies, narrative_change=None, *, previous_review=None, intro=""):
-        return await self.edit(LOSS, text, {"intro": intro, "text": text, "new_lost_concepts": stakes, "past_lost_concepts": lost, "existing_concepts_and_dependencies": dependencies, "narrative_change": narrative_change, "previous_review": previous_review}, "loss", stakes)
+    async def loss(self, text, stakes, lost, dependencies, narrative_change=None, *, previous_review=None, intro="", marked_units=()):
+        return await self.edit(mark_instruction(marked_units) + LOSS, text, {"marked_units": marked_units, "intro": intro, "text": text, "new_lost_concepts": stakes, "past_lost_concepts": lost, "existing_concepts_and_dependencies": dependencies, "narrative_change": narrative_change, "previous_review": previous_review}, "loss", stakes)
 
-    async def review(self, original, candidate, outcome, offer, stakes, lost, *, relax_budget=False, intro=""):
+    async def review(self, original, candidate, outcome, offer, stakes, lost, *, relax_budget=False, intro="", marked_units=()):
         from .editing import edit_plan, apply_edits
 
         plan = edit_plan(original, outcome, stakes, [], offer)
+        plan["marked_units"] = marked_units
         if relax_budget:
             relax_edit_budget(plan)
-        result = await self.generate(REVIEW + ("\n" + reward_policy(offer) if outcome == "win" else ""), {
+        result = await self.generate(mark_instruction(marked_units) + REVIEW + ("\n" + reward_policy(offer) if outcome == "win" else ""), {
             **plan,
             'intro': intro,
             'original_text': original,
@@ -209,6 +211,10 @@ class Gemini:
                 raise ReviewRejected('採用判定に修正案が付いていました。')
             result.value = candidate.model_copy(update={'checks': review.checks})
         return result
+
+
+def mark_instruction(units):
+    return "marked_units の印付きの表現は一字一句そのまま残す。\n" if units else ""
 
 
 def relax_edit_budget(plan):

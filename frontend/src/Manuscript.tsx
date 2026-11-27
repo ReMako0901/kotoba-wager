@@ -29,13 +29,14 @@ export function focusFirstChange(paper: HTMLElement) {
   scroll.scrollLeft += (bounds.left + bounds.right - viewport.left - viewport.right) / 2;
 }
 
-function Paper({text, units, selected, disabled, onToggle, marked, changes}: {
+function Paper({text, units, selected, disabled, onToggle, marked, markIds, changes}: {
   text: string;
   units?: Unit[];
   selected?: string[];
   disabled?: boolean;
   onToggle?: (id: string) => void;
   marked?: Set<number>;
+  markIds?: string[];
   changes?: ReturnType<typeof manuscriptChanges>;
 }) {
   const paper = useRef<HTMLDivElement>(null);
@@ -81,8 +82,8 @@ function Paper({text, units, selected, disabled, onToggle, marked, changes}: {
       }
       const position = {gridRow: `${row + 1} / span ${cells.length}`, gridColumn: Math.floor(square / rows) + 1};
       content.push(run.stakeable ? (
-        <button className="vertical-word" key={source} type="button" style={position}
-          aria-label={run.text} aria-pressed={selected?.includes(run.id)}
+        <button className="vertical-word" data-memory-mark={markIds?.includes(run.id) || undefined} key={source} type="button" style={position}
+          aria-label={markIds?.includes(run.id) ? run.text + '（印付き）' : run.text} aria-pressed={selected?.includes(run.id)}
           tabIndex={firstFragment ? 0 : -1} disabled={disabled}
           onClick={() => onToggle?.(run.id)}>{cells}</button>
       ) : (
@@ -123,7 +124,7 @@ export function Manuscript({text, before}: {text: string; before?: string}) {
 }
 
 export function WagerManuscript(props: {
-  text: string; units: Unit[]; selected: string[]; disabled: boolean; onToggle: (id: string) => void;
+  text: string; units: Unit[]; markIds?: string[]; selected: string[]; disabled: boolean; onToggle: (id: string) => void;
 }) {
   return <Paper {...props} />;
 }
