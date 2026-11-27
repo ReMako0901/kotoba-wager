@@ -77,7 +77,7 @@ test('game hides intro, omits reward descriptions and opens only on selection co
     const requests = [];
     global.fetch = async (url, options) => {
       requests.push([url, options.method]);
-      return { ok: true, json: async () => url.endsWith('/games') ? { games: [{ id: 'dice', name: 'サイコロ', tier: 'beginner' }] } : drawStories(url) ?? session };
+      return { ok: true, json: async () => url.endsWith('/games') ? { games: [{ id: 'chinchiro', name: 'チンチロ', tier: 'beginner' }] } : drawStories(url) ?? session };
     };
     const ui = mount(App, {}); await flush(); ui.draw();
     await startStory(ui);

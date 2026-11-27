@@ -111,19 +111,68 @@ def test_card_choice_resolves_against_the_fixed_shuffle():
     assert outcomes.count('win') == 1 and outcomes.count('loss') == 2
 
 
-@pytest.mark.parametrize('face, outcome, strength', [
-    (1, 'loss', 8), (2, 'loss', 1), (3, 'loss', 1),
-    (4, 'win', 1), (5, 'win', 1), (6, 'win', 8),
+@pytest.mark.parametrize('roll,yaku,point', [
+    ((1, 1, 1), 'pinzoro', None), ((3, 3, 3), 'zorome', 3),
+    ((6, 4, 5), 'shigoro', None), ((2, 6, 2), 'normal', 6),
+    ((3, 1, 2), 'hifumi', None), ((6, 3, 1), 'menashi', None),
 ])
-def test_dice_has_two_extreme_faces(face, outcome, strength):
-    from app.gambles import play_beginner_game
+def test_chinchiro_hand(roll, yaku, point):
+    from itertools import permutations
+    from app.gambles import chinchiro_hand
+    for order in permutations(roll):
+        assert chinchiro_hand(order) == (yaku, point)
 
-    class FixedDie:
+
+def play_rolls(game, *faces):
+    from app.gambles import play_beginner_game
+    rolls = iter(faces)
+
+    class FixedDice:
         def randrange(self, start, stop):
             assert (start, stop) == (1, 7)
-            return face
+            return next(rolls)
 
-    game = make_gamble('dice', lambda _: None)
-    play_beginner_game(game, None, FixedDie())
-    assert game['moves'][0]['face'] == face
-    assert (game['outcome'], game['strength']) == (outcome, strength)
+    play_beginner_game(game, None, FixedDice())
+    assert list(rolls) == []
+
+
+@pytest.mark.parametrize('winning,strength', [
+    ((1, 1, 1), 8), ((6, 6, 6), 6), ((6, 5, 4), 4),
+    ((1, 6, 1), 3), ((2, 2, 4), 2), ((3, 4, 4), 1), ((1, 2, 3), 1),
+])
+@pytest.mark.parametrize('player_wins', [True, False])
+def test_chinchiro_winner_sets_strength(winning, strength, player_wins):
+    game = make_gamble('chinchiro', lambda _: None)
+    miss = (1, 4, 6)
+    play_rolls(game, *(miss * 3 if player_wins else miss + winning))
+    assert game['anoma']['rolls'] == ([list(miss)] * 3 if player_wins else [list(miss), list(winning)])
+    if player_wins:
+        play_rolls(game, *winning)
+    else:
+        for i in range(3):
+            assert game['outcome'] is None
+            play_rolls(game, *miss)
+            assert game['moves'][-1]['attempt'] == i + 1
+    assert game['outcome'] == ('win' if player_wins else 'loss')
+    assert game['strength'] == strength
+
+
+def test_chinchiro_tied_misses_reset_round():
+    from app.gambles import play_beginner_game
+    game = make_gamble('chinchiro', lambda _: None)
+    with pytest.raises(ValueError):
+        play_beginner_game(game, 0)
+    assert game['moves'] == []
+    miss = (2, 4, 6)
+    play_rolls(game, *(miss * 3))
+    for _ in range(3):
+        play_rolls(game, *miss)
+    assert game['moves'][-1]['result'] == 'tie'
+    assert game['outcome'] is None and 'anoma' not in game
+    play_rolls(game, 2, 2, 5)
+    play_rolls(game, 4, 5, 4)
+    assert game['moves'][-1]['result'] == 'tie'
+    assert game['moves'][-1]['attempt'] == 1
+    play_rolls(game, 6, 6, 3)
+    play_rolls(game, 1, 1, 4)
+    assert (game['outcome'], game['strength']) == ('win', 2)

@@ -56,25 +56,32 @@ test('the edition label follows the paper and its tab toggles the diff in place'
 });
 
 test('gambling actions stay with the tabletop object and generation polling only reads the active session', async () => {
+  const anoma = { side: 'anoma', rolls: [[1, 2, 3]], yaku: 'hifumi', point: null };
   const transaction = {
     id: 'first', status: 'playing', stakes: ['猫'], offer: { title: '心の声' },
-    gamble: { kind: 'dice', rounds: [], moves: [] },
+    gamble: { kind: 'chinchiro', rounds: [], moves: [anoma] },
   };
   const played = { ...session, status: 'playing', transactions: [transaction] };
-  const settledGamble = { ...transaction.gamble, outcome: 'win', moves: [{ face: 6, outcome: 'win' }] };
+  const settledGamble = { ...transaction.gamble, outcome: 'win', moves: [anoma, { side: 'player', roll: [4, 5, 6], attempt: 1, yaku: 'shigoro', point: null }] };
   const generating = { ...played, status: 'generating', transactions: [{ ...transaction, gamble: settledGamble }] };
   const requests = gameApi(url => url.endsWith('/play') ? generating
     : url.endsWith('/sessions/played') ? { ...generating, status: 'awaiting_reveal' } : played);
   const ui = mount(App, {});
   await startStory(ui);
-  const table = () => ui.find(n => n.props['aria-label'] === '一発サイコロ');
+  const table = () => ui.find(n => n.props['aria-label'] === 'チンチロ');
   const actions = () => ui.find(n => n.props.className?.startsWith('folio-outcome-slip'));
-  assert.ok(nodes(table(), n => n.props.className === 'folio-dice').length);
-  assert.match(text(table()), /賽を振る/);
+  const land = () => {
+    const roll = ui.find(n => n.props.className === 'chin-roll rolling');
+    roll.props.onAnimationEnd({ target: roll, currentTarget: roll });
+    ui.draw();
+  };
+  land();
+  assert.match(text(table()), /ヒフミ/);
   assert.equal(requests.filter(([url]) => url.endsWith('/play')).length, 0);
-  ui.click('賽を振る'); await flush(); ui.draw();
-  // 新UIでは賽の転がり演出が終わってから完了部品が出るため、タイマを進めて出現を待つ
-  for (let i = 0; i < 12 && !actions(); i++) { ui.tick(); await flush(); ui.draw(); }
+  ui.click('丼を振る'); await flush(); ui.draw();
+  assert.equal(actions(), undefined);
+  land();
+  ui.tick(); await flush(); ui.draw();
   assert.ok(actions());
   assert.equal(nodes(actions(), n => n.type === 'button')[0].props.disabled, false);
   assert.deepEqual(requests.filter(([url]) => url.endsWith('/sessions/played')), [['/api/sessions/played', 'GET']]);
@@ -90,4 +97,55 @@ test('photo and dialogue occupy the page margin above the controls', () => {
   assert.match(anoma, /<header className="page-margin">[^]*anoma-photo[^]*anoma-dialogue[^]*<\/header>\s*\{children\}/);
   assert.doesNotMatch(css, /overflow-y:\s*(auto|scroll)|blur\(/);
   assert.doesNotMatch(app, /import '[^']*(?:layout|table-finish|anoma)\.css'/);
+});
+
+test('each roll waits for landing and the upper face has the server pip count', () => {
+  const { FreshGamble } = require('../src/games/FreshGamble.tsx');
+  const moves = [];
+  const calls = [];
+  const props = { gamble: { kind: 'chinchiro', moves }, onMove: n => calls.push(n) };
+  const ui = mount(FreshGamble, props);
+  ui.click('アノマが振る');
+  moves.push({ side: 'anoma', rolls: [[1, 3, 5], [6, 2, 4], [2, 2, 1]], yaku: 'normal', point: 1 });
+  ui.draw();
+
+  function verifyFaces(expected) {
+    const cubes = ui.all(n => n.props.className === 'chin-cube');
+    assert.equal(cubes.length, 3);
+    function rotation(n) {
+      const [, axis, angle] = n.props.style.transform.match(/rotate([XY])\((-?\d+)deg\)/);
+      return [axis, Number(angle)];
+    }
+    cubes.forEach((cube, i) => {
+      const [axis, angle] = rotation(cube);
+      const top = nodes(cube, n => n.props.className === 'chin-face').filter(face => {
+        const [faceAxis, faceAngle] = rotation(face);
+        return axis === faceAxis && (angle + faceAngle) % 360 === 0;
+      });
+      assert.equal(top.length, 1);
+      assert.equal(nodes(top[0], n => n.props.className === 'pip').length, expected[i]);
+    });
+  }
+
+  function land(expected) {
+    verifyFaces(expected);
+    const roll = ui.find(n => n.props.className === 'chin-roll rolling');
+    assert.ok(ui.find(n => n.type === 'button').props.disabled);
+    roll.props.onAnimationEnd({ target: roll, currentTarget: roll });
+    ui.draw();
+  }
+
+  for (const roll of moves[0].rolls) land(roll);
+  verifyFaces([2, 2, 1]);
+  ui.click('丼を振る');
+  moves.push({ side: 'player', roll: [1, 3, 6], yaku: 'menashi', point: null, attempt: 1 });
+  ui.draw();
+  land([1, 3, 6]);
+  ui.click('もう一度振る');
+  moves.push({ side: 'player', roll: [3, 1, 3], yaku: 'normal', point: 1, attempt: 2, result: 'tie' });
+  ui.draw();
+  land([3, 1, 3]);
+  ui.click('もう一勝負');
+  assert.deepEqual(calls, [0, 1, 2, 3]);
+  ui.unmount();
 });
