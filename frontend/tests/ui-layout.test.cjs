@@ -89,6 +89,7 @@ test('gambling actions stay with the tabletop object and generation polling only
   land();
   assert.match(text(table()), /ヒフミ/);
   assert.equal(requests.filter(([url]) => url.endsWith('/play')).length, 0);
+  ui.tick();
   ui.click('丼を振る'); await flush(); ui.draw();
   assert.equal(actions(), undefined);
   land();
@@ -159,17 +160,82 @@ test('each roll waits for landing and the upper face has the server pip count', 
 
   for (const roll of moves[0].rolls) land(roll);
   verifyFaces([2, 2, 1]);
+  ui.tick();
   ui.click('丼を振る');
   moves.push({ side: 'player', roll: [1, 3, 6], yaku: 'menashi', point: null, attempt: 1 });
   ui.draw();
   land([1, 3, 6]);
+  assert.equal(text(ui.find(n => n.props.className === 'folio-hand-call')), '目なし');
+  ui.tick();
   ui.click('もう一度振る');
   moves.push({ side: 'player', roll: [3, 1, 3], yaku: 'normal', point: 1, attempt: 2, result: 'tie' });
   ui.draw();
   land([3, 1, 3]);
+  ui.tick();
   assert.match(text(ui.tree), /同点/);
   assert.equal(text(ui.find(n => n.props.role === 'status')), 'アノマのターンです');
   ui.tick();
   assert.deepEqual(calls, [0, 1, 2, 3]);
   ui.unmount();
+});
+
+test('baccarat reveals only on a full squeeze and counts each complete hand separately', () => {
+  const { FreshGamble } = require('../src/games/FreshGamble.tsx');
+  const card = { rank: 'K', suit: '♥' };
+  const ui = mount(FreshGamble, { gamble: { kind: 'baccarat', rounds: [{
+    player: [card, card, card], banker: [card, card], outcome: 'win',
+  }] } });
+  const slider = () => ui.find(n => n.props.role === 'slider');
+  const target = { getBoundingClientRect: () => ({ left: 0, right: 100, top: 0, bottom: 140, width: 100, height: 140 }),
+    setPointerCapture() {} };
+  const event = x => ({ currentTarget: target, pointerId: 1, isPrimary: true, clientX: x, clientY: 70 });
+  const drag = x => {
+    slider().props.onPointerDown(event(0));
+    slider().props.onPointerMove(event(x));
+    ui.draw();
+  };
+  drag(74);
+  assert.equal(slider().props['aria-valuenow'], 74);
+  slider().props.onPointerUp(event(74)); ui.draw();
+  assert.equal(slider().props['aria-valuenow'], 0);
+  drag(75); drag(75);
+  assert.doesNotMatch(text(ui.tree), /下1桁/);
+  ui.click('バンカーをまとめて開く');
+  assert.equal(ui.all(n => n.props.className === 'folio-ink-total').length, 1);
+  drag(75);
+  assert.equal(ui.all(n => n.props.className === 'folio-ink-total').length, 2);
+  assert.equal(ui.all(n => n.type === 'img' || n.props.className === 'folio-card-corner').length, 0);
+});
+
+test('blackjack announces each opening natural before the outcome', () => {
+  const { FreshGamble } = require('../src/games/FreshGamble.tsx');
+  const hand = [{ rank: 'A', suit: '♣' }, { rank: 'K', suit: '♥' }];
+  const ui = mount(FreshGamble, { gamble: { kind: 'blackjack', rounds: [{ player: hand, banker: hand }] } });
+  const call = () => text(ui.find(n => n.props.className === 'folio-hand-call'));
+  for (let i = 0; i < 5; i++) ui.tick();
+  assert.equal(call(), 'あなたブラックジャック！');
+  ui.tick(); ui.tick();
+  assert.equal(call(), 'アノマブラックジャック！');
+  assert.equal(ui.find(n => n.props.className?.startsWith('folio-outcome-banner')), undefined);
+  ui.tick(); ui.tick();
+  assert.ok(ui.find(n => n.props.className?.startsWith('folio-outcome-banner')));
+});
+
+test('rps keeps the chosen slip through the chant and reveals the opponent before the outcome', () => {
+  const { FreshGamble } = require('../src/games/FreshGamble.tsx');
+  const props = { gamble: { kind: 'rps', moves: [] }, onMove() {} };
+  const ui = mount(FreshGamble, props);
+  ui.click('グーを出す');
+  ui.draw({ ...props, gamble: { ...props.gamble, outcome: 'win', moves: [{ choice: 0, opponent: 2, outcome: 'win' }] } });
+  const banner = () => ui.find(n => n.props.className?.startsWith('folio-outcome-banner'));
+  for (const beat of ['じゃん', 'けん', 'ぽん']) {
+    assert.equal(text(ui.find(n => n.props.className?.startsWith('rps-call'))), beat);
+    assert.equal(ui.all(n => n.props.className?.includes('is-hidden')).length, 2);
+    assert.equal(banner(), undefined);
+    ui.tick();
+  }
+  assert.match(text(ui.tree), /アノマの札チョキ/);
+  assert.equal(banner(), undefined);
+  ui.tick();
+  assert.match(text(banner()), /勝利/);
 });

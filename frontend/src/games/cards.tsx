@@ -75,12 +75,31 @@ export function calcBaccaratTotal(cards: PlayingCard[]): number {
   return sum % 10;
 }
 
+// Positions on a three-column, seven-row pip grid, counted row by row.
+const PIP_LAYOUTS = [
+  [], [10], [1, 19], [1, 10, 19], [0, 2, 18, 20], [0, 2, 10, 18, 20],
+  [0, 2, 9, 11, 18, 20], [0, 2, 4, 9, 11, 18, 20], [0, 2, 4, 9, 11, 16, 18, 20],
+  [0, 2, 6, 8, 10, 12, 14, 18, 20], [0, 2, 4, 6, 8, 12, 14, 16, 18, 20],
+];
+
+export function BaccaratFace({ card }: { card: PlayingCard }) {
+  const suit = { S: '♠', H: '♥', D: '♦', C: '♣' }[SUIT_CODE[card.suit]];
+  const pips = PIP_LAYOUTS[calcBaccaratPoint(card) || 10];
+  return <span className={`baccarat-face${isRedSuit(card.suit) ? ' is-red' : ''}`} aria-hidden="true">
+    {pips.map(cell => <i key={cell} style={{
+      left: `${24 + (cell % 3) * 26}%`, top: `${15 + Math.floor(cell / 3) * 70 / 6}%`,
+      rotate: cell > 11 ? '180deg' : undefined,
+    }}>{suit}</i>)}
+  </span>;
+}
+
 interface FolioCardViewProps {
   card?: PlayingCard;
   faceUp: boolean;
   className?: string;
   badge?: string;
   highlighted?: boolean;
+  suitOnly?: boolean;
 }
 
 export function FolioCardView({
@@ -89,6 +108,7 @@ export function FolioCardView({
   className = '',
   badge,
   highlighted = false,
+  suitOnly = false,
 }: FolioCardViewProps) {
   const red = card ? isRedSuit(card.suit) : false;
   return (
@@ -97,7 +117,7 @@ export function FolioCardView({
         highlighted ? ' is-highlighted' : ''
       }${red ? ' is-red' : ''} ${className}`.trim()}
     >
-      {faceUp && card ? (
+      {faceUp && card && suitOnly ? <BaccaratFace card={card} /> : faceUp && card ? (
         <span className="folio-card-face">
           <img
             src={cardAssetUrl(card)}

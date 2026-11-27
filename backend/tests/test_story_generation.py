@@ -10,8 +10,9 @@ from app.store import Store
 ANSWERS = [{'question': q, 'text': a} for q, a in
            [('お名前は？', 'ミオ 海の色から'), ('今の気分は？', '明るい'), ('好きなものは？', '小さな鍵')]]
 PAYLOAD = {'name': 'ミオ', 'answers': ANSWERS}
-GOOD = '青い扉の前で、私は古い鍵を拾った。向こうでは猫が小さな鐘を鳴らした。'
-FEW = 'ただずっとゆっくり歩いて、またただ歩いていた。'
+# Same length range, six and five stakeable units respectively.
+GOOD = '私は駅で猫と犬と鳥と虫をじっと見つめていた。'
+FEW = '私は駅で猫と犬と鳥をずっとじっと見つめていた。'
 
 
 @pytest.mark.parametrize('texts, fallback', [([GOOD], False), ([FEW, GOOD], False), ([FEW, FEW], True)])
@@ -37,6 +38,7 @@ def test_generate_and_start(tmp_path, monkeypatch, texts, fallback):
     save.assert_called_once_with(story_id, {**PAYLOAD, **story})
     assert 'ミオ' in story['intro']
     assert (story['text'] != GOOD) == fallback
+    assert sum(u.stakeable for u in generation.build_analysis(story['text'], 1).units) >= 6
     start = dict(request_id='interview-session', custom_text=story.pop('text'),
                  generated_story_id=story_id, **story)
     session = client.post('/api/sessions', json=start)

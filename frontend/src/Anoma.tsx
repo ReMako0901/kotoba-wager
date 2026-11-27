@@ -170,11 +170,6 @@ export function Opening({ busy, error, onDark, onComplete }: {
         setCount(1);
         setPhase('narration');
       }, reduced ? 120 : 650);
-    } else if (phase === 'narration') {
-      timer = window.setTimeout(() => {
-        if (count < openingNarration.length) setCount(count + 1);
-        else setPhase('arrival');
-      }, count === 1 ? 2400 : 1800);
     } else if (phase === 'arrival') {
       timer = window.setTimeout(() => setPhase('dialogue'), reduced ? 140 : 950);
     } else if (phase === 'docking') {
@@ -184,7 +179,7 @@ export function Opening({ busy, error, onDark, onComplete }: {
       }, reduced ? 140 : 850);
     }
     return () => window.clearTimeout(timer);
-  }, [phase, count]);
+  }, [phase]);
 
   function advance() {
     if (speaking) setRevealed(true);
@@ -196,6 +191,10 @@ export function Opening({ busy, error, onDark, onComplete }: {
     onComplete();
   }
   return <main className="opening-screen" data-phase={phase}>
+    {phase === 'narration' && <button className="opening-advance" aria-label="地の文を送る" onClick={() => {
+      if (count < openingNarration.length) setCount(count + 1);
+      else setPhase('arrival');
+    }} />}
     {phase === 'narration' && <div className="opening-narration" aria-live="polite">
       {openingNarration.slice(0, count).map(line => <p key={line}>{line}</p>)}
     </div>}

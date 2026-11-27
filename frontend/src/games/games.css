@@ -99,27 +99,6 @@
   border-left: 1px dashed #cbbba0;
 }
 
-/* ページ左端に挟まれた縦書きの栞タグ（種目名） */
-.folio-ear-tag {
-  position: absolute;
-  left: 0;
-  top: 10px;
-  writing-mode: vertical-rl;
-  text-orientation: upright;
-  padding: 7px 3px;
-  background: linear-gradient(180deg, #efe2c4, #dfd0ae);
-  border: 1px solid #bfae8e;
-  border-left: 2px solid var(--stamp, #863d3c);
-  border-radius: 0 4px 4px 0;
-  box-shadow: 1px 2px 4px #3c281722;
-  font-family: var(--serif);
-  font-size: 11px;
-  letter-spacing: 0.12em;
-  color: var(--ink, #382c25);
-  z-index: 2;
-  pointer-events: none;
-}
-
 .folio-gamble-canvas {
   flex: 1;
   min-height: 0;
@@ -575,8 +554,8 @@
 }
 .chin-face .pip { background: #291e17; border-radius: 50%; }
 .chin-face:first-child .pip { background: #994039; }
-.chin-roll.rolling .chin-view { animation: chin-bounce 1.8s ease-out; }
-.chin-roll.rolling .chin-spin { animation: chin-tumble 1.8s ease-out; }
+.chin-roll.rolling .chin-view { animation: chin-bounce 2.34s ease-out; }
+.chin-roll.rolling .chin-spin { animation: chin-tumble 2.34s ease-out; }
 .chin-view:nth-child(2) { --spin-y: -720deg; }
 .chin-view:nth-child(3) { --spin-y: 360deg; }
 .chin-view { --travel: 19cqw; --lift: -30px; }
@@ -787,7 +766,7 @@
 }
 
 .is-spinning .folio-reel-strip {
-  animation: folio-reel-roll 290ms linear infinite;
+  animation: folio-reel-roll 377ms linear infinite;
   filter: blur(1px) drop-shadow(0 -5px 2px #74563d70);
 }
 
@@ -924,8 +903,8 @@
   width: clamp(50px, 14vw, 64px);
 }
 
-.folio-bj .bj-deal { animation: folio-deal 420ms ease-out both; }
-.folio-bj .bj-turn { animation: folio-turn 420ms ease-out both; }
+.folio-bj .bj-deal { animation: folio-deal 546ms ease-out both; }
+.folio-bj .bj-turn { animation: folio-turn 546ms ease-out both; }
 @keyframes folio-deal {
   from { opacity: 0; transform: translate(16px, -8px) rotate(6deg); }
 }
@@ -1158,52 +1137,23 @@
   padding: 4px;
 }
 
-.folio-squeeze-underlay img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
+@property --peel-pct {
+  syntax: '<percentage>';
+  inherits: true;
+  initial-value: 0%;
 }
 
-.folio-squeeze-peek {
-  position: absolute;
-  bottom: 3px;
-  left: 4px;
-  right: 4px;
-  text-align: center;
-  font-size: 10.5px;
-  font-weight: 700;
-  background: #fffdf8e6;
-  border-radius: 2px;
-  color: #241d1c;
-}
-
-.folio-squeeze-peek.is-red {
-  color: #9c2e32;
-}
-
+.folio-squeeze-card { transition: --peel-pct 180ms ease-out; }
+.folio-squeeze-card:active { transition: none; }
 .folio-squeeze-cover {
-  position: absolute;
-  inset: 0;
-  background:
-    repeating-linear-gradient(
-      45deg,
-      #733534 0 3px,
-      #f3e6cb 3px 6px
-    );
-  border-bottom: 3px solid #d8c39e;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  padding-bottom: 8px;
-  transform: translate(var(--peel-x, 0%), var(--peel-y, 0%));
-  transition: transform 70ms linear;
-  box-shadow: 0 6px 12px #1f130a44;
+  position: absolute; inset: 0;
+  background: repeating-linear-gradient(45deg, #733534 0 3px, #f3e6cb 3px 6px);
+  clip-path: inset(var(--cut-top, 0%) var(--cut-right, 0%) var(--cut-bottom, 0%) var(--cut-left, 0%));
 }
-
-[data-edge="left"] .folio-squeeze-cover { --peel-x: var(--peel-pct); }
-[data-edge="right"] .folio-squeeze-cover { --peel-x: calc(-1 * var(--peel-pct)); }
-[data-edge="top"] .folio-squeeze-cover { --peel-y: var(--peel-pct); }
-[data-edge="bottom"] .folio-squeeze-cover { --peel-y: calc(-1 * var(--peel-pct)); }
+[data-edge=left] { --cut-left: var(--peel-pct); }
+[data-edge=right] { --cut-right: var(--peel-pct); }
+[data-edge=top] { --cut-top: var(--peel-pct); }
+[data-edge=bottom] { --cut-bottom: var(--peel-pct); }
 
 /* ============================================================================
  * 小画面 (max-height: 720px / 393×681 基準) 調整および Reduced Motion
@@ -1246,11 +1196,7 @@
     filter: none;
   }
   .folio-reel-window.is-spinning::after { display: none; }
-  .folio-squeeze-cover {
-    transform: none;
-    opacity: var(--peel-opacity);
-    transition: opacity 80ms linear;
-  }
+
   @keyframes folio-card-fade { from { opacity: .3; } }
 
   .folio-guess-card-slot {
@@ -1296,4 +1242,43 @@
   height: 100%;
   flex-direction: column;
   gap: 12px;
+}
+
+.folio-rps-slip { transition: opacity 280ms, transform 280ms; }
+.folio-rps-slip.is-hidden { opacity: 0; transform: scale(.72); pointer-events: none; }
+.folio-rps-slip.is-chosen { opacity: 1; }
+.rps-reveal span {
+  padding: 3px 12px; background: var(--paper); border: 1px solid var(--rule);
+  border-radius: 4px; animation: opponent-arrives 420ms ease-out both;
+}
+@keyframes opponent-arrives { from { opacity: 0; transform: translateY(-65%); } }
+.folio-hand-call {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  z-index: 5; width: max-content; max-width: 96%; padding: .15em .4em;
+  background: var(--paper); color: var(--stamp); text-align: center;
+  font: 900 clamp(26px, 8vw, 44px)/1.4 var(--serif); pointer-events: none;
+}
+.folio-hand-call small { display: block; font-size: 14px; }
+.baccarat-face {
+  display: block; position: absolute; inset: 0; background: #fffdf8; color: #262124;
+  container-type: inline-size;
+}
+.baccarat-face.is-red { color: #a32c37; }
+.baccarat-face i { position: absolute; translate: -50% -50%; font: normal 23cqw/1 serif; }
+
+.folio-squeeze-cover::before {
+  content: ''; position: absolute; inset: var(--cut-top, 0%) var(--cut-right, 0%) var(--cut-bottom, 0%) var(--cut-left, 0%);
+  background: linear-gradient(var(--fold-direction), #ac967e, #fffdf1 32%, #dfcdb3 65%, #78624c);
+  width: var(--fold-width, 100%); height: var(--fold-height, 100%);
+  border-radius: 8% / 4%; box-shadow: 0 2px 5px #24150b66;
+}
+[data-edge=left] .folio-squeeze-cover { --fold-width: min(var(--peel-pct), 18%); --fold-direction: to right; }
+[data-edge=right] .folio-squeeze-cover { --fold-width: min(var(--peel-pct), 18%); --fold-direction: to left; }
+[data-edge=top] .folio-squeeze-cover { --fold-height: min(var(--peel-pct), 18%); --fold-direction: to bottom; }
+[data-edge=bottom] .folio-squeeze-cover { --fold-height: min(var(--peel-pct), 18%); --fold-direction: to top; }
+[data-edge=right] .folio-squeeze-cover::before { left: auto; }
+[data-edge=bottom] .folio-squeeze-cover::before { top: auto; }
+@media (prefers-reduced-motion: reduce) {
+  .rps-reveal span { animation: none; }
+  .folio-rps-slip, .folio-squeeze-card { transition: none; }
 }

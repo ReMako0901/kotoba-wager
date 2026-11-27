@@ -87,7 +87,7 @@ button:focus-visible, [tabindex]:focus-visible, textarea:focus-visible { outline
 .title-folio h1 { font-size: clamp(25px,6.6vw,40px); line-height: 1.65; color: #e5ccb0; text-shadow: 0 -1px 1px #301a10,0 1px #916b4e; }
 .title-folio h1 span,.title-folio h1 small { display: block; }
 .title-folio small { font-size: 14px; letter-spacing: .16em; }
-.title-actions { margin-top: 32px; }
+.title-actions { display: flex; justify-content: center; margin-top: 32px; }
 .title-actions button { padding-inline: 26px; background: #f6e8ce; color: var(--ink); border: 0; }
 .choose-header,.object-heading,.game-heading { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
 .choose-header { flex-wrap: wrap; }
@@ -147,3 +147,5 @@ button:focus-visible, [tabindex]:focus-visible, textarea:focus-visible { outline
 .story-interview textarea { font: inherit; width: 100%; box-sizing: border-box; }
 .story-interview small { line-height: 1.4; }
 .interview-preset { align-self: flex-end; margin-top: auto; font-size: .8rem; }
+.app-shell[data-screen=title] .anoma-dialogue { color: var(--ink); }
+.title-actions .primary { flex: 0 0 auto; width: auto; }

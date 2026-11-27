@@ -5,14 +5,14 @@ import { api, requestId } from './api';
 import { GenerationSkeleton } from './GenerationSkeleton';
 import type { Session } from './types';
 
-const SHORT_ANSWER = 10;
+const SHORT_ANSWER = 5;
 type Answer = { question: string; text: string };
 type Story = { generated_story_id: string; title: string; intro: string; text: string };
 
 function drawQuestions() {
   const pool = [...d.questions];
   const draw = () => pool.splice(Math.floor(Math.random() * pool.length), 1)[0];
-  return [d.name, draw(), draw()];
+  return [{ question: d.name, followup: '' }, draw(), draw()];
 }
 
 export function StoryInterview({ busy, act, onPreset, accept }: {
@@ -26,16 +26,16 @@ export function StoryInterview({ busy, act, onPreset, accept }: {
   const [waiting, setWaiting] = useState(false);
   const saved = useRef<{ key: string; story: Story; sid: string } | undefined>(undefined);
   const index = answers.length;
-  const question = questions[index];
+  const { question, followup } = questions[index];
   const value = input.trim();
   const contact = /[\w.+-]+@[\w.-]+\.[\w-]+|(?:\+?\d[\s().‐‑–ー-]*){9,}\d/u.test(
     (first + ' ' + value).normalize('NFKC')
   );
-  const line = first ? d.more : question;
+  const line = first ? followup : question;
   function answer() {
     if (!value || contact || busy) return;
     if (!index && !first) setName(value);
-    if (index !== 0 && !first && Array.from(value).length < SHORT_ANSWER) {
+    if (index !== 0 && !first && Array.from(value).length <= SHORT_ANSWER) {
       setFirst(value); setInput(''); return;
     }
     const next = [...answers, { question, text: first ? first + ' ' + value : value }];

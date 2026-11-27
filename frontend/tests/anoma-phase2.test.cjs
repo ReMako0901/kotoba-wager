@@ -22,7 +22,8 @@ test('all result triggers use the specified expressions and retain reaction kind
 
 test('opening, arrival, extension welcome and all ending signs select their expressions', () => {
   const opening = require('./component-harness.cjs').mount(Opening, { busy: false, onDark() {}, onComplete() {} });
-  for (let i = 0; i < 4; i++) opening.tick();
+  opening.tick();
+  for (let i = 0; i < 3; i++) opening.click('地の文を送る');
   assert.equal(current(opening).props.src, '/anoma/normal.webp');
   for (const [phase, expression] of [['escapable', 'surprise'], ['extension', expressionForExtension(JSON.stringify(progress('extension').totals))]]) {
     const ui = stageMount(StoryDecision, { progress: progress(phase), busy: false, onChoice() {} });
