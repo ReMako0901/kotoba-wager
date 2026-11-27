@@ -84,7 +84,7 @@ class TradeRequest(BaseModel):
     version: int = Field(ge=1)
     offer_id: str
     unit_ids: list[str] = Field(min_length=1,max_length=80)
-    game: Literal["slot", "blackjack", "baccarat", "rps", "card_guess", "dice"] | None = None
+    game: Literal["slot", "blackjack", "baccarat", "rps", "card_guess", "chinchiro"] | None = None
 
 
 class GameMoveRequest(BaseModel):

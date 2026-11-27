@@ -48,7 +48,7 @@ test('ending renders all final lines and returns to title', () => {
 test('App handles reaching the goal and escaping for all games', async () => {
   const App = require('../src/App.tsx').default;
   const flush = () => new Promise(resolve => setImmediate(resolve));
-  for (const kind of ['rps', 'card_guess', 'dice', 'slot', 'blackjack', 'baccarat']) {
+  for (const kind of ['rps', 'card_guess', 'chinchiro', 'slot', 'blackjack', 'baccarat']) {
     global.crypto = require('node:crypto').webcrypto;
     let saved = { id: 'saved-story', betting_mode: 'count-v1', title: '物語', text: '猫が来た。', version: 6,
       status: 'ready', view: 'result', offers: [], lost_concepts: [], usage: {},

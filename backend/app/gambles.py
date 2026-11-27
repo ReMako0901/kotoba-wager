@@ -6,8 +6,8 @@ GAMES = [
      'description': '手を選ぶ。あいこならもう一回。'},
     {'id': 'card_guess', 'name': 'カード当て', 'tier': 'beginner', 'win_probability': 1 / 3,
      'description': '高速で混ざる3枚から当たりを追う。'},
-    {'id': 'dice', 'name': '一発サイコロ', 'tier': 'beginner', 'win_probability': .5,
-     'description': '4〜6で勝ち。1と6は大きく変わる。'},
+    {'id': 'chinchiro', 'name': 'チンチロ', 'tier': 'beginner', 'win_probability': .5,
+     'description': 'アノマと丼で勝負。役の強さで比べる。'},
     {'id': 'slot', 'name': 'スロット', 'win_probability': .5,
      'description': '7が揃うと！？'},
     {'id': 'blackjack', 'name': 'ブラックジャック', 'win_probability': .6,
@@ -113,7 +113,7 @@ def matching_deal(kind, outcome, rng, differences=None):
     raise ValueError('カードの配列を準備できませんでした。もう一度開始してください。')
 
 
-BEGINNER_GAMES = {'rps', 'card_guess', 'dice'}
+BEGINNER_GAMES = {'rps', 'card_guess', 'chinchiro'}
 
 
 def prepare_beginner_game(kind, rng):
@@ -127,16 +127,69 @@ def prepare_beginner_game(kind, rng):
     return game
 
 
+CHINCHIRO_ORDER = ('menashi', 'hifumi', 'normal', 'shigoro', 'zorome', 'pinzoro')
+
+
+def chinchiro_hand(dice):
+    a, b, c = sorted(dice)
+    if a == c:
+        return ('pinzoro', None) if a == 1 else ('zorome', a)
+    if (a, b, c) == (4, 5, 6):
+        return 'shigoro', None
+    if a == b or b == c:
+        return 'normal', c if a == b else a
+    if (a, b, c) == (1, 2, 3):
+        return 'hifumi', None
+    return 'menashi', None
+
+
+def chinchiro_rank(move):
+    return CHINCHIRO_ORDER.index(move['yaku']), move['point'] or 0
+
+
+def chinchiro_strength(move):
+    if move['yaku'] == 'normal':
+        return 3 if move['point'] == 6 else 2 if move['point'] >= 4 else 1
+    return {'pinzoro': 8, 'zorome': 6, 'shigoro': 4}.get(move['yaku'], 1)
+
+
+def play_chinchiro(game, rng):
+    anoma = game.get('anoma')
+    rolls = []
+    for _ in range(1 if anoma else 3):
+        roll = [rng.randrange(1, 7) for _ in range(3)]
+        rolls.append(roll)
+        yaku, point = chinchiro_hand(roll)
+        if yaku != 'menashi':
+            break
+    if not anoma:
+        move = dict(side='anoma', rolls=rolls, yaku=yaku, point=point)
+        game['moves'].append(move)
+        game['anoma'] = move
+        return
+
+    attempt = game['moves'][-1].get('attempt', 0) + 1
+    move = dict(side='player', roll=roll, yaku=yaku, point=point, attempt=attempt)
+    game['moves'].append(move)
+    if yaku == 'menashi' and attempt < 3:
+        return
+    player_rank, anoma_rank = chinchiro_rank(move), chinchiro_rank(anoma)
+    if player_rank == anoma_rank:
+        move['result'] = 'tie'
+        del game['anoma']
+        return
+    won = player_rank > anoma_rank
+    game.update(outcome='win' if won else 'loss', label='WIN' if won else 'LOSE',
+                strength=chinchiro_strength(move if won else anoma))
+
+
 def play_beginner_game(game, choice, rng=None):
     rng = rng or secrets.SystemRandom()
     kind = game['kind']
-    if kind == 'dice':
+    if kind == 'chinchiro':
         if choice is not None:
             raise ValueError('サイコロには選択肢がありません。')
-        face = rng.randrange(1, 7)
-        outcome = 'win' if face >= 4 else 'loss'
-        strength = 8 if face in (1, 6) else 1
-        move = {'face': face, 'outcome': outcome}
+        return play_chinchiro(game, rng)
     elif choice not in (0, 1, 2):
         raise ValueError('三つの中から選んでください。')
     elif kind == 'rps':

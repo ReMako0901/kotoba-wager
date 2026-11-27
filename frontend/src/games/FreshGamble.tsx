@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type {
   CardMove,
   CardRound,
-  DiceMove,
+  ChinchiroMove,
   GameKind,
   HandMove,
   PlayingCard,
@@ -22,7 +22,7 @@ import './games.css';
 
 const KIND_NAMES: Record<GameKind, string> = {
   rps: 'じゃんけん',
-  dice: '一発サイコロ',
+  chinchiro: 'チンチロ',
   card_guess: 'カード当て',
   slot: 'スロット',
   blackjack: 'ブラックジャック',
@@ -311,7 +311,7 @@ function RpsGamble({
 }
 
 /* ============================================================================
- * 2. 一発サイコロ (Dice) — 手帳ページの「インク八角方陣と象牙の賽」
+ * 2. チンチロ
  * ========================================================================== */
 
 // 3×3 グリッド (位置 0..8) における標準サイコロの目配置
@@ -324,157 +324,76 @@ const DICE_PIPS: Record<number, number[]> = {
   6: [0, 2, 3, 5, 6, 8],
 };
 
-function DiceFace({
-  face,
-  rolling,
-}: {
-  face: number;
-  rolling?: boolean;
-}) {
-  const pips = DICE_PIPS[face] ?? DICE_PIPS[1];
-  return (
-    <div
-      className={`folio-die-cube${rolling ? ' is-rolling' : ''}`}
-      data-face={face}
-      aria-label={`サイコロの目 ${face}`}
-    >
-      {Array.from({ length: 9 }, (_, cell) => {
-        const hasPip = pips.includes(cell);
-        const isAce = face === 1 && cell === 4;
-        return (
-          <span
-            key={cell}
-            className={`folio-die-cell${hasPip ? ' has-pip' : ''}${
-              isAce ? ' is-ace-pip' : ''
-            }`}
-          />
-        );
-      })}
-    </div>
-  );
+// Each face is rotated out from the top plane. Its inverse is the exact
+// resting rotation that brings that face back to the top.
+const FACE_AXES = ['X', 'Y', 'X', 'X', 'Y', 'X'] as const;
+const FACE_ANGLES = [0, 90, 90, -90, -90, 180];
+
+function ChinchiroDie({ value }: { value: number }) {
+  const rest = `rotate${FACE_AXES[value - 1]}(${-FACE_ANGLES[value - 1]}deg)`;
+  return <div className="chin-view" role="img" aria-label={`サイコロの目 ${value}`}>
+    <div className="chin-spin"><div className="chin-cube" style={{ transform: rest }}>
+      {FACE_ANGLES.map((angle, i) => <div className="chin-face" key={i} aria-hidden="true"
+        style={{ transform: `rotate${FACE_AXES[i]}(${angle}deg) translateZ(12px)` }}>
+        {Array.from({ length: 9 }, (_, cell) => <i key={cell} className={DICE_PIPS[i + 1].includes(cell) ? 'pip' : ''} />)}
+      </div>)}
+    </div></div>
+  </div>;
 }
 
-function DiceGamble({
-  gamble,
-  busy,
-  error,
-  prepared,
-  onMove,
-  onFinish,
-}: FreshGambleProps) {
-  const moves = (gamble.moves ?? []) as DiceMove[];
-  const resultMove = moves[0];
-  const [rollingAnim, setRollingAnim] = useState(false);
-  const [displayFace, setDisplayFace] = useState<number>(resultMove?.face ?? 1);
-  const animTriggeredRef = useRef(false);
+function chinchiroHandName(hand: ChinchiroMove) {
+  return { pinzoro: 'ピンゾロ', zorome: 'ゾロ目', shigoro: 'シゴロ', normal: `${hand.point}の役`,
+    hifumi: 'ヒフミ', menashi: '目なし' }[hand.yaku];
+}
 
-  useEffect(() => {
-    if (!resultMove) return;
-    if (animTriggeredRef.current) {
-      setDisplayFace(resultMove.face);
-      return;
+function ChinchiroGamble({ gamble, busy, error, prepared, onMove, onFinish }: FreshGambleProps) {
+  const moves = (gamble.moves ?? []) as ChinchiroMove[];
+  const [shown, setShown] = useState(() => Math.max(0, moves.length - 1));
+  const [rollIndex, setRollIndex] = useState(0);
+  const current = moves[shown];
+  const previous = moves[shown - 1];
+  const hand = current ?? previous;
+  const rolls = hand?.side === 'anoma' ? hand.rolls : hand ? [hand.roll] : [];
+  const faces = rolls[current ? rollIndex : rolls.length - 1] ?? [1, 2, 3];
+  const anoma = current?.side === 'anoma' ? undefined
+    : moves.slice(0, shown).reverse().find(m => m.side === 'anoma');
+  const player = previous?.side === 'player' && current?.side !== 'anoma' ? previous : undefined;
+  const tie = player?.result === 'tie';
+  function finishRoll() {
+    if (!current) return;
+    if (rollIndex + 1 < rolls.length) setRollIndex(rollIndex + 1);
+    else {
+      setRollIndex(0);
+      setShown(shown + 1);
     }
-    animTriggeredRef.current = true;
-    if (prefersReducedMotion()) {
-      setDisplayFace(resultMove.face);
-      setRollingAnim(false);
-      return;
-    }
-    setRollingAnim(true);
-    const sequence = [3, 6, 2, 5, 4, resultMove.face];
-    let step = 0;
-    const timer = window.setInterval(() => {
-      setDisplayFace(sequence[step] ?? resultMove.face);
-      step += 1;
-      if (step >= sequence.length) {
-        window.clearInterval(timer);
-        setDisplayFace(resultMove.face);
-        setRollingAnim(false);
-      }
-    }, 95);
-    return () => window.clearInterval(timer);
-  }, [resultMove]);
+  }
 
-  const hasResult = Boolean(resultMove) && !rollingAnim;
-  const finalOutcome = gamble.outcome ?? resultMove?.outcome ?? null;
-
-  const handleRoll = () => {
-    if (busy || resultMove || rollingAnim) return;
-    onMove(0);
-  };
-
-  return (
-    <div className="folio-dice">
-      <div className="folio-dice-notes">
-        <span className="folio-note-caption">紙上の賽皿</span>
-        <p className="folio-scribble">
-          {!resultMove && !busy
-            ? '八角の皿に置かれた賽に触れて振る'
-            : busy || rollingAnim
-              ? '賽が紙面を転がっている…'
-              : `出た目：${resultMove.face}`}
-        </p>
+  return <div className="chin-board">
+    <div className="chin-table">
+      <div className="chin-bowl">
+        <div key={`${shown}-${rollIndex}`} className={`chin-roll${current ? ' rolling' : ''}`}
+          onAnimationEnd={event => {
+            if (event.target === event.currentTarget) finishRoll();
+          }}>
+          {faces.map((value, i) => <ChinchiroDie key={i} value={value} />)}
+        </div>
       </div>
-
-      <div className="folio-dice-tray-wrap">
-        <button
-          type="button"
-          className={`folio-dice-tray${
-            !resultMove && !busy ? ' is-interactive' : ''
-          }${busy || rollingAnim ? ' is-active' : ''}`}
-          disabled={busy || Boolean(resultMove) || rollingAnim}
-          onClick={handleRoll}
-          aria-label="サイコロを振る"
-        >
-          <svg
-            className="folio-octagon-svg"
-            viewBox="0 0 220 220"
-            aria-hidden="true"
-          >
-            <polygon
-              points="66,12 154,12 208,66 208,154 154,208 66,208 12,154 12,66"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-            />
-            <polygon
-              points="72,22 148,22 198,72 198,148 148,198 72,198 22,148 22,72"
-              fill="none"
-              stroke="currentColor"
-              strokeDasharray="4 4"
-              strokeWidth="1"
-            />
-          </svg>
-
-          <DiceFace
-            face={hasResult && resultMove ? resultMove.face : displayFace}
-            rolling={busy || rollingAnim}
-          />
-
-          {!resultMove && !busy && (
-            <span className="folio-tray-inscription">賽を振る</span>
-          )}
-        </button>
-
-        {hasResult && resultMove && (
-          <div className="folio-dice-margin-memo" aria-live="polite">
-            <span>出目</span>
-            <strong>{resultMove.face}</strong>
-          </div>
-        )}
-      </div>
-
-      {hasResult && finalOutcome && (
-        <OutcomeSlip
-          outcome={finalOutcome}
-          prepared={prepared}
-          busy={busy}
-          error={error}
-          onFinish={onFinish}
-        />
-      )}
+      <aside className="chin-notes" aria-live="polite">
+        {anoma?.side === 'anoma' && <div className="chin-slip"><small>アノマ</small>
+          <strong>{chinchiroHandName(anoma)}</strong><span>{anoma.rolls.at(-1)?.join('・')}</span></div>}
+        <small aria-label={`あなたの試行 ${player?.attempt ?? 0}回`}>あなた　{'Ⅰ'.repeat(player?.attempt ?? 0)}</small>
+        {player && !current && <strong className="chin-slip">{chinchiroHandName(player)}</strong>}
+      </aside>
     </div>
-  );
+    {!current && gamble.outcome ? <OutcomeSlip outcome={gamble.outcome} {...{ prepared, busy, error, onFinish }} /> :
+      <div className="chin-actions">
+        {tie && !current && <strong className="chin-slip">同点</strong>}
+        <button type="button" className="folio-story-turn" disabled={busy || Boolean(current)}
+          onClick={() => onMove(moves.length)}>
+          {current ? '転がり中…' : tie ? 'もう一勝負' : !anoma ? 'アノマが振る' : player ? 'もう一度振る' : '丼を振る'}
+        </button>
+      </div>}
+  </div>;
 }
 
 /* ============================================================================
@@ -1452,7 +1371,7 @@ export function FreshGamble(props: FreshGambleProps) {
 
       <div className="folio-gamble-canvas">
         {gamble.kind === 'rps' && <RpsGamble {...props} />}
-        {gamble.kind === 'dice' && <DiceGamble {...props} />}
+        {gamble.kind === 'chinchiro' && <ChinchiroGamble {...props} />}
         {gamble.kind === 'card_guess' && <CardGuessGamble {...props} />}
         {gamble.kind === 'slot' && <SlotGamble {...props} />}
         {gamble.kind === 'blackjack' && <BlackjackGamble {...props} />}

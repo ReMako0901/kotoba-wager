@@ -63,7 +63,7 @@ test('new start opens before drawing stories; results publish reactions for all 
   ui.click('スキップ'); await flush(); ui.draw();
   assert.ok(text(ui.tree).includes('物語を選ぶ'));
   assert.equal(requests.filter(url => url.endsWith('/stories/draw')).length, 1);
-  for (const kind of ['rps', 'card_guess', 'dice', 'slot', 'blackjack', 'baccarat']) {
+  for (const kind of ['rps', 'card_guess', 'chinchiro', 'slot', 'blackjack', 'baccarat']) {
     const transaction = tx('win', { gamble: { kind, strength: 1 }, before: '猫が来た。', after: '犬が来た。', stakes: ['猫'], offer: { title: '報酬' } });
     const session = { id: 'saved', betting_mode: 'count-v1', status: 'ready', view: 'result', version: 2, text: transaction.after, transactions: [transaction], offers: [], lost_concepts: [], title: '物語', usage: {} };
     environment(session);
