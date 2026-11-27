@@ -3,7 +3,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const { mount, text } = require('./component-harness.cjs');
-const { scenario, openingNarration, chooseLine, reactionTrigger } = require('../src/scenario.ts');
+const { scenario, openingNarration, openingGreetings, chooseLine, reactionTrigger } = require('../src/scenario.ts');
 const { resultReaction, Opening } = require('../src/Anoma.tsx');
 const App = require('../src/App.tsx').default;
 const flush = () => new Promise(resolve => setImmediate(resolve));
@@ -11,10 +11,10 @@ const tx = (outcome, extra = {}) => ({ id: 'round', status: 'committed', outcome
 
 test('all S1 dialogue matches confirmed design; opening narration and seven lines are complete', () => {
   const design = fs.readFileSync('docs/STORY_DESIGN.md', 'utf8');
-  assert.equal(scenario.opening.length, 7);
+  assert.equal(scenario.opening.length, 6);
   assert.equal(openingNarration.length, 3);
   assert.deepEqual(Object.keys(scenario), ['opening', 'gain', 'loss', 'change', 'winStreak', 'lossStreak']);
-  for (const line of [...openingNarration, ...Object.values(scenario).flat()]) assert.ok(design.includes(line), line);
+  for (const line of [...openingNarration, ...openingGreetings, ...Object.values(scenario).flat()]) assert.ok(design.includes(line), line);
 });
 test('multiple candidates never repeat immediately; one confirmed candidate remains usable', () => {
   for (const random of [() => 0, () => 0.999]) {
@@ -54,6 +54,10 @@ test('opening separates narration, arrival, tapped dialogue and docking', () => 
   assert.equal(ui.tree.props['data-phase'], 'arrival');
   assert.ok(!text(ui.tree).includes(openingNarration[0]));
   ui.tick();
+  assert.ok(openingGreetings.includes(text(ui.find(n => n.props.className === 'sr-only'))));
+  ui.tick();
+  ui.click('▼');
+  ui.click('▼');
   for (const line of scenario.opening) {
     assert.equal(text(ui.find(n => n.props.className === 'sr-only')), line);
     ui.tick();

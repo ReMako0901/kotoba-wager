@@ -51,7 +51,7 @@ export function gameScene(state: GameSceneState): SceneKey {
 export const interviewDialogue = {
   intro: 'まず、あなたのことを教えてくれる？',
   caution: '内緒のことや重い話は、ここではお休みにしよう。',
-  name: '物語では、あなたを何と呼べばいい？',
+  name: 'あなたを何と呼べばいい？',
   questions: [
     { question: '今日はどんなことがあったの？', followup: 'たとえば、どこで？ 誰といたの？' },
     { question: 'どこから、どうやって来たの？', followup: '何に乗って来たの？ 途中で何か見えた？' },

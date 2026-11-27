@@ -1,7 +1,7 @@
 import { retainExit } from './notebookMotion';
 import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import type { Transaction } from './types';
-import { chooseLine, openingNarration, reactionKinds, reactionTrigger, scenario, expressionForTrigger, storyExpressions, type AnomaExpression, type ReactionKind } from './scenario';
+import { chooseLine, openingGreetings, openingNarration, reactionKinds, reactionTrigger, scenario, expressionForTrigger, storyExpressions, type AnomaExpression, type ReactionKind } from './scenario';
 
 // Presentation memory only: no session storage or game state changes.
 let previousExpression: AnomaExpression | undefined;
@@ -156,7 +156,8 @@ export function Opening({ busy, error, onDark, onComplete }: {
   const [revealed, setRevealed] = useState(false);
   const callbacks = useRef({ onDark, onComplete });
   useLayoutEffect(() => { callbacks.current = { onDark, onComplete }; }, [onDark, onComplete]);
-  const line = phase === 'dialogue' ? scenario.opening[index] : '';
+  const [lines] = useState(() => [openingGreetings[Math.floor(Math.random() * openingGreetings.length)], ...scenario.opening]);
+  const line = phase === 'dialogue' ? lines[index] : '';
   const chars = Array.from(line);
   const visible = useTypedLength(line, chars.length);
   const speaking = !revealed && visible < chars.length;
@@ -183,7 +184,7 @@ export function Opening({ busy, error, onDark, onComplete }: {
 
   function advance() {
     if (speaking) setRevealed(true);
-    else if (index === scenario.opening.length - 1) setPhase('docking');
+    else if (index === lines.length - 1) setPhase('docking');
     else { setIndex(index + 1); setRevealed(false); }
   }
   function skip() {
