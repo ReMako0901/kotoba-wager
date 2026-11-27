@@ -49,15 +49,15 @@ test('publisher draws nothing, updates lines and expression, and resets on unmou
 test('stage is shared on title, opening and story selection; all have dialogue', async () => {
   global.fetch = async url => ({ ok: true, json: async () => url.endsWith('/games') ? { games: [] } : { stories: [], exhausted: false } });
   const ui = mount(App, {}); await flush(); ui.draw();
-  for (const action of [null, 'はじめる', 'スキップ']) {
+  for (const action of [null, 'はじめる', 'スキップ', 'プリセットの文で始める']) {
     if (action) { ui.click(action); await flush(); ui.draw(); }
     assert.equal(ui.all(n => n.props.className === 'anoma-stage').length, 1);
     const portrait = ui.find(n => n.props.className === 'anoma-photo');
-    assert.equal(portrait.props['data-focus'], action === 'スキップ' ? 'table' : 'portrait');
+    assert.equal(portrait.props['data-focus'], action && action !== 'はじめる' ? 'table' : 'portrait');
     if (action === 'はじめる') {
       assert.equal(stage(ui).props.inert, true);
       assert.ok(!text(ui.tree).includes(scenario.opening[0]));
-    } else {
+    } else if (action !== 'スキップ') {
       assertScene(ui, action ? 'storySelect' : 'title');
     }
   }

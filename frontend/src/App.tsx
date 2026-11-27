@@ -1,3 +1,4 @@
+import { StoryInterview } from './StoryInterview';
 import './fonts.css';
 import './notebook.css';
 import './notebook-paper.css';
@@ -9,7 +10,7 @@ import { gameScene } from './sceneDialogue';
 import { AnomaStageProvider, AnomaStage, StagePublisher, resultReaction, Opening } from './Anoma';
 import { NormalEnding, StoryCounts, StoryDecision } from './StoryProgress';
 import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react';
-import { api } from './api';
+import { api, requestId } from './api';
 import type { Story, Session, GameKind, GameOption } from './types';
 import { FreshGamble } from './games/FreshGamble';
 import { Manuscript, WagerManuscript } from './Manuscript';
@@ -17,10 +18,6 @@ import { PaperLayers, StoryPaperStack, StoryHistory } from './StoryHistory';
 import { GenerationSkeleton } from './GenerationSkeleton';
 import { storyVersions } from './storyVersions';
 
-function requestId() {
-  const b=crypto.getRandomValues(new Uint8Array(16)); b[6]=(b[6]&15)|64; b[8]=(b[8]&63)|128;
-  return [...b].map(x=>x.toString(16).padStart(2,'0')).join('');
-}
 const MIN_STORY = 20;
 const MAX_STORY = 100;
 
@@ -42,7 +39,7 @@ export default function App() {
 }
 
 function AppContent(){
-  const [screen,setScreen]=useState<'title'|'opening'|'choose'|'game'>('title');
+  const [screen,setScreen]=useState<'title'|'opening'|'interview'|'choose'|'game'>('title');
   const [starting, setStarting] = useState(false);
   const [session,setSession]=useState<Session>();
   const [paperIndex,setPaperIndex]=useState<number>();
@@ -211,6 +208,7 @@ function AppContent(){
           </div>
         </div>
       </main>}
+      {screen === 'interview' && <StoryInterview busy={busy} act={act} accept={accept} onPreset={() => void reroll(true)} />}
       {screen === 'choose' && !customOpen && <main className="choose-screen">
         <div className="choose-header">
           <h1>物語を選ぶ</h1>
@@ -324,6 +322,6 @@ function AppContent(){
     </AnomaStage>
     {(starting || screen === 'opening') && <Opening busy={busy} error={error}
       onDark={() => { setStarting(false); setScreen('opening'); }}
-      onComplete={() => { setStarting(false); setScreen('opening'); void reroll(true); }} />}
+      onComplete={() => { setStarting(false); setScreen('interview'); }} />}
   </div>;
 }

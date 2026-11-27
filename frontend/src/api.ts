@@ -6,3 +6,8 @@ export async function api<T>(path: string, body?: unknown): Promise<T> {
   if (!response.ok) throw new Error(typeof data.detail === 'string' ? data.detail : 'リクエストを処理できませんでした。');
   return data as T;
 }
+
+export function requestId() {
+  const b=crypto.getRandomValues(new Uint8Array(16)); b[6]=(b[6]&15)|64; b[8]=(b[8]&63)|128;
+  return [...b].map(x=>x.toString(16).padStart(2,'0')).join('');
+}

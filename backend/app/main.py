@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
+from .story_generation import generate_story
 from .config import settings
 from .engine import engine
 from .gemini import GenerationError, gemini
@@ -69,6 +70,9 @@ def public(session):
     return result
 
 
+app.post("/api/stories/generate")(generate_story)
+
+
 @app.get("/api/health")
 def health():
     return {"status":"ok","api_configured":gemini.configured(),"model":settings.model,"betting_mode":BETTING_MODE}
@@ -107,14 +111,16 @@ async def create_session(request:CreateSession):
             if existing.get('betting_mode')!=BETTING_MODE:
                 raise HTTPException(409,'旧点数方式の開始IDです。新しく「はじめる」から開始してください。')
             if existing["story_id"] != story_id or (
-                request.custom_text is not None and (existing.get("custom_text") != request.custom_text or existing.get("intro", "") != request.intro)
+                request.custom_text is not None and (existing.get("custom_text") != request.custom_text or existing.get("intro", "") != request.intro
+                    or existing["title"] != (request.title or "自分の物語")
+                    or existing.get("generated_story_id") != request.generated_story_id)
             ):
                 raise HTTPException(409,"同じ開始IDで違う物語は開始できません。")
             update_progress(existing)
             store.save(existing)
             return public(existing)
         story = (
-            {"id": story_id, "title": "自分の物語", "text": request.custom_text, "intro": request.intro}
+            {"id": story_id, "title": request.title or "自分の物語", "text": request.custom_text, "intro": request.intro}
             if request.custom_text is not None
             else next((s for s in STORIES if s["id"] == story_id), None)
         )
@@ -134,6 +140,8 @@ async def create_session(request:CreateSession):
         session={"betting_mode":BETTING_MODE,"id":sid,"story_id":story["id"],"title":story["title"],"intro":story.get("intro", ""),"text":story["text"],"version":1,"status":"ready","analysis":analysis,"offers":make_offers(analysis,1,1),"win_probability":settings.win_probability,"transactions":[],"lost_concepts":[],"pending_transaction_id":None,"view":"game","api_calls":0,"api_events":[],"usage":{"input":0,"output":0,"thoughts":0},"model":settings.model,"analysis_attempts":0,"error":None}
         if request.custom_text is not None:
             session["custom_text"] = request.custom_text
+            if request.generated_story_id:
+                session["generated_story_id"] = request.generated_story_id
         update_progress(session)
         store.save(session)
         return public(session)
