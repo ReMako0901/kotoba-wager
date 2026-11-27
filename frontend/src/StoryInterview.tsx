@@ -102,7 +102,7 @@ export function StoryInterview({ busy, act, onPreset, accept }: {
         <StoryMarks text={finalText} units={analysis.units} marks={marks} onChange={setMarks} busy={busy} />
         <div className="review-actions">
           <button disabled={busy} onClick={() => setEditing(true)}>手動で修正する</button>
-          <button className="primary" disabled={busy} onClick={start}>これで始める</button>
+          <button className="primary" disabled={busy || marks.length !== 1} onClick={start}>はい</button>
         </div>
       </>}
     </main>;

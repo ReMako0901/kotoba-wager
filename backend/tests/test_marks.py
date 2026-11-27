@@ -16,15 +16,19 @@ def test_mark_selection_is_durable_and_immutable(tmp_path, monkeypatch):
     url = f'/api/sessions/{sid}/marks'
     units = session['analysis']['units']
     ids = [u['id'] for u in units if u['stakeable']][:2]
-    for invalid in ([ids[0]] * 2, ['v2-u1'], ids):
+    for invalid in ([], [ids[0]] * 2, ['v2-u1'], ids):
         assert client.post(url, json={'unit_ids': invalid}).status_code == 422
     assert client.post('/api/sessions', json={
         'story_id': main.STORIES[0]['id'], 'request_id': 'two-marks', 'mark_ids': ids,
     }).status_code == 422
+    trade = dict(request_id='first-wager', version=1, offer_id=session['offers'][0]['id'], unit_ids=ids[:1])
+    assert client.post(f'/api/sessions/{sid}/transactions', json=trade).status_code == 409
+    assert main.store.load(sid)['transactions'] == []
+    replacement = ids[1:]
     ids = ids[:1]
     for _ in range(2):
         assert client.post(url, json={'unit_ids': ids}).json()['initial_mark_ids'] == ids
-    assert client.post(url, json={'unit_ids': []}).status_code == 409
+    assert client.post(url, json={'unit_ids': replacement}).status_code == 409
     assert main.store.load(sid)['marked_unit_ids'] == ids
 
 

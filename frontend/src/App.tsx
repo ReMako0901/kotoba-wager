@@ -67,7 +67,7 @@ function AppContent(){
   function accept(s:Session){if(s.betting_mode!=='count-v1')throw new Error('個数方式へ更新中です。少し待ってからページを再読み込みしてください。');setSession(s);setScreen('game')}
   function openMarks(s: Session) {
     accept(s);
-    if (s.version === 1 && !s.initial_mark_ids && !s.transactions.length) {
+    if (s.version === 1 && s.initial_mark_ids?.length !== 1 && !s.transactions.length) {
       setMarks([]);
       setScreen('marks');
     }
@@ -237,7 +237,7 @@ function AppContent(){
       {screen === 'marks' && session && <main className="story-interview">
         <h2>{session.title}</h2>
         <StoryMarks text={session.text} units={units} marks={marks} onChange={setMarks} busy={busy} />
-        <button className="primary" disabled={busy} onClick={() => act(async () =>
+        <button className="primary" disabled={busy || marks.length !== 1} onClick={() => act(async () =>
           accept(await api<Session>(`/sessions/${session.id}/marks`, { unit_ids: marks }))
         )}>これで始める</button>
       </main>}

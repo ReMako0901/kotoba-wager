@@ -35,13 +35,15 @@ def test_generate_and_start(tmp_path, monkeypatch, texts, fallback):
     if len(texts) == 2:
         assert generate.await_args_list[0].args[0] != generate.await_args_list[1].args[0]
     story_id = story.pop('generated_story_id')
-    assert story.pop('analysis')['units']
+    units = story.pop('analysis')['units']
     save.assert_called_once_with(story_id, {**PAYLOAD, **story})
     assert 'ミオ' in story['intro']
     assert (story['text'] != GOOD) == fallback
     assert sum(u.stakeable for u in generation.build_analysis(story['text'], 1).units) >= 6
     start = dict(request_id='interview-session', custom_text=story.pop('text'),
                  generated_story_id=story_id, **story)
+    assert client.post('/api/sessions', json=start).status_code == 422
+    start['mark_ids'] = [next(u['id'] for u in units if u['stakeable'])]
     session = client.post('/api/sessions', json=start)
     assert session.status_code == 202
     assert session.json()['title'] == story['title']

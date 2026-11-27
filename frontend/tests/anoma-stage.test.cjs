@@ -66,6 +66,7 @@ test('stage is shared on title, opening and story selection; all have dialogue',
 test('game publishes scene dialogue for reward, generation, gambling and title', async () => {
   for (const [status, gamble, scene] of [['ready', false, 'rewardSelect'], ['generating', false, 'generating'], ['generating', true, 'gamblePlay:chinchiro']]) {
     const session = { id: 'saved', betting_mode: 'count-v1', status, view: 'select', version: 1, text: '猫。', title: '物語', offers: [], lost_concepts: [], usage: {},
+      analysis: { units: [{ id: 'cat', text: '猫', stakeable: true }, { id: 'end', text: '。', stakeable: false }] },
       transactions: gamble ? [{ id: 'r', status: 'generating', stakes: ['猫'], offer: { title: '報酬' }, gamble: { kind: 'chinchiro', strength: 1, outcome: null, rounds: [], moves: [] } }] : [] };
     global.fetch = async url => ({ ok: true, json: async () => url.endsWith('/games') ? { games: [] } : drawStories(url) ?? session });
     const ui = mount(App, {}); await flush(); ui.draw();

@@ -9,7 +9,7 @@ test('名前から始まり、異なる2問を聞き、各問の深掘りは1回
   global.crypto = require('node:crypto').webcrypto;
   global.fetch = async (url, options) => {
     requests.push([url, JSON.parse(options.body)]);
-    const data = { generated_story_id: 'abc', title: '青い鳥', intro: '私はソラ。', text: '本文', analysis: { units: [] } };
+    const data = { generated_story_id: 'abc', title: '青い鳥', intro: '私はソラ。', text: '本文', analysis: { units: [{ id: 'word', text: '本文', stakeable: true, start: 0, end: 2 }] } };
     return { ok: true, json: async () => data };
   };
   let pending;
@@ -38,12 +38,15 @@ test('名前から始まり、異なる2問を聞き、各問の深掘りは1回
   assert.ok(questions.slice(1).every(q => interviewDialogue.questions.some(item => item.question === q)));
   ui.draw();
   assert.equal(requests.length, 1);
-  ui.click('これで始める');
+  assert.equal(ui.find(n => n.type === 'button' && text(n) === 'はい').props.disabled, true);
+  ui.click('本文');
+  ui.click('はい');
   await pending;
   const [[generate, payload], [start, session]] = requests;
   assert.equal(generate, '/api/stories/generate');
   assert.equal(payload.name, 'ソラ');
   assert.deepEqual(payload.answers, questions.map((question, i) => ({ question, text: ['ソラ', '風 少し', '海 少し'][i] })));
+  assert.deepEqual(session.mark_ids, ['word']);
   assert.equal(start, '/api/sessions');
   assert.equal(session.custom_text, accepted.text);
   assert.equal(session.generated_story_id, accepted.generated_story_id);

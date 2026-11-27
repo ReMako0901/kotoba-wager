@@ -25,12 +25,15 @@ test('印を確定した後だけ報酬を表示し、印付きの賭けだけ�
   await flush(); ui.draw(); ui.click('検証用の物語');
   await flush(); ui.draw();
   assert.doesNotMatch(text(ui.tree), /報酬候補/);
+  const start = () => ui.find(n => n.type === 'button' && text(n) === 'これで始める');
+  assert.equal(start().props.disabled, true);
   ui.click('犬');
+  assert.equal(start().props.disabled, false);
   ui.click('犬（印付き）');
-  assert.match(text(ui.tree), /0 \/ 1/);
+  assert.equal(start().props.disabled, true);
   ui.click('犬');
   ui.click('猫');
-  assert.match(text(ui.tree), /1 \/ 1/);
+  assert.equal(start().props.disabled, false);
   ui.click('これで始める'); await flush(); ui.draw();
   ui.click('報酬候補'); ui.click('猫（印付き）'); ui.click('選び直す');
   assert.equal(ui.find(n => n.props['aria-label'] === '猫（印付き）').props['aria-pressed'], false);

@@ -16,6 +16,8 @@ async function startStory(ui) {
   await flush();
   ui.draw();
   if (ui.find(n => n.props['data-screen'] === 'marks')) {
+    const word = ui.find(n => n.props.className === 'vertical-word');
+    ui.click(word.props['aria-label']);
     ui.click('これで始める');
     await flush(); ui.draw();
   }
