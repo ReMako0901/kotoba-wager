@@ -61,7 +61,7 @@ class Rewrite(BaseModel):
 
 
 class CreateSession(BaseModel):
-    mark_ids: list[str] | None = Field(default=None, max_length=3)
+    mark_ids: list[str] | None = Field(default=None, max_length=1)
     title: str | None = Field(default=None, max_length=500)
     generated_story_id: str | None = Field(default=None, pattern=r"^[a-f0-9]{32}$")
     story_id: str | None = None

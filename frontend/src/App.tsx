@@ -1,4 +1,4 @@
-import { StoryMarks, markLine } from './StoryMarks';
+import { StoryMarks } from './StoryMarks';
 import { StoryInterview } from './StoryInterview';
 import './fonts.css';
 import './notebook.css';
@@ -235,7 +235,6 @@ function AppContent(){
         </div>
       </main>}
       {screen === 'marks' && session && <main className="story-interview">
-        <StagePublisher expression="normal" lines={[markLine]} />
         <h2>{session.title}</h2>
         <StoryMarks text={session.text} units={units} marks={marks} onChange={setMarks} busy={busy} />
         <button className="primary" disabled={busy} onClick={() => act(async () =>

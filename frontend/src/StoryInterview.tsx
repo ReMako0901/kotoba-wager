@@ -3,7 +3,7 @@ import { StagePublisher } from './Anoma';
 import { interviewDialogue as d } from './sceneDialogue';
 import { api, requestId } from './api';
 import { GenerationSkeleton } from './GenerationSkeleton';
-import { StoryMarks, markLine } from './StoryMarks';
+import { StoryMarks } from './StoryMarks';
 import type { Analysis, Session } from './types';
 
 const SHORT_ANSWER = 5;
@@ -82,7 +82,6 @@ export function StoryInterview({ busy, act, onPreset, accept }: {
         mark_ids: marks, title: story.title, intro: finalIntro, custom_text: finalText, request_id: sid.current }));
     });
     return <main className="story-interview">
-      <StagePublisher expression="normal" lines={[markLine]} />
       <h2>{story.title}</h2>
       <p>これでいいかしら？</p>
       {editing ? <>
