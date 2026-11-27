@@ -126,6 +126,7 @@ button:focus-visible, [tabindex]:focus-visible, textarea:focus-visible { outline
 .paper-tabs,.story-decision,.story-counts { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
 .paper-tabs button,.story-decision button { font-size: 12px; }
 .result-tabs, .wager-tabs { justify-content: flex-end; }
+.result-tabs .escape-button { margin-right: auto; }
 .page-links .history-link { margin-left: auto; }
 .stake-caption { display: block; font-size: 10px; color: #756653; }
 .paper-turn-hint { display: block; text-align: right; padding-right: 24px; font-size: 10px; }

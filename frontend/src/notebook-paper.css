@@ -39,7 +39,7 @@
 .result-change.cut-before { animation-name: result-cut-before; }
 .result-change.cut-after { animation-name: result-cut-after; }
 @keyframes result-rewrite {
-  0%, 28% { background-color: #fff; box-shadow: inset -2px 0 var(--stamp); }
+  0%, 28% { background-color: #fff; }
   100% { background-color: transparent; }
 }
 @keyframes result-cut-before {
@@ -72,7 +72,7 @@
 .vertical-word:disabled { opacity: 1; }
 .ink-cell.crumbled .marked-glyph { visibility: hidden; }
 .ink-cell.crumbled { background: var(--paper); transition: background .3s ease; }
-.show-changes .result-change.rewritten { animation: none; background: transparent; color: var(--stamp); font-weight: inherit; box-shadow: inset -2px 0 var(--stamp); }
+.show-changes .result-change.rewritten { animation: none; background: transparent; color: var(--stamp); font-weight: inherit; }
 .show-changes .result-change.cut-before { animation: none; box-shadow: 0 -2px var(--stamp); }
 .show-changes .result-change.cut-after { animation: none; box-shadow: 0 2px var(--stamp); }
 
@@ -98,3 +98,17 @@
 .paper-corner { background: linear-gradient(135deg,#e2d3ad 29%,transparent 30%); }
 .vertical-paper { box-sizing: content-box; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+.rewrite-stroke {
+  z-index: 1;
+  justify-self: start;
+  width: 2px;
+  pointer-events: none;
+  background: var(--stamp);
+  animation: rewrite-stroke-fade 1.4s ease-out forwards;
+}
+@keyframes rewrite-stroke-fade { 0%, 28% { opacity: 1; } 100% { opacity: 0; } }
+.show-changes .rewrite-stroke { animation: none; }
+@media (prefers-reduced-motion: reduce) {
+  .rewrite-stroke { animation-timing-function: steps(1, end); }
+}

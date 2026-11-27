@@ -6,9 +6,10 @@ import './notebook-motion.css';
 import './opening.css';
 import { retainExit } from './notebookMotion';
 import { ScenePublisher } from './ScenePublisher';
+import { expressionForExtension } from './scenario';
 import { gameScene } from './sceneDialogue';
 import { AnomaStageProvider, AnomaStage, StagePublisher, resultReaction, Opening } from './Anoma';
-import { NormalEnding, StoryCounts, StoryDecision } from './StoryProgress';
+import { NormalEnding } from './StoryProgress';
 import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react';
 import { api, requestId } from './api';
 import type { Story, Session, GameKind, GameOption } from './types';
@@ -129,23 +130,35 @@ function AppContent(){
     });
   }
 
-  const storyChoice = useRef<{ id: string; sid: string; choice: 'escape' | 'continue'; version: number } | undefined>(undefined);
+  const phase = session?.story_progress?.phase;
+  const [welcomeVersion, setWelcomeVersion] = useState<string>();
+  const resultKey = session && JSON.stringify([session.id, session.version]);
+  const storyChoice = useRef<{ id: string; key: string } | undefined>(undefined);
+  async function nextRound() {
+    if (!session) return;
+    accept(await api<Session>(`/sessions/${session.id}/continue`, {}));
+    setSelected([]);
+    setOfferId('');
+    setChoosingReward(true);
+  }
   async function chooseStory(choice: 'escape' | 'continue') {
     if (!session) return;
     await act(async () => {
-      if (storyChoice.current?.sid !== session.id || storyChoice.current.choice !== choice || storyChoice.current.version !== session.version)
-        storyChoice.current = { id: requestId(), sid: session.id, choice, version: session.version };
+      const key = JSON.stringify([session.id, session.version, choice]);
+      if (storyChoice.current?.key !== key) storyChoice.current = { id: requestId(), key };
       accept(await api<Session>(`/sessions/${session.id}/story-choice`, {
         request_id: storyChoice.current.id, choice, version: session.version,
       }));
+      if (choice === 'continue') {
+        setWelcomeVersion(resultKey);
+        await nextRound();
+      }
     });
   }
   const reaction = resultMode && session ? resultReaction(session.transactions) : undefined;
   const ended = session?.story_progress?.phase === 'ended';
   const versions = resultMode && session ? storyVersions(session) : undefined;
   const currentVersion = versions?.[Math.min(paperIndex ?? versions.length - 1, versions.length - 1)];
-  const decision = resultMode && session?.story_progress && ['escapable', 'extension'].includes(session.story_progress.phase)
-    ? session.story_progress : undefined;
   const rewardModalOpen = !gambleMode && Boolean(ready && !resultMode && (choosingReward || !offer));
   const gambleModalOpen = !gambleMode && Boolean(ready && !resultMode && !choosingReward && stakesReady && choosingGame);
   const errorNotice = error && !customOpen && !choosingGame && <div className="alert" role="alert">{error}{screen === 'game' && session &&
@@ -175,7 +188,7 @@ function AppContent(){
   }
 
   const page = screen !== 'game' ? (customOpen ? 'custom' : screen)
-    : ended ? 'ending' : gambleMode ? 'board' : decision ? 'decision' : resultMode ? 'result'
+    : ended ? 'ending' : gambleMode ? 'board' : resultMode ? 'result'
     : rewardModalOpen ? 'reward' : gambleModalOpen ? 'sheet' : processing ? 'waiting' : 'words';
   const [turn, setTurn] = useState({ page, from: '', history: historyOpen, returning: false });
   if (turn.page !== page || turn.history !== historyOpen) {
@@ -184,21 +197,22 @@ function AppContent(){
   const backward = turn.returning || page === 'title' || (page === 'choose' && turn.from === 'custom')
     || (page === 'words' && turn.from === 'sheet') || (page === 'reward' && turn.from === 'words');
   return <div className="app-shell" data-screen={screen}>
-    <AnomaStage portraitFocus={screen === 'title' || screen === 'opening' || Boolean(ended || decision)} inactive={starting || screen === 'opening' || Boolean(ended)}>
+    <AnomaStage portraitFocus={screen === 'title' || screen === 'opening' || Boolean(ended)} inactive={starting || screen === 'opening' || Boolean(ended)}>
       <div className="page-viewport" data-back={backward} data-returning={turn.returning}>
       <div className="notebook-body" key={page} ref={retainExit} data-page={page} data-from={turn.from}>
       {screen === 'title' && <ScenePublisher scene="title" />}
       {screen === 'choose' && <ScenePublisher scene="storySelect" />}
       {screen === 'game' && session && !ended && (!resultMode || !reaction) &&
-        !(resultMode && session.story_progress && ['escapable', 'extension'].includes(session.story_progress.phase)) &&
-        <ScenePublisher scene={gameScene({
+        (rewardModalOpen && welcomeVersion === resultKey
+          ? <StagePublisher lines={['あら、もう帰っていいのに。物好きね。']} expression={expressionForExtension(session.id)} />
+          : <ScenePublisher scene={gameScene({
           rewardModal: rewardModalOpen,
           gambleModal: gambleModalOpen,
           gambling: gambleMode, game: last?.gamble?.kind,
           processing: Boolean(processing || busy || session.view === 'result'), selectedCount, stakesReady,
-        })} /> }
+        })} />) }
 
-      {screen === 'game' && resultMode && !ended && !decision && reaction &&
+      {screen === 'game' && resultMode && !ended && reaction &&
         <StagePublisher lines={[reaction.line]} expression={reaction.expression} reaction={reaction.reaction} />}
       {screen === 'title' && <main className="title-screen">
         <div className="title-folio">
@@ -241,15 +255,11 @@ function AppContent(){
       {screen==='game'&&session&&!ended&&<main ref={historyOpen ? undefined : retainExit} hidden={historyOpen} key={`${session.id}-${session.version}-${session.view}`}
         className={`game-screen${resultMode && currentVersion?.transaction ? ` result-${currentVersion.transaction.outcome}-view` : ''}${gambleMode ? ' gambling-view' : ''}`}>
         {!rewardModalOpen && !gambleModalOpen && <div className="game-object" key={gambleMode ? 'table' : 'manuscript'}>
-          {decision && <StoryDecision progress={decision} busy={busy} showCounts={false} onChoice={choice => void chooseStory(choice)} />}
           {!gambleMode && <div className="game-heading">
             {currentVersion ? <span className="edition-badge" aria-live="polite">第{currentVersion.version}版</span> : <>
               <div className="chapter-line"><span>第{round}章</span></div>
               <h1 className="story-title" title={session.title}>{session.title}{offer && ` ＞ ${offer.title}`}</h1>
             </>}
-          </div>}
-          {resultMode && decision && <div className="result-meta">
-            <StoryCounts totals={decision.totals} />
           </div>}
             {gambleMode && last?.gamble ? <FreshGamble key={last.gamble.kind === 'chinchiro' ? `${last.id}-${boardRecovery}` : last.id} gamble={last.gamble} busy={busy} error={session.error} prepared={session.status === 'awaiting_reveal'}
               onMove={(attempt, choice) => act(async () => accept(await api<Session>(`/sessions/${session.id}/transactions/${last.id}/play`, { attempt, choice })))}
@@ -267,13 +277,11 @@ function AppContent(){
               {session.status === 'error' && <div className="api-error" role="alert"><p>{session.error}</p></div>}
             </>}
           {!gambleMode && (resultMode ? <div className="paper-tabs result-tabs">
-              {session.story_progress?.phase !== 'escapable' &&
-                <button className="primary" disabled={busy} onClick={() => act(async () => {
-                  accept(await api<Session>(`/sessions/${session.id}/continue`, {}));
-                  setSelected([]);
-                  setOfferId('');
-                  setChoosingReward(true);
-                })}>次は何をねらう？ <span>→</span></button>}
+              {(phase === 'escapable' || phase === 'extension') &&
+                <button className="secondary escape-button" disabled={busy} onClick={() => chooseStory('escape')}>脱出する</button>}
+              {phase === 'escapable'
+                ? <button className="primary" disabled={busy} onClick={() => chooseStory('continue')}>まだ続ける</button>
+                : <button className="primary" disabled={busy} onClick={() => act(nextRound)}>次は何をねらう？ <span>→</span></button>}
             </div> : <div className="paper-tabs wager-tabs" aria-label="取引の確定">
               {offer && <>
                 <button className="text-button" disabled={busy || !selected.length} onClick={() => {
@@ -286,6 +294,7 @@ function AppContent(){
         {rewardModalOpen &&
           <SceneObject kind="rewards" title="何が欲しい？" onClose={offer ? () => setChoosingReward(false) : undefined}>
             <div className="reward-options">{session.offers.map(reward => <button key={reward.id} className="reward-option" onClick={() => {
+              setWelcomeVersion(undefined);
               if (reward.id !== offerId) setSelected([]);
               setOfferId(reward.id);
               setChoosingReward(false);

@@ -81,3 +81,13 @@
 
 .opening-dialogue::before { content: ''; position: fixed; inset: 0; }
 .opening-skip { z-index: 1; }
+
+.ending-closeup { animation: soft-in 360ms ease-out both; }
+.ending-closeup .opening-portrait { animation-delay: 360ms; }
+.ending-closeup .opening-dialogue { animation: soft-in 480ms 360ms backwards; }
+.ending-closeup .story-counts { display: grid; grid-template-columns: 1fr 1fr; margin: 0; }
+.ending-closeup .story-counts dd { margin: 0; }
+.ending-closeup .opening-advance { height: 100%; }
+@media (prefers-reduced-motion: reduce) {
+  .ending-closeup, .ending-closeup .opening-portrait, .ending-closeup .opening-dialogue { animation: none; }
+}
