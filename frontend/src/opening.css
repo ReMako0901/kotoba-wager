@@ -1,12 +1,12 @@
-:root:has(.opening-screen) { background: var(--paper); }
+:root:has(.opening-screen) { background: #000; }
 .app-shell:has(> .opening-screen) { box-shadow: none; }
 .opening-screen {
   position: absolute;
   inset: 0;
   z-index: 10;
   overflow: hidden;
-  background: var(--paper);
-  color: var(--ink);
+  background: #050505;
+  color: #f5f1e8;
   --closeup: min(92%, 72dvh);
 }
 .opening-screen .opening-narration {
@@ -59,7 +59,7 @@
   min-height: 44px;
   border: 0;
   background: transparent;
-  color: #65594e;
+  color: #b8b0a2;
   font-size: 12px;
 }
 .opening-status { position: absolute; inset: 50% 8% auto; text-align: center; }
