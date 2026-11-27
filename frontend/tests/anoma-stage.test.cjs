@@ -13,7 +13,7 @@ function assertScene(ui, key) {
   assert.ok(scenePools[key].expressions.includes(stage(ui).props['data-expression']), key);
 }
 const stage = ui => ui.find(n => n.props.className === 'anoma-stage');
-const stageLine = ui => text(ui.find(n => n.props.className === 'anoma-dialogue'));
+const stageLine = ui => text(ui.find(n => n.props.className === 'sr-only'));
 const flush = () => new Promise(resolve => setImmediate(resolve));
 
 function Host({ visible, lines, expression = 'taunt' }) {
@@ -25,7 +25,19 @@ test('publisher draws nothing, updates lines and expression, and resets on unmou
   assert.equal(stageLine(ui), '');
   ui.draw({ visible: true, lines: ['一行目', '二行目'], expression: 'surprise' });
   assert.equal(stage(ui).props['data-expression'], 'surprise');
-  assert.deepEqual(ui.all(n => n.type === 'p').map(text), ['一行目', '二行目']);
+  const displayed = () => ui.all(n => n.type === 'p').map(text);
+  assert.equal(stageLine(ui), '一行目\n二行目');
+  assert.deepEqual(displayed(), ['', '']);
+  ui.tick();
+  assert.deepEqual(displayed(), ['一', '']);
+  ui.draw({ visible: true, lines: ['一行目', '二行目'], expression: 'surprise' });
+  assert.deepEqual(displayed(), ['一', '']);
+  for (let i = 0; i < 3; i++) ui.tick();
+  assert.deepEqual(displayed(), ['一行目', '二']);
+  assert.ok(ui.find(n => n.props.className?.includes('anoma-portrait-speaking')));
+  ui.tick(); ui.tick();
+  assert.deepEqual(displayed(), ['一行目', '二行目']);
+  assert.equal(ui.find(n => n.props.className?.includes('anoma-portrait-speaking')), undefined);
   assert.equal(ui.all(n => n.type === 'aside').length, 1);
   ui.draw({ visible: true, lines: ['次の台詞'], expression: 'smile' });
   assert.equal(stageLine(ui), '次の台詞');
@@ -59,8 +71,7 @@ test('game publishes scene dialogue for reward, generation, gambling and title',
     const ui = mount(App, {}); await flush(); ui.draw();
     await startStory(ui);
     assertScene(ui, scene);
-    ui.click('タイトルへ');
-    assertScene(ui, 'title');
+    assert.equal(ui.find(n => n.props['aria-label'] === 'タイトルへ'), undefined);
     ui.unmount();
   }
 });

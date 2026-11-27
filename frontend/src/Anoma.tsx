@@ -94,21 +94,45 @@ export function StagePublisher({ lines, expression, reaction }: StageContent) {
 
 export function AnomaStage({ portraitFocus = false, children }: { portraitFocus?: boolean; children?: ReactNode }) {
   const { lines, expression, reaction } = useContext(StageContext);
-  const [speaking, setSpeaking] = useState(false);
+  const linesKey = JSON.stringify(lines ?? []);
+  const characters = (lines ?? []).map(line => Array.from(line));
+  const length = characters.reduce((sum, line) => sum + line.length, 0);
+  const [visible, setVisible] = useState(0);
   useLayoutEffect(() => {
-    const dialogue = lines?.join('') ?? '';
-    setSpeaking(Boolean(dialogue));
-    if (!dialogue) return;
-    const duration = Math.min(2800, 500 + Array.from(dialogue).length * 70);
-    const timer = window.setTimeout(() => setSpeaking(false), duration);
-    return () => window.clearTimeout(timer);
-  }, [lines]);
+    const media = window.matchMedia('(prefers-reduced-motion: reduce)');
+    let timer: number;
+    let count = 0;
+    const tick = () => {
+      setVisible(++count);
+      if (count < length) timer = window.setTimeout(tick, 35);
+    };
+    const finish = () => {
+      if (media.matches) {
+        window.clearTimeout(timer);
+        setVisible(length);
+      }
+    };
+    setVisible(media.matches ? length : 0);
+    if (!media.matches && length) timer = window.setTimeout(tick, 35);
+    media.addEventListener('change', finish);
+    return () => {
+      window.clearTimeout(timer);
+      media.removeEventListener('change', finish);
+    };
+  }, [linesKey, length]);
+  const speaking = visible < length;
+  let remaining = visible;
   return <div className="anoma-stage" data-expression={expression} data-reaction={reaction ?? 'normal'}>
     <header className="page-margin">
       <aside className="anoma-photo" data-focus={portraitFocus || Boolean(reaction && speaking) ? 'portrait' : 'table'} aria-label="アノマ">
         <AnomaPortrait key={expression} expression={expression} speaking={speaking} />
       </aside>
-      <div className="anoma-dialogue" aria-live="polite"><div key={JSON.stringify(lines ?? [])} className="dialogue-lines" ref={retainExit}>{lines?.map((line, index) => <p key={index}>{line}</p>)}</div></div>
+      <div className="anoma-dialogue" aria-live="polite"><span className="sr-only">{lines?.join('\n')}</span>
+        <div key={linesKey} className="dialogue-lines" ref={retainExit} aria-hidden="true">{characters.map((line, index) => {
+          const prefix = line.slice(0, remaining).join('');
+          remaining = Math.max(0, remaining - line.length);
+          return <p key={index}>{prefix}</p>;
+        })}</div></div>
     </header>
     {children}
   </div>;

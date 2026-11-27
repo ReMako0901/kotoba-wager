@@ -29,7 +29,7 @@ function SceneObject({ title, onClose, children, kind }: {
   const titleId = useId();
   return <section ref={kind === 'history' ? retainExit : undefined} className={`scene-object object-${kind}`} aria-labelledby={titleId}>
     <header className="object-heading">
-      <h2 id={titleId}>{title}</h2>
+      <h2 id={titleId}>{kind === 'rewards' && <span className="speaker-name">アノマ</span>}{title}</h2>
       {onClose && <button className="icon-button" aria-label="閉じる" onClick={onClose}>×</button>}
     </header>
     {children}
@@ -277,7 +277,7 @@ function AppContent(){
               <button className="secondary reward-change" disabled={!ready || busy}
                 title={offer ? `${offer.title}・${offer.required_count}個 変更` : undefined}
                 onClick={() => { setChoosingGame(false); setChoosingReward(true); }}>
-                {offer ? <><span>{offer.title}</span>{`・${offer.required_count}個 変更`}</> : '報酬を選ぼう'}
+                {offer ? <><span>{offer.title}</span>{`・${offer.required_count}個 変更`}</> : '願いを伝える'}
               </button>
               {offer && <>
                 <output className={`stake-count${stakesReady ? ' stakes-ready' : ''}`} aria-label="選んだ個数">{selectedCount} / {offer.required_count}</output>
@@ -288,7 +288,7 @@ function AppContent(){
             </div>)}
         </div>}
         {rewardModalOpen &&
-          <SceneObject kind="rewards" title="何を手に入れる？" onClose={offer ? () => setChoosingReward(false) : undefined}>
+          <SceneObject kind="rewards" title="何が欲しい？" onClose={offer ? () => setChoosingReward(false) : undefined}>
             <div className="reward-options">{session.offers.map(reward => <button key={reward.id} className="reward-option" onClick={() => {
               if (reward.id !== offerId) setSelected([]);
               setOfferId(reward.id);
@@ -296,7 +296,7 @@ function AppContent(){
               action.current = undefined;
             }}>
               <b>{reward.title}</b>
-              <strong>{reward.required_count}<small>個</small></strong>
+              <small>ことば {reward.required_count}個</small>
             </button>)}</div>
           </SceneObject>}
         {gambleModalOpen &&
@@ -315,10 +315,9 @@ function AppContent(){
       </main>}
       {screen === 'game' && session && historyOpen && <SceneObject kind="history" title="物語の変遷" onClose={() => setHistoryOpen(false)}><StoryHistory session={session} pageIndex={paperIndex} onPageChange={setPaperIndex} /></SceneObject>}
       {errorNotice}
-      {screen !== 'title' && <div className="page-links">
-      <button className="scene-link title-link" aria-label="タイトルへ" disabled={busy} onClick={returnToTitle}>‹ タイトルへ</button>
-      {screen === 'game' && !ended && <button className="scene-link history-link" aria-label="取引履歴" aria-expanded={historyOpen} disabled={busy}
-        onClick={() => setHistoryOpen(!historyOpen)}>取引履歴</button>}
+      {screen === 'game' && !ended && <div className="page-links">
+        <button className="scene-link history-link" aria-label="取引履歴" aria-expanded={historyOpen} disabled={busy}
+        onClick={() => setHistoryOpen(!historyOpen)}>取引履歴</button>
       </div>}
       </div>
       </div>

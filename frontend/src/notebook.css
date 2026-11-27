@@ -60,7 +60,7 @@ button:focus-visible, [tabindex]:focus-visible, textarea:focus-visible { outline
 }
 
 .notebook-body { overflow: clip; display: flex; flex-direction: column; justify-content: center; min-width: 0; position: relative; gap: 6px; }
-.page-links { margin-top: auto; display: flex; justify-content: space-between; border-top: 1px solid var(--rule); }
+.page-links { margin-top: auto; display: flex; justify-content: flex-end; border-top: 1px solid var(--rule); }
 .notebook-body > :is(main,section):first-of-type { margin-block: auto; }
 .scene-link,.text-button { background: transparent; border: 0; font-size: 12px; color: #694d40; }
 .primary,.game-tiers [aria-pressed=true] { background: var(--stamp); color: #fff7e7; border-color: var(--stamp); }
@@ -92,6 +92,9 @@ button:focus-visible, [tabindex]:focus-visible, textarea:focus-visible { outline
 .object-rewards .reward-option { position: relative; padding: 18px 15px; border: 0; border-top: 7px solid #ddcb9b; background: #f7edcc; box-shadow: var(--shadow); }
 .object-rewards .reward-option:nth-child(2) { background: #ebecd8; border-color: #c8cdac; }
 .object-rewards .reward-option:nth-child(3) { background: #f4e0cf; border-color: #dbbda8; }
+.object-rewards .object-heading h2 { display: flex; align-items: center; gap: .7em; font: 500 19px/1.5 var(--body-serif); }
+.speaker-name { padding: 1px 6px; border: 1px solid var(--rule); font-size: 12px; }
+.object-rewards .reward-option small { align-self: flex-end; white-space: nowrap; border-bottom: 1px solid var(--rule); }
 .reward-option small { display: block; font-size: 12px; font-weight: normal; }
 .reward-option strong { white-space: nowrap; text-align: center; }
 .reward-option b { font-size: 17px; }
