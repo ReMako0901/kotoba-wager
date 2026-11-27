@@ -1,11 +1,12 @@
+:root:has(.opening-screen) { background: var(--paper); }
+.app-shell:has(> .opening-screen) { box-shadow: none; }
 .opening-screen {
   position: absolute;
   inset: 0;
   z-index: 10;
   overflow: hidden;
-  background: #000;
-  color: #fff;
-  animation: soft-in 650ms ease-in-out backwards;
+  background: var(--paper);
+  color: var(--ink);
   --closeup: min(92%, 72dvh);
 }
 .opening-screen .opening-narration {
@@ -19,23 +20,24 @@
   font: 16px/1.85 var(--body-serif);
 }
 .opening-narration p { animation: soft-in 750ms ease-out backwards; }
-.app-shell .opening-photo {
+.app-shell .opening-portrait {
   position: absolute;
   width: var(--closeup);
+  aspect-ratio: .91;
   top: 48%;
   left: 50%;
   transform: translate(-50%, -50%);
   animation: soft-in 900ms ease-out backwards;
   transition: width 800ms ease-in-out, top 800ms ease-in-out, left 800ms ease-in-out, transform 800ms ease-in-out;
 }
-.opening-screen:is([data-phase=docking], [data-phase=waiting]) .opening-photo {
+.opening-screen:is([data-phase=docking], [data-phase=waiting]) .opening-portrait {
   width: clamp(74px,14dvh,134px);
   top: 24px;
   left: 28px;
   transform: rotate(-3deg);
 }
 @media (max-height: 720px) {
-  .opening-screen:is([data-phase=docking], [data-phase=waiting]) .opening-photo { width: 78px; }
+  .opening-screen:is([data-phase=docking], [data-phase=waiting]) .opening-portrait { width: 78px; }
 }
 .opening-dialogue {
   position: absolute;
@@ -47,7 +49,7 @@
   text-align: left;
   color: var(--ink);
   font: 16px/1.55 var(--body-serif);
-  background: #fbf5e5;
+  background: var(--paper);
 }
 .opening-dialogue small { position: absolute; bottom: 4px; right: 10px; font-size: 9px; }
 .opening-skip {
@@ -57,20 +59,20 @@
   min-height: 44px;
   border: 0;
   background: transparent;
-  color: #c6c1ba;
+  color: #65594e;
   font-size: 12px;
 }
 .opening-status { position: absolute; inset: 50% 8% auto; text-align: center; }
 @media (prefers-reduced-motion: reduce) {
-  .opening-screen, .opening-narration p, .app-shell .opening-photo { animation-duration: 120ms; }
-  .app-shell .opening-photo { transition: none; }
-  .opening-screen[data-phase=docking] .opening-photo {
+  .opening-screen, .opening-narration p, .app-shell .opening-portrait { animation-duration: 120ms; }
+  .app-shell .opening-portrait { transition: none; }
+  .opening-screen[data-phase=docking] .opening-portrait {
     width: var(--closeup);
     top: 48%;
     left: 50%;
     transform: translate(-50%, -50%);
     animation: soft-out 120ms linear forwards;
   }
-  .opening-screen[data-phase=waiting] .opening-photo { animation: soft-in 120ms linear; }
-  .app-shell .opening-photo .anoma-portrait { animation: none; }
+  .opening-screen[data-phase=waiting] .opening-portrait { animation: soft-in 120ms linear; }
+  .app-shell .opening-portrait .anoma-portrait { animation: none; }
 }
