@@ -57,6 +57,15 @@ export function AnomaPortrait({ expression, speaking, mouth }: { expression: Ano
   const [talkLoaded, setTalkLoaded] = useState(false);
   const [talkFailed, setTalkFailed] = useState(() => unavailableTalkExpressions.has(expression));
   const [mouthReady, setMouthReady] = useState<ReadonlySet<string>>(new Set());
+  const [prevMouthKey, setPrevMouthKey] = useState<string | null>(null);
+  const lastMouthKey = useRef<string | null>(null);
+  const currentMouthKey = mouth ? `${mouth.vowel}${mouth.frame}` : null;
+  useEffect(() => {
+    if (currentMouthKey && lastMouthKey.current && lastMouthKey.current !== currentMouthKey) {
+      setPrevMouthKey(lastMouthKey.current);
+    }
+    if (currentMouthKey) lastMouthKey.current = currentMouthKey;
+  }, [currentMouthKey]);
   const [mouthFailed, setMouthFailed] = useState<ReadonlySet<string>>(new Set());
   const [blinking, setBlinking] = useState(false);
   useEffect(() => {
@@ -121,14 +130,24 @@ export function AnomaPortrait({ expression, speaking, mouth }: { expression: Ano
     {!reducedMotion && mouth && (() => {
       const mouthKey = `${mouth.vowel}${mouth.frame}`;
       const mouthActive = Boolean(speaking && loaded && mouthReady.has(mouthKey) && !mouthFailed.has(mouthKey));
-      return <img
-        className="anoma-portrait-mouth"
-        data-active={mouthActive}
-        src={`${import.meta.env.BASE_URL}anoma/${expression}-${mouthKey}.webp`} alt=""
-        onError={() => {
-          unavailableMouthShapes.add(`${expression}-${mouthKey}`);
-          setMouthFailed(previous => new Set(previous).add(mouthKey));
-        }} />;
+      const prevActive = Boolean(speaking && loaded && prevMouthKey && prevMouthKey !== mouthKey && mouthReady.has(prevMouthKey) && !mouthFailed.has(prevMouthKey));
+      const onMouthError = (key: string) => () => {
+        unavailableMouthShapes.add(`${expression}-${key}`);
+        setMouthFailed(previous => new Set(previous).add(key));
+      };
+      return <>
+        {prevActive && <img
+          className="anoma-portrait-mouth"
+          data-active={true}
+          src={`${import.meta.env.BASE_URL}anoma/${expression}-${prevMouthKey}.webp`} alt=""
+          onError={onMouthError(prevMouthKey as string)} />}
+        <img
+          key={mouthKey}
+          className="anoma-portrait-mouth anoma-portrait-mouth-fade"
+          data-active={mouthActive}
+          src={`${import.meta.env.BASE_URL}anoma/${expression}-${mouthKey}.webp`} alt=""
+          onError={onMouthError(mouthKey)} />
+      </>;
     })()}
     {settled && !reducedMotion && !closedFailed && <img
       className={`anoma-portrait-closed${blinking && closedLoaded ? ' anoma-portrait-blinking' : ''}`}
