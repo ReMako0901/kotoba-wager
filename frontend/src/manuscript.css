@@ -362,7 +362,7 @@ body { background: #0e0a0a; }
 .vertical-word[aria-pressed=true] .ink-cell { color: #fff; background: var(--ink); }
 .vertical-word[aria-pressed=true]::after { width: 3px; background: var(--stamp); }
 
-.show-changes .result-change.rewritten { animation: none; background: #fff; color: var(--ink); font-weight: 800; box-shadow: inset -2px 0 var(--stamp); }
+.show-changes .result-change.rewritten { animation: none; background: transparent; color: var(--stamp); font-weight: inherit; box-shadow: inset -2px 0 var(--stamp); }
 .show-changes .result-change.cut-before { animation: none; box-shadow: 0 -2px var(--stamp); }
 .show-changes .result-change.cut-after { animation: none; box-shadow: 0 2px var(--stamp); }
 
