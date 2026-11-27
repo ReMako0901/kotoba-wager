@@ -5,7 +5,6 @@ const fs = require('node:fs');
 const { mount, text } = require('./component-harness.cjs');
 const { scenario, openingNarration, chooseLine, reactionTrigger } = require('../src/scenario.ts');
 const { resultReaction, Opening } = require('../src/Anoma.tsx');
-const { stageMount } = require('./anoma-stage-harness.cjs');
 const App = require('../src/App.tsx').default;
 const flush = () => new Promise(resolve => setImmediate(resolve));
 const tx = (outcome, extra = {}) => ({ id: 'round', status: 'committed', outcome, lost: [], ...extra });
@@ -40,15 +39,33 @@ test('priority uses current-round loss count and strength, then consecutive comm
   assert.equal(reactionTrigger([tx('win', { gamble: { strength: 5 }, lost: [{}] })]), 'gain');
   assert.equal(reactionTrigger([tx('loss', { lost: [{}, {}] }), tx('win'), tx('loss', { status: 'generating' })]), 'gain');
 });
-test('opening advances only on explicit clicks and supports skip', () => {
+test('opening separates narration, arrival, tapped dialogue and docking', () => {
   let done = 0;
-  const ui = stageMount(Opening, { busy: false, onComplete: () => done++ });
-  assert.match(text(ui.tree), new RegExp(scenario.opening[0]));
-  ui.tick(); assert.match(text(ui.tree), new RegExp(scenario.opening[0]));
-  for (let i = 1; i < scenario.opening.length; i++) { ui.click('次へ'); assert.ok(text(ui.tree).includes(scenario.opening[i])); }
-  assert.equal(done, 0); ui.click('物語を選ぶ'); assert.equal(done, 1);
-  const skipped = stageMount(Opening, { busy: false, onComplete: () => done++ });
-  skipped.click('スキップ'); assert.equal(done, 2);
+  const props = { busy: false, onDark() {}, onComplete: () => done++ };
+  const ui = mount(Opening, props);
+  assert.equal(ui.tree.props['data-phase'], 'blackout');
+  for (let i = 0; i < openingNarration.length; i++) {
+    ui.tick();
+    assert.deepEqual(ui.all(n => n.type === 'p').map(text), openingNarration.slice(0, i + 1));
+    assert.ok(!text(ui.tree).includes(scenario.opening[0]));
+  }
+  ui.tick();
+  assert.equal(ui.tree.props['data-phase'], 'arrival');
+  assert.ok(!text(ui.tree).includes(openingNarration[0]));
+  ui.tick();
+  for (const line of scenario.opening) {
+    assert.equal(text(ui.find(n => n.props.className === 'sr-only')), line);
+    ui.tick();
+    ui.click('▼');
+    assert.equal(text(ui.find(n => n.type === 'span' && n.props['aria-hidden'] === 'true')), line);
+    ui.click('▼');
+  }
+  assert.equal(ui.tree.props['data-phase'], 'docking');
+  assert.equal(done, 0);
+  ui.tick(); assert.equal(done, 1);
+  const skipped = mount(Opening, props);
+  skipped.click('スキップ'); skipped.tick();
+  assert.equal(done, 2);
 });
 function environment(session) {
   const requests = [];
@@ -58,7 +75,7 @@ function environment(session) {
 test('new start opens before drawing stories; results publish reactions for all games', async () => {
   let requests = environment();
   let ui = mount(App, {}); await flush(); ui.draw();
-  ui.click('はじめる'); assert.ok(text(ui.tree).includes(scenario.opening[0]));
+  ui.click('はじめる'); assert.ok(!text(ui.tree).includes(scenario.opening[0]));
   assert.equal(requests.some(url => url.endsWith('/stories/draw')), false);
   ui.click('スキップ'); await flush(); ui.draw();
   assert.ok(text(ui.tree).includes('物語を選ぶ'));

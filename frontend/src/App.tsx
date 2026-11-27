@@ -2,6 +2,7 @@ import './fonts.css';
 import './notebook.css';
 import './notebook-paper.css';
 import './notebook-motion.css';
+import './opening.css';
 import { retainExit } from './notebookMotion';
 import { ScenePublisher } from './ScenePublisher';
 import { gameScene } from './sceneDialogue';
@@ -42,6 +43,7 @@ export default function App() {
 
 function AppContent(){
   const [screen,setScreen]=useState<'title'|'opening'|'choose'|'game'>('title');
+  const [starting, setStarting] = useState(false);
   const [session,setSession]=useState<Session>();
   const [paperIndex,setPaperIndex]=useState<number>();
   const transactions = session?.transactions;
@@ -185,7 +187,7 @@ function AppContent(){
   const backward = turn.returning || page === 'title' || (page === 'choose' && turn.from === 'custom')
     || (page === 'words' && turn.from === 'sheet') || (page === 'reward' && turn.from === 'words');
   return <div className="app-shell" data-screen={screen}>
-    <AnomaStage portraitFocus={screen === 'title' || screen === 'opening' || Boolean(ended || decision)}>
+    <AnomaStage portraitFocus={screen === 'title' || screen === 'opening' || Boolean(ended || decision)} inactive={starting || screen === 'opening'}>
       <div className="page-viewport" data-back={backward} data-returning={turn.returning}>
       <div className="notebook-body" key={page} ref={retainExit} data-page={page} data-from={turn.from}>
       {screen === 'title' && <ScenePublisher scene="title" />}
@@ -205,11 +207,10 @@ function AppContent(){
         <div className="title-folio">
           <h1><span>ギャンブル</span><span>ライティングメーカー</span><small>(仮称)</small></h1>
           <div className="title-actions">
-            <button className="primary" disabled={busy} onClick={() => setScreen('opening')}>はじめる <span>→</span></button>
+            <button className="primary" disabled={busy} onClick={() => setStarting(true)}>はじめる <span>→</span></button>
           </div>
         </div>
       </main>}
-      {screen === 'opening' && <Opening busy={busy} onComplete={() => void reroll(true)} />}
       {screen === 'choose' && !customOpen && <main className="choose-screen">
         <div className="choose-header">
           <h1>物語を選ぶ</h1>
@@ -321,5 +322,8 @@ function AppContent(){
       </div>
       </div>
     </AnomaStage>
+    {(starting || screen === 'opening') && <Opening busy={busy} error={error}
+      onDark={() => { setStarting(false); setScreen('opening'); }}
+      onComplete={() => { setStarting(false); setScreen('opening'); void reroll(true); }} />}
   </div>;
 }
