@@ -123,7 +123,13 @@ def prepare_beginner_game(kind, rng):
         swaps = []
         for _ in range(8):
             swaps.append(rng.choice([pair for pair in pairs if not swaps or pair != swaps[-1]]))
-        game.update(cards=deck(rng)[:3], target=rng.randrange(3), swaps=swaps)
+        ace = {'rank': 'A', 'suit': '♠'}
+        cards = deck(rng)
+        cards.remove(ace)
+        cards = cards[:2]
+        target = rng.randrange(3)
+        cards.insert(target, ace)
+        game.update(cards=cards, target=target, swaps=swaps)
     return game
 
 
