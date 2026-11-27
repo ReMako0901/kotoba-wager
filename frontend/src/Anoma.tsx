@@ -1,5 +1,5 @@
 import { retainExit } from './notebookMotion';
-import { createContext, useContext, useEffect, useLayoutEffect, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import type { Transaction } from './types';
 import { chooseLine, openingNarration, reactionKinds, reactionTrigger, scenario, expressionForTrigger, storyExpressions, type AnomaExpression, type ReactionKind } from './scenario';
 
@@ -92,11 +92,7 @@ export function StagePublisher({ lines, expression, reaction }: StageContent) {
   return null;
 }
 
-export function AnomaStage({ portraitFocus = false, children }: { portraitFocus?: boolean; children?: ReactNode }) {
-  const { lines, expression, reaction } = useContext(StageContext);
-  const linesKey = JSON.stringify(lines ?? []);
-  const characters = (lines ?? []).map(line => Array.from(line));
-  const length = characters.reduce((sum, line) => sum + line.length, 0);
+function useTypedLength(linesKey: string, length: number) {
   const [visible, setVisible] = useState(0);
   useLayoutEffect(() => {
     const media = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -120,9 +116,18 @@ export function AnomaStage({ portraitFocus = false, children }: { portraitFocus?
       media.removeEventListener('change', finish);
     };
   }, [linesKey, length]);
+  return visible;
+}
+
+export function AnomaStage({ portraitFocus = false, inactive = false, children }: { portraitFocus?: boolean; inactive?: boolean; children?: ReactNode }) {
+  const { lines, expression, reaction } = useContext(StageContext);
+  const linesKey = JSON.stringify(lines ?? []);
+  const characters = (lines ?? []).map(line => Array.from(line));
+  const length = characters.reduce((sum, line) => sum + line.length, 0);
+  const visible = useTypedLength(linesKey, length);
   const speaking = visible < length;
   let remaining = visible;
-  return <div className="anoma-stage" data-expression={expression} data-reaction={reaction ?? 'normal'}>
+  return <div inert={inactive} className="anoma-stage" data-expression={expression} data-reaction={reaction ?? 'normal'}>
     <header className="page-margin">
       <aside className="anoma-photo" data-focus={portraitFocus || Boolean(reaction && speaking) ? 'portrait' : 'table'} aria-label="アノマ">
         <AnomaPortrait key={expression} expression={expression} speaking={speaking} />
@@ -138,14 +143,74 @@ export function AnomaStage({ portraitFocus = false, children }: { portraitFocus?
   </div>;
 }
 
-export function Opening({ busy, onComplete }: { busy: boolean; onComplete: () => void }) {
+type OpeningPhase = 'blackout' | 'narration' | 'arrival' | 'dialogue' | 'docking' | 'waiting';
+
+export function Opening({ busy, error, onDark, onComplete }: {
+  busy: boolean; error?: string; onDark: () => void; onComplete: () => void;
+}) {
+  const [phase, setPhase] = useState<OpeningPhase>('blackout');
+  const [count, setCount] = useState(0);
   const [index, setIndex] = useState(0);
-  const last = index === scenario.opening.length - 1;
-  return <main className="opening-screen">
-    <div className="opening-narration">{openingNarration.map(line => <p key={line}>{line}</p>)}</div>
-    <StagePublisher lines={[scenario.opening[index]]} expression={storyExpressions.opening} />
-    <button className="primary" disabled={busy} onClick={() => last ? onComplete() : setIndex(index + 1)}>{last ? '物語を選ぶ' : '次へ'}</button>
-    <button className="secondary" disabled={busy} onClick={onComplete}>スキップ</button>
+  const [revealed, setRevealed] = useState(false);
+  const callbacks = useRef({ onDark, onComplete });
+  useLayoutEffect(() => { callbacks.current = { onDark, onComplete }; }, [onDark, onComplete]);
+  const line = phase === 'dialogue' ? scenario.opening[index] : '';
+  const chars = Array.from(line);
+  const visible = useTypedLength(line, chars.length);
+  const speaking = !revealed && visible < chars.length;
+
+  useEffect(() => {
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let timer: number;
+    if (phase === 'blackout') {
+      timer = window.setTimeout(() => {
+        callbacks.current.onDark();
+        setCount(1);
+        setPhase('narration');
+      }, reduced ? 120 : 650);
+    } else if (phase === 'narration') {
+      timer = window.setTimeout(() => {
+        if (count < openingNarration.length) setCount(count + 1);
+        else setPhase('arrival');
+      }, count === 1 ? 2400 : 1800);
+    } else if (phase === 'arrival') {
+      timer = window.setTimeout(() => setPhase('dialogue'), reduced ? 140 : 950);
+    } else if (phase === 'docking') {
+      timer = window.setTimeout(() => {
+        setPhase('waiting');
+        callbacks.current.onComplete();
+      }, reduced ? 140 : 850);
+    }
+    return () => window.clearTimeout(timer);
+  }, [phase, count]);
+
+  function advance() {
+    if (speaking) setRevealed(true);
+    else if (index === scenario.opening.length - 1) setPhase('docking');
+    else { setIndex(index + 1); setRevealed(false); }
+  }
+  function skip() {
+    setPhase('waiting');
+    onComplete();
+  }
+  return <main className="opening-screen" data-phase={phase}>
+    {phase === 'narration' && <div className="opening-narration" aria-live="polite">
+      {openingNarration.slice(0, count).map(line => <p key={line}>{line}</p>)}
+    </div>}
+    {phase !== 'blackout' && phase !== 'narration' && <aside className="anoma-photo opening-photo" aria-label="アノマ">
+      <AnomaPortrait expression={storyExpressions.opening} speaking={speaking} />
+    </aside>}
+    {phase === 'dialogue' && <button className="opening-dialogue" autoFocus onClick={advance}>
+      <span className="sr-only" aria-live="polite">{line}</span>
+      <span aria-hidden="true">{speaking ? chars.slice(0, visible).join('') : line}</span>
+      <small aria-hidden="true">▼</small>
+    </button>}
+    {phase === 'waiting' && <p className="opening-status" role="status">
+      {busy ? '物語をめくっています…' : error}
+    </p>}
+    <button className="opening-skip" disabled={busy} onClick={skip}>
+      {phase === 'waiting' && error && !busy ? '再試行' : 'スキップ'}
+    </button>
   </main>;
 }
 

@@ -55,8 +55,8 @@ test('stage is shared on title, opening and story selection; all have dialogue',
     const portrait = ui.find(n => n.props.className === 'anoma-photo');
     assert.equal(portrait.props['data-focus'], action === 'スキップ' ? 'table' : 'portrait');
     if (action === 'はじめる') {
-      assert.equal(stage(ui).props['data-expression'], 'normal');
-      assert.equal(stageLine(ui), scenario.opening[0]);
+      assert.equal(stage(ui).props.inert, true);
+      assert.ok(!text(ui.tree).includes(scenario.opening[0]));
     } else {
       assertScene(ui, action ? 'storySelect' : 'title');
     }
@@ -79,7 +79,7 @@ test('all dialogue owners publish and obsolete embedded frames are removed', () 
   const anoma = fs.readFileSync('frontend/src/Anoma.tsx', 'utf8');
   const app = fs.readFileSync('frontend/src/App.tsx', 'utf8');
   const progress = fs.readFileSync('frontend/src/StoryProgress.tsx', 'utf8');
-  assert.match(anoma, /StagePublisher lines=\{\[scenario.opening\[index\]\]\}/);
+  assert.doesNotMatch(anoma, /StagePublisher lines=\{\[scenario.opening/);
   assert.match(app, /<ScenePublisher scene=\{gameScene/);
   assert.match(app, /<StagePublisher lines=\{\[reaction.line\]\} expression=\{reaction.expression\} reaction=\{reaction.reaction\}/);
   assert.equal((progress.match(/<StagePublisher /g) ?? []).length, 2);
