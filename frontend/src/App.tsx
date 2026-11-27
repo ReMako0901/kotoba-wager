@@ -1,3 +1,4 @@
+import { TitleWords } from "./TitleWords";
 import { StoryMarks } from './StoryMarks';
 import { StoryInterview } from './StoryInterview';
 import './fonts.css';
@@ -227,6 +228,7 @@ function AppContent(){
       {screen === 'game' && resultMode && !ended && reaction &&
         <StagePublisher lines={[reaction.line]} expression={reaction.expression} reaction={reaction.reaction} />}
       {screen === 'title' && <main className="title-screen">
+        <TitleWords />
         <div className="title-folio">
           <h1><span>アノマと</span><span>言葉の遊戯場</span></h1>
           <div className="title-actions">

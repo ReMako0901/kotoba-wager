@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
+from .title_words import title_words
 from .story_generation import finalize_story, generate_story
 from .config import settings
 from .engine import engine
@@ -70,6 +71,7 @@ def public(session):
     return result
 
 
+app.get("/api/title-words")(title_words)
 app.post("/api/stories/generate")(generate_story)
 app.post("/api/stories/generated/{story_id}/finalize")(finalize_story)
 
