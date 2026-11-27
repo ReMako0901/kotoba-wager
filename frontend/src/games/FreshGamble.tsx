@@ -660,107 +660,83 @@ function SlotGamble({
   );
 
   const [started, setStarted] = useState(false);
-  const [stopped, setStopped] = useState<[boolean, boolean, boolean]>([
-    false,
-    false,
-    false,
-  ]);
+  type ReelState = 'ready' | 'braking' | 'landed';
+  const [reels, setReels] = useState<ReelState[]>(['ready', 'ready', 'ready']);
+  const strips = useRef<(HTMLDivElement | null)[]>([]);
   const [pulling, setPulling] = useState(false);
+  const allStopped = reels.every(state => state === 'landed');
 
-  const allStopped = started && stopped[0] && stopped[1] && stopped[2];
-
-  const handlePullLever = () => {
-    if (started) return;
-    setPulling(true);
-    window.setTimeout(() => {
-      setPulling(false);
+  useEffect(() => {
+    if (!pulling) return;
+    const timer = window.setTimeout(() => {
       setStarted(true);
+      setPulling(false);
     }, prefersReducedMotion() ? 60 : 220);
-  };
+    return () => window.clearTimeout(timer);
+  }, [pulling]);
 
-  const handleStopReel = (index: 0 | 1 | 2) => {
-    if (!started || stopped[index]) return;
-    setStopped((prev) => {
-      const next: [boolean, boolean, boolean] = [...prev];
-      next[index] = true;
-      return next;
+  function changeReel(index: number, state: ReelState) {
+    setReels(previous => previous.map((value, i) => i === index ? state : value));
+  }
+
+  function stopReel(index: number) {
+    const strip = strips.current[index];
+    if (!strip || !started || reels[index] !== 'ready') return;
+    const reduced = prefersReducedMotion();
+    const cell = strip.firstElementChild!.getBoundingClientRect().height;
+    const transform = getComputedStyle(strip).transform;
+    const y = transform === 'none' ? 0 : new DOMMatrix(transform).m42;
+    const target = SLOT_CYCLE.indexOf(targetReels[index]);
+    // Choose the matching symbol at least one full turn farther down the strip.
+    const cycle = SLOT_CYCLE.length * cell;
+    const end = Math.ceil((y + cycle + target * cell) / cycle) * cycle - target * cell;
+    const finalPosition = `translateY(${-target * cell}px)`;
+    const frames = reduced ? [
+      { opacity: .3, transform: finalPosition },
+      { opacity: 1, transform: finalPosition },
+    ] : [
+      { transform: `translateY(${y}px)`, filter: 'blur(1px)' },
+      { transform: `translateY(${end}px)`, filter: 'blur(0)' },
+    ];
+    changeReel(index, 'braking');
+    const brake = strip.animate(frames, {
+      duration: reduced ? 90 : 640, easing: 'cubic-bezier(.15,.65,.35,1)', fill: 'forwards',
     });
-  };
+    brake.onfinish = () => changeReel(index, 'landed');
+  }
 
   return (
     <div className="folio-slot">
-      <div className="folio-slot-notes">
-        <span className="folio-note-caption">真鍮の三連覗き窓</span>
-        <p className="folio-scribble" aria-live="polite">
-          {!started
-            ? '右脇の引き手を引いて絵柄車を回す'
-            : !allStopped
-              ? '回転している窓の留め金を一つずつ押して止める'
-              : `出目：${targetReels.join('・')}`}
-        </p>
-      </div>
-
+      <span className="folio-note-caption">真鍮の三連覗き窓</span>
       <div className="folio-slot-mechanica">
         <div className="folio-slot-windows" role="group" aria-label="スロットリール">
-          {([0, 1, 2] as const).map((idx) => {
-            const isSpinning = started && !stopped[idx];
-            const isLocked = started && stopped[idx];
-            const finalSymbol = targetReels[idx] ?? 'ベル';
-            const previewSymbol = SLOT_CYCLE[idx % SLOT_CYCLE.length];
-
+          {reels.map((state, idx) => {
+            const symbol = started ? targetReels[idx] : SLOT_CYCLE[idx];
             return (
-              <div
-                key={idx}
-                className={`folio-reel-column${
-                  isSpinning ? ' is-spinning' : ''
-                }${isLocked ? ' is-locked' : ''}`}
-              >
-                <span className="folio-reel-index" aria-hidden="true">
-                  {idx === 0 ? '壱' : idx === 1 ? '弐' : '参'}
-                </span>
-
-                <button
-                  type="button"
-                  className="folio-reel-window"
-                  disabled={!isSpinning}
-                  onClick={() => handleStopReel(idx)}
-                  aria-label={`第${idx + 1}リールを止める`}
-                >
-                  {isSpinning ? (
-                    <div className="folio-reel-strip" aria-hidden="true">
-                      {[...SLOT_CYCLE, ...SLOT_CYCLE].map((sym, sIdx) => (
-                        <div key={sIdx} className="folio-reel-cell">
-                          <img
-                            src={slotAssetUrl(sym)}
-                            alt=""
-                            draggable={false}
-                          />
-                          <small>{sym}</small>
-                        </div>
+              <div key={idx} className="folio-reel-column">
+                <span className="folio-reel-index" aria-hidden="true">{['壱', '弐', '参'][idx]}</span>
+                <div className={`folio-reel-window ${started && state === 'ready' ? 'is-spinning' : ''}`}>
+                  {started && state !== 'landed' ? (
+                    <div key="strip" className="folio-reel-strip" ref={el => { strips.current[idx] = el; }}
+                      aria-hidden="true">
+                      {[...SLOT_CYCLE, ...SLOT_CYCLE, ...SLOT_CYCLE, ...SLOT_CYCLE].map((item, i) => (
+                        <div className="folio-reel-cell" key={i}><img src={slotAssetUrl(item)} alt="" /></div>
                       ))}
                     </div>
                   ) : (
-                    <div className="folio-reel-cell is-static">
-                      <img
-                        src={slotAssetUrl(isLocked ? finalSymbol : previewSymbol)}
-                        alt={isLocked ? finalSymbol : previewSymbol}
-                        draggable={false}
-                      />
-                      <small>{isLocked ? finalSymbol : '待機'}</small>
-                    </div>
+                    <div key="symbol" className="folio-reel-cell"><img src={slotAssetUrl(symbol)} alt={symbol} /></div>
                   )}
-
-                  <span className="folio-reel-latch">
-                    {isSpinning
-                      ? '止める'
-                      : isLocked
-                        ? finalSymbol
-                        : '―'}
-                  </span>
-                </button>
+                </div>
               </div>
             );
           })}
+        </div>
+        <div className="folio-reel-controls">
+          {reels.map((state, idx) => (
+            <button type="button" className="folio-reel-latch" key={idx}
+              disabled={!started || state !== 'ready'} onClick={() => stopReel(idx)}
+              aria-label={`第${idx + 1}リールを止める`}>止める</button>
+          ))}
         </div>
 
         {/* 右側面から伸びる真鍮の引き手（レバー） */}
@@ -769,15 +745,15 @@ function SlotGamble({
           className={`folio-slot-lever${pulling ? ' is-pulling' : ''}${
             started ? ' is-pulled' : ''
           }`}
-          disabled={started}
-          onClick={handlePullLever}
+          disabled={started || pulling}
+          onClick={() => setPulling(true)}
           aria-label="レバーを引く"
         >
           <span className="folio-lever-shaft" aria-hidden="true">
             <span className="folio-lever-knob" />
           </span>
           <span className="folio-lever-label">
-            {started ? '稼働中' : '引く'}
+            引く
           </span>
         </button>
       </div>
@@ -813,43 +789,30 @@ function BlackjackGamble({
   const [hits, setHits] = useState(0);
   const [stood, setStood] = useState(false);
 
-  const visiblePlayerCards = useMemo(
-    () => playerAll.slice(0, Math.min(playerAll.length, 2 + hits)),
-    [playerAll, hits]
-  );
-  const playerTotal = useMemo(
-    () => calcBlackjackTotal(visiblePlayerCards),
-    [visiblePlayerCards]
-  );
+  const [dealt, setDealt] = useState(0);
+  const [settledHits, setSettledHits] = useState(0);
+  const [dealerOpen, setDealerOpen] = useState(1);
+  const [dealerSettled, setDealerSettled] = useState(false);
+  const visiblePlayerCards = playerAll.slice(0, Math.ceil(Math.min(dealt, 4) / 2) + hits);
+  const playerTotal = calcBlackjackTotal(visiblePlayerCards);
+  const ready = dealt === 5 && settledHits === hits;
+  const isFinished = ready && (stood || playerTotal >= 21);
+  const canHit = ready && !isFinished && 2 + hits < playerAll.length;
+  const dealerHandForStep = round?.dealer_hands?.[hits] ?? bankerAll;
+  const dealerCount = Math.max(Math.floor(Math.min(dealt, 4) / 2), isFinished ? dealerOpen : 0);
+  const dealerVisibleTotal = calcBlackjackTotal(dealerHandForStep.slice(0, Math.min(dealerOpen, dealerCount)));
 
-  // 終了条件: STAND するか、合計が 21 以上になったら終了
-  const isFinished = stood || playerTotal >= 21;
-
-  // HIT できる条件: まだ加わる札があり、合計が 21 未満のときだけ
-  const canHit =
-    !isFinished &&
-    2 + hits < playerAll.length &&
-    playerTotal < 21;
-
-  // ディーラーの見せ札は dealer_hands[ヒット回数] を使い、無ければ banker を使う
-  const dealerHandForStep = useMemo(() => {
-    if (isFinished) {
-      return round?.dealer_hands?.[hits] &&
-        round.dealer_hands[hits].length >= bankerAll.length
-        ? round.dealer_hands[hits]
-        : bankerAll;
-    }
-    return round?.dealer_hands?.[hits] ?? bankerAll;
-  }, [round, hits, bankerAll, isFinished]);
-
-  const dealerVisibleTotal = useMemo(() => {
-    if (isFinished) {
-      return calcBlackjackTotal(dealerHandForStep);
-    }
-    return dealerHandForStep.length > 0
-      ? calcBlackjackTotal([dealerHandForStep[0]])
-      : 0;
-  }, [dealerHandForStep, isFinished]);
+  useEffect(() => {
+    // The fifth beat lets the fourth opening card land before enabling actions.
+    const advance = dealt < 5 ? () => setDealt(dealt + 1)
+      : settledHits < hits ? () => setSettledHits(hits)
+      : isFinished && dealerOpen < dealerHandForStep.length ? () => setDealerOpen(dealerOpen + 1)
+      : isFinished && !dealerSettled ? () => setDealerSettled(true)
+      : undefined;
+    if (!advance) return;
+    const timer = window.setTimeout(advance, prefersReducedMotion() ? 90 : 350);
+    return () => window.clearTimeout(timer);
+  }, [dealt, hits, settledHits, isFinished, dealerOpen, dealerHandForStep.length, dealerSettled]);
 
   const finalOutcome =
     gamble.outcome ??
@@ -866,16 +829,17 @@ function BlackjackGamble({
           <span className="folio-ink-total" aria-live="polite">
             合計:{' '}
             <strong>
-              {isFinished ? dealerVisibleTotal : `${dealerVisibleTotal} + ?`}
+              {dealerCount === 0 ? '―' : dealerCount > dealerOpen ? `${dealerVisibleTotal} + ?` : dealerVisibleTotal}
             </strong>
           </span>
         </div>
         <div className="folio-card-spread">
-          {dealerHandForStep.map((card, idx) => (
+          {dealerHandForStep.slice(0, dealerCount).map((card, idx) => (
             <FolioCardView
               key={idx}
               card={card}
-              faceUp={isFinished || idx === 0}
+              faceUp={idx < dealerOpen}
+              className={idx === 1 && dealerOpen > 1 ? 'bj-turn' : 'bj-deal'}
             />
           ))}
         </div>
@@ -901,8 +865,8 @@ function BlackjackGamble({
 
         <button
           type="button"
-          className={`folio-stand-bookmark${!isFinished ? ' is-ready' : ''}`}
-          disabled={isFinished}
+          className={`folio-stand-bookmark${ready && !isFinished ? ' is-ready' : ''}`}
+          disabled={!ready || isFinished}
           onClick={() => setStood(true)}
           aria-label="この手で勝負する (STAND)"
         >
@@ -932,13 +896,14 @@ function BlackjackGamble({
               key={idx}
               card={card}
               faceUp={true}
+              className="bj-deal"
               highlighted={idx >= 2 && idx === visiblePlayerCards.length - 1}
             />
           ))}
         </div>
       </section>
 
-      {isFinished && (
+      {dealerSettled && (
         <OutcomeSlip
           outcome={finalOutcome}
           prepared={prepared}
@@ -954,6 +919,8 @@ function BlackjackGamble({
 /* ============================================================================
  * 6. バカラ (Baccarat) — 「左右の配札とルーペ絞り（スクイーズ）台」
  * ========================================================================== */
+
+type PeelEdge = 'left' | 'right' | 'top' | 'bottom';
 
 type BaccaratCardKey = 'p-0' | 'p-1' | 'p-2' | 'b-0' | 'b-1' | 'b-2';
 
@@ -979,7 +946,8 @@ function BaccaratGamble({
   const [opened, setOpened] = useState<Record<string, boolean>>({});
   const [activeKey, setActiveKey] = useState<BaccaratCardKey>('p-0');
   const [peelProgress, setPeelProgress] = useState(0);
-  const dragStartRef = useRef<{ x: number; y: number; base: number } | null>(
+  const [edge, setEdge] = useState<PeelEdge>('left');
+  const dragStartRef = useRef<{ id: number; edge: PeelEdge; x: number; y: number; base: number } | null>(
     null
   );
 
@@ -1003,7 +971,7 @@ function BaccaratGamble({
   const dealtPlayerCount = initialFourOpened
     ? playerCards.length
     : Math.min(2, playerCards.length);
-  const dealtBankerCount = initialFourOpened
+  const dealtBankerCount = initialFourOpened && (playerCards.length < 3 || opened['p-2'])
     ? bankerCards.length
     : Math.min(2, bankerCards.length);
 
@@ -1075,14 +1043,10 @@ function BaccaratGamble({
 
   // バンカー側を全てまとめて開く操作
   const openAllBanker = () => {
+    dragStartRef.current = null;
     setOpened((prev) => {
       const next = { ...prev };
-      // 現在配られているバンカー札を開く。もしプレイヤーの最初の2枚もすでに開いていれば3枚目まで一気に開く
-      const pInitialDone = Boolean(next['p-0']) && Boolean(next['p-1']);
-      const maxBanker = pInitialDone
-        ? bankerCards.length
-        : Math.min(2, bankerCards.length);
-      for (let i = 0; i < maxBanker; i += 1) {
+      for (let i = 0; i < dealtBankerCount; i += 1) {
         next[`b-${i}`] = true;
       }
       return next;
@@ -1105,57 +1069,51 @@ function BaccaratGamble({
   const playerTotal = calcBaccaratTotal(openedPlayerCards);
   const bankerTotal = calcBaccaratTotal(openedBankerCards);
 
-  // ドラッグ（Pointer Events）による絞り操作
-  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+  function peel(value: number) {
     if (!activeItem) return;
-    e.currentTarget.setPointerCapture?.(e.pointerId);
-    dragStartRef.current = {
-      x: e.clientX,
-      y: e.clientY,
-      base: peelProgress,
+    if (value >= 75) openSingleCard(activeItem.key);
+    else setPeelProgress(Math.max(0, Math.round(value)));
+  }
+
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!activeItem || !e.isPrimary) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const distances: Record<PeelEdge, number> = {
+      left: e.clientX - rect.left, right: rect.right - e.clientX,
+      top: e.clientY - rect.top, bottom: rect.bottom - e.clientY,
     };
+    const nearest = (Object.keys(distances) as PeelEdge[])
+      .reduce((a, b) => distances[a] < distances[b] ? a : b);
+    const from = peelProgress > 0 ? edge : nearest;
+    setEdge(from);
+    e.currentTarget.setPointerCapture(e.pointerId);
+    dragStartRef.current = { id: e.pointerId, edge: from, x: e.clientX, y: e.clientY, base: peelProgress };
   };
 
   const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!dragStartRef.current || !activeItem) return;
-    const dx = e.clientX - dragStartRef.current.x;
-    const dy = e.clientY - dragStartRef.current.y;
-    const dist = Math.hypot(dx, dy);
-    const nextProgress = Math.min(
-      100,
-      Math.round(dragStartRef.current.base + (dist / 78) * 100)
-    );
-    if (nextProgress >= 75) {
-      openSingleCard(activeItem.key);
-    } else {
-      setPeelProgress(nextProgress);
-    }
+    const drag = dragStartRef.current;
+    if (!drag || drag.id !== e.pointerId) return;
+    const horizontal = drag.edge === 'left' || drag.edge === 'right';
+    const rect = e.currentTarget.getBoundingClientRect();
+    const delta = horizontal ? (e.clientX - drag.x) / rect.width : (e.clientY - drag.y) / rect.height;
+    const sign = drag.edge === 'left' || drag.edge === 'top' ? 1 : -1;
+    peel(drag.base + sign * delta * 100);
   };
 
-  const handlePointerUp = () => {
-    dragStartRef.current = null;
+  const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (dragStartRef.current?.id === e.pointerId) dragStartRef.current = null;
   };
 
-  // 矢印キーによる絞り操作
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
-    if (!activeItem) return;
-    if (
-      e.key === 'ArrowUp' ||
-      e.key === 'ArrowDown' ||
-      e.key === 'ArrowLeft' ||
-      e.key === 'ArrowRight'
-    ) {
-      e.preventDefault();
-      const next = peelProgress + 28;
-      if (next >= 75) {
-        openSingleCard(activeItem.key);
-      } else {
-        setPeelProgress(next);
-      }
-    } else if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      openSingleCard(activeItem.key);
-    }
+    const directions: Record<string, PeelEdge> = {
+      ArrowRight: 'left', ArrowLeft: 'right', ArrowDown: 'top', ArrowUp: 'bottom',
+    };
+    const from = directions[e.key];
+    if (!from) return;
+    e.preventDefault();
+    if (e.repeat) return;
+    if (!peelProgress) setEdge(from);
+    peel(peelProgress + (!peelProgress || edge === from ? 25 : -25));
   };
 
   const handleNextRound = () => {
@@ -1204,6 +1162,7 @@ function BaccaratGamble({
                   }${idx === 2 ? ' is-third-card' : ''}`}
                   disabled={isOpened}
                   onClick={() => {
+                    dragStartRef.current = null;
                     setActiveKey(key);
                     setPeelProgress(0);
                   }}
@@ -1248,6 +1207,7 @@ function BaccaratGamble({
                   }${idx === 2 ? ' is-third-card' : ''}`}
                   disabled={isOpened}
                   onClick={() => {
+                    dragStartRef.current = null;
                     setActiveKey(key);
                     setPeelProgress(0);
                   }}
@@ -1285,19 +1245,17 @@ function BaccaratGamble({
         >
           <div className="folio-squeeze-guide">
             <span className="folio-squeeze-target">{activeItem.label}</span>
-            <span className="folio-scribble">
-              端をドラッグまたは矢印キーでめくる（{peelProgress}%）
-            </span>
           </div>
 
           <div className="folio-squeeze-workarea">
             <div
               className="folio-squeeze-card"
+              data-edge={edge}
               tabIndex={0}
               role="slider"
               aria-label={`${activeItem.label}を絞ってめくる`}
               aria-valuemin={0}
-              aria-valuemax={100}
+              aria-valuemax={75}
               aria-valuenow={peelProgress}
               onPointerDown={handlePointerDown}
               onPointerMove={handlePointerMove}
@@ -1307,7 +1265,7 @@ function BaccaratGamble({
               style={
                 {
                   '--peel-pct': `${peelProgress}%`,
-                  '--peel-ratio': peelProgress / 100,
+                  '--peel-opacity': 1 - peelProgress / 100,
                 } as React.CSSProperties
               }
             >
@@ -1329,21 +1287,8 @@ function BaccaratGamble({
               </div>
 
               {/* 上にかぶさっている裏紙（めくり進行度に応じて端から折れ上がる） */}
-              <div className="folio-squeeze-cover">
-                <span className="folio-squeeze-corner-hint">
-                  端を引いて絞る ↗
-                </span>
-                <span className="folio-squeeze-fold" aria-hidden="true" />
-              </div>
+              <div className="folio-squeeze-cover" aria-hidden="true" />
             </div>
-
-            <button
-              type="button"
-              className="folio-flip-direct-btn"
-              onClick={() => openSingleCard(activeItem.key)}
-            >
-              表にする
-            </button>
           </div>
         </section>
       )}
