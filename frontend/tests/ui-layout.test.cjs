@@ -94,6 +94,8 @@ test('gambling actions stay with the tabletop object and generation polling only
   land();
   ui.tick(); await flush(); ui.draw();
   assert.ok(actions());
+  assert.match(text(ui.find(n => n.props.className?.startsWith('folio-outcome-banner'))), /勝利/);
+  assert.equal(ui.all(n => n.props.className?.includes('folio-wax-seal')).length, 0);
   assert.equal(nodes(actions(), n => n.type === 'button')[0].props.disabled, false);
   assert.deepEqual(requests.filter(([url]) => url.endsWith('/sessions/played')), [['/api/sessions/played', 'GET']]);
   assert.equal(requests.filter(([url]) => url.endsWith('/finish')).length, 0);
